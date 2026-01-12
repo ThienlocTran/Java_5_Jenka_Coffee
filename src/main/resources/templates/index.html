@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ - Jenka Coffee</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div th:replace="~{layout :: header}"></div>
+
+<div class="container mt-5 pt-4"> <!-- Main Boxed Layout Container with Top Spacing -->
+    
+    <!-- Hero Carousel enclosed in container -->
+    <div id="heroCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
+        <div class="carousel-inner rounded"> <!-- Rounded corners for aesthetic inside box -->
+            <!-- [x] Fix Product Image Consistency id: 40 -->
+            <!-- [x] Correct HTML File Extensions (.webp/.png) id: 41 -->
+            <!-- [x] Add CSS for Fixed Height & Object-Fit id: 42 -->
+            <!-- Slide 1 -->
+            <div class="carousel-item active">
+                <img th:src="@{/images/banner/banner1.jpg}" class="d-block w-100 hero-img" alt="Banner 1">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5 class="display-4 fw-bold">HƯƠNG VỊ CÀ PHÊ ĐÍCH THỰC</h5>
+                    <p class="lead">Khơi dậy đam mê trong từng tách cà phê</p>
+                </div>
+            </div>
+            <!-- Slide 2 -->
+            <div class="carousel-item">
+                <img th:src="@{/images/banner/banner2.jpg}" class="d-block w-100 hero-img" alt="Banner 2">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5 class="display-4 fw-bold">CHẤT LƯỢNG THƯỢNG HẠNG</h5>
+                    <p class="lead">Tuyển chọn từ những hạt cà phê tốt nhất</p>
+                </div>
+            </div>
+            <!-- Slide 3 -->
+            <div class="carousel-item">
+                <img th:src="@{/images/banner/banner3.jpg}" class="d-block w-100 hero-img" alt="Banner 3">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5 class="display-4 fw-bold">PHONG CÁCH HIỆN ĐẠI</h5>
+                    <p class="lead">Trải nghiệm không gian cà phê đẳng cấp</p>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+    </div>
+
+    <!-- Category Menu -->
+    <!-- Category Menu -->
+    <div class="category-menu-wrapper container">
+        <h4 class="text-uppercase fw-bold mb-4 text-start" style="color: #4b3d33;">MENU SẢN PHẨM</h4>
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3 justify-content-center">
+            <!-- Item 1: Máy pha cà phê -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" alt="Máy pha cà phê">
+                    </div>
+                    <div class="category-title">Máy pha cà phê</div>
+                </div>
+            </div>
+            <!-- Item 2: Máy xay cà phê -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <img th:src="@{/images/product/May_xay_ca_phe/may_xay_01.jpg}" alt="Máy xay cà phê">
+                    </div>
+                    <div class="category-title">Máy xay cà phê</div>
+                </div>
+            </div>
+            <!-- Item 3: Máy xay sinh tố -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <img th:src="@{/images/product/may_xay_may_ep/may_ep_01.jpg}" alt="Máy xay sinh tố, máy ép">
+                    </div>
+                    <div class="category-title">Máy xay sinh tố, máy ép</div>
+                </div>
+            </div>
+            <!-- Item 4: Dụng cụ pha chế -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_03.png}" alt="Dụng cụ pha chế">
+                    </div>
+                    <div class="category-title">Dụng cụ pha chế</div>
+                </div>
+            </div>
+            <!-- Item 5: Cà phê & Đồ ăn -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_01.jpg}" alt="Cà phê và đồ ăn">
+                    </div>
+                    <div class="category-title">Cà phê và đồ ăn</div>
+                </div>
+            </div>
+            <!-- Item 6: Máy cũ (Placeholder) -->
+            <div class="col">
+                <div class="category-item-container">
+                    <div class="category-image-box">
+                        <!-- Using placeholder since original file was HTML -->
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_04.png}" alt="Máy pha, máy xay cũ lướt">
+                    </div>
+                    <div class="category-title">Máy pha, máy xay cũ lướt</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOT PROMOTION SECTION -->
+    <div class="mb-5 container">
+        <h4 class="text-uppercase fw-bold mb-4" style="color: #4b3d33;">KHUYẾN MÃI CỰC HOT</h4>
+        <div class="row g-4">
+            <!-- Promo Item 1 -->
+            <div class="col-md-4">
+                <div class="promotion-card">
+                    <div class="promo-badge">20% OFF</div>
+                    <div class="promo-details">
+                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>GEMILAI 3149</div>
+                        <div class="promo-price-group">
+                            <span class="promo-old-price">21.500.000 ₫</span>
+                            <span class="promo-new-price">17.200.000 ₫</span>
+                        </div>
+                    </div>
+                    <div class="promo-img-container">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_01.webp}" alt="Promo Product 1">
+                    </div>
+                </div>
+            </div>
+            <!-- Promo Item 2 -->
+            <div class="col-md-4">
+                <div class="promotion-card">
+                    <div class="promo-badge">20% OFF</div>
+                    <div class="promo-details">
+                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>GEMILAI 3200B PRO</div>
+                        <div class="promo-price-group">
+                            <span class="promo-old-price">14.375.000 ₫</span>
+                            <span class="promo-new-price">11.500.000 ₫</span>
+                        </div>
+                    </div>
+                    <div class="promo-img-container">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" alt="Promo Product 2">
+                    </div>
+                </div>
+            </div>
+            <!-- Promo Item 3 -->
+            <div class="col-md-4">
+                <div class="promotion-card">
+                    <div class="promo-badge">20% OFF</div>
+                    <div class="promo-details">
+                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>CASADIO UNDICI A1</div>
+                        <div class="promo-price-group">
+                            <span class="promo-old-price">51.250.000 ₫</span>
+                            <span class="promo-new-price">41.000.000 ₫</span>
+                        </div>
+                    </div>
+                    <div class="promo-img-container">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_03.png}" alt="Promo Product 3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCTS SECTION -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-4 text-uppercase border-bottom pb-2 border-danger d-inline-block">Sản phẩm nhà Jenka</h4>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3">
+            
+            <!-- Item 1 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <div class="position-relative">
+                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" class="card-img-top p-2" alt="Milesto EM60">
+                    </div>
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Milesto EM60</h6>
+                        <span class="current-price">32.000.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 212</span>
+                        </div>
+                        <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" class="card-img-top p-2" alt="Milesto M20">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Milesto M20</h6>
+                        <span class="current-price">12.200.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 321</span>
+                        </div>
+                        <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 3 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/may_pha_ca_phe/may_pha_03.png}" class="card-img-top p-2" alt="Milesto X20">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Milesto X20</h6>
+                        <span class="current-price">13.800.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 880</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 4 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/may_pha_ca_phe/may_pha_04.png}" class="card-img-top p-2" alt="CIME CO-03 NEO">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Espresso Machine CIME CO-03 NEO</h6>
+                        <span class="current-price">64.350.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 124</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 5 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/may_pha_ca_phe/may_pha_05.png}" class="card-img-top p-2" alt="Gemilai CRM3149">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Gemillai CRM3149</h6>
+                        <span class="current-price">17.200.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 675</span>
+                        </div>
+                        <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 6 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/May_xay_ca_phe/may_xay_01.jpg}" class="card-img-top p-2" alt="Máy xay CRM 020">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Máy xay Hạt CRM 020</h6>
+                        <span class="current-price">1.500.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                            <span class="sold-count">Đã bán 500</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 7 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/May_xay_ca_phe/may_xay_02.jpg}" class="card-img-top p-2" alt="Máy xay HC600">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Máy xay HeyCafe HC600</h6>
+                        <span class="current-price">6.500.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 150</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 8 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/May_xay_ca_phe/may_xay_03.jpg}" class="card-img-top p-2" alt="Máy xay Fiorenzato">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Máy xay Fiorenzato F64E</h6>
+                        <span class="current-price">14.500.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 89</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Item 9 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/May_xay_ca_phe/may_xay_04.jpg}" class="card-img-top p-2" alt="Máy xay Eureka">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Máy xay Eureka Zenith</h6>
+                        <span class="current-price">18.000.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            <span class="sold-count">Đã bán 45</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Item 10 -->
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <img th:src="@{/images/product/May_xay_ca_phe/may_xay_05.jpg}" class="card-img-top p-2" alt="Máy xay Cà Phê">
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-truncate">Máy xay Cà Phê 900N</h6>
+                        <span class="current-price">3.200.000 ₫</span>
+                        <div class="product-rating">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                            <span class="sold-count">Đã bán 600</span>
+                        </div>
+                         <div class="product-btn-group">
+                             <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                             <a href="#" class="btn-buy-now">Mua ngay</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- RELATED PRODUCTS SECTION -->
+<div class="related-section mb-5">
+    <div class="container">
+        <h4 class="text-center text-uppercase fw-bold mb-5" style="color: #4b3d33;">SẢN PHẨM BÁN KÈM</h4>
+        <div class="row row-cols-2 row-cols-md-4 g-4">
+            <div class="col">
+                <div class="related-card">
+                    <div class="related-img-box">
+                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_01.jpg}" alt="Related 1">
+                    </div>
+                    <div class="related-title">Cà phê</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="related-card">
+                    <div class="related-img-box">
+                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_02.jpg}" alt="Related 2">
+                    </div>
+                    <div class="related-title">Hạt hướng dương</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="related-card">
+                    <div class="related-img-box">
+                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_03.jpg}" alt="Related 3">
+                    </div>
+                    <div class="related-title">Bỏng ngô</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="related-card">
+                    <div class="related-img-box">
+                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_04.jpg}" alt="Related 4">
+                    </div>
+                    <div class="related-title">Đồ ăn vặt</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NEWS SECTION -->
+<div class="news-section mb-5">
+    <div class="container">
+        <h4 class="text-uppercase fw-bold mb-4 news-heading" style="color: #4b3d33;">TIN TỨC</h4>
+        
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <i class="fas fa-search ps-3 text-muted"></i>
+            <input type="text" class="search-input" placeholder="Tìm kiếm">
+            <div class="d-flex align-items-center gap-2 border-start ps-3">
+                <span class="text-muted">Từ ngày</span>
+                <input type="date" class="date-input">
+                <i class="fas fa-arrow-right text-muted small"></i>
+                <span class="text-muted">Đến ngày</span>
+                <input type="date" class="date-input">
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-2 mb-4">
+                <a href="#" class="sidebar-btn">Tất cả danh mục</a>
+            </div>
+
+            <!-- News Grid -->
+            <div class="col-lg-10">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+                    <!-- Article 1 -->
+                    <div class="col">
+                        <div class="news-card">
+                            <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_02.jpg}" class="news-img" alt="News 1">
+                            <h6 class="news-title">Khám phá hạt hướng dương Jenka - Sức khoẻ từ tự nhiên</h6>
+                            <p class="news-summary">Chào mừng bạn đến với Jenka, nơi mang đến những hạt hướng dương chất lượng cao, giàu dinh dưỡng và hoàn toàn tự nhiên...</p>
+                        </div>
+                    </div>
+                    <!-- Article 2 -->
+                    <div class="col">
+                        <div class="news-card">
+                            <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_01.jpg}" class="news-img" alt="News 2">
+                            <h6 class="news-title">Khám Phá Hương Vị Đặc Biệt Của Cafe Jenka - Thức Uống...</h6>
+                            <p class="news-summary">Chào mừng bạn đến với thế giới của cafe Jenka, nơi mà từng hạt cafe mang trong mình một câu chuyện riêng...</p>
+                        </div>
+                    </div>
+                    <!-- Article 3 -->
+                    <div class="col">
+                        <div class="news-card">
+                            <img th:src="@{/images/banner/banner1.jpg}" class="news-img" alt="News 3">
+                            <h6 class="news-title">Dịch Vụ Sửa Chữa & Mua Bán Máy Xay, Máy Pha Cà Phê - ...</h6>
+                            <p class="news-summary">Chào mừng bạn đến với dịch vụ sửa chữa và mua bán máy xay, máy pha cà phê chuyên nghiệp của chúng tôi...</p>
+                        </div>
+                    </div>
+                    <!-- Article 4 -->
+                    <div class="col">
+                        <div class="news-card">
+                            <img th:src="@{/images/banner/banner2.jpg}" class="news-img" alt="News 4">
+                            <h6 class="news-title">Setup và Đào Tạo Vận Hành Quán Cà Phê Cùng Sentosy...</h6>
+                            <p class="news-summary">Kinh doanh quán cà phê đang trở thành một xu hướng phổ biến tại Việt Nam, và việc sở hữu một quán cà phê thành công...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-4">
+                    <ul class="pagination">
+                        <li class="page-item disabled"><a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a></li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{layout :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
