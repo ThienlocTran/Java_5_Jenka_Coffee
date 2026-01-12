@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:fragment="html_content(content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jenka Coffee - Máy Pha Cà Phê Chính Hãng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Header Fragment -->
+<header th:fragment="header">
+    <nav class="navbar navbar-expand-lg navbar-jenka fixed-top py-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-danger" href="/site/index" style="font-size: 1.5rem;">
+                <img src="/images/brand/logo.png" alt="logo" onerror="this.src='https://via.placeholder.com/150x50?text=Jenka+Coffee'">
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="/site/index">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy pha cà phê</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy xay cà phê</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy xay máy ép</a></li>
+
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Cà phê & Đồ ăn vặt</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Dụng cụ pha chế</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy cũ lướt</a></li>
+                </ul>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="mini-cart-wrapper">
+                    <a href="/cart/view" class="cart-icon-wrap position-relative">
+                        <i class="fas fa-shopping-cart fa-lg"></i>
+                        <span class="badge cart-badge position-absolute top-0 start-100 translate-middle">3</span>
+                    </a>
+                    
+                    <!-- Mini Cart Dropdown -->
+                    <div class="mini-cart-dropdown">
+                        <div class="mini-cart-items">
+                            <div class="mini-cart-item">
+                                <img src="/images/products/may_pha_1.jpg" alt="Product" class="mini-cart-img">
+                                <div class="mini-cart-info">
+                                    <p class="mini-cart-title">Máy pha cà phê Casadio Undici A1</p>
+                                    <span class="mini-cart-price">35.000.000₫</span> x 1
+                                </div>
+                            </div>
+                            <div class="mini-cart-item">
+                                <img src="/images/products/may_xay_1.jpg" alt="Product" class="mini-cart-img">
+                                <div class="mini-cart-info">
+                                    <p class="mini-cart-title">Máy xay cà phê HC600</p>
+                                    <span class="mini-cart-price">5.500.000₫</span> x 1
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mini-cart-total">
+                            <span>Tổng tiền:</span>
+                            <span class="text-danger">40.500.000₫</span>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-2">
+                            <a href="/cart/view" class="btn btn-dark btn-sm">Xem giỏ hàng</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auth Links -->
+                <div class="d-none d-md-flex gap-2">
+                     <a href="/auth/login" class="btn btn-outline-dark btn-sm rounded-pill px-3">Đăng nhập</a>
+                     <a href="/auth/signup" class="btn btn-danger btn-sm rounded-pill px-3">Đăng ký</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+<div style="margin-top: var(--header-height);"></div> <!-- Spacer for Fixed Header -->
+
+<!-- Dynamic Content Injection for Inheritance -->
+<div th:if="${content}" th:replace="${content}"></div>
+<!-- Inclusion Fallback (if using inclusion in site/index, this div is empty) -->
+
+<div class="floating-social">
+    <a href="#" class="social-btn bg-fb"><i class="fab fa-facebook-f"></i></a>
+    <a href="#" class="social-btn bg-messenger"><i class="fab fa-facebook-messenger"></i></a>
+    <a href="#" class="social-btn bg-zalo">
+        <img src="/images/icon/zalo.png" alt="" style="width: 60%;">
+    </a>
+</div>
+
+<div th:fragment="footer">
+    <!-- BRAND MARQUEE -->
+    <div class="brand-marquee">
+        <div class="brand-track">
+            <span class="brand-item">EXPOBAR</span>
+            <span class="brand-item">MAHLKÖNIG</span>
+            <span class="brand-item">CASADIO</span>
+            <span class="brand-item">Eureka</span>
+            <span class="brand-item">FIORENZATO</span>
+            <span class="brand-item">la marzocco</span>
+            <span class="brand-item">SIMONELLI</span>
+            <span class="brand-item">FAEMA</span>
+             <span class="brand-item">EXPOBAR</span>
+            <span class="brand-item">MAHLKÖNIG</span>
+            <span class="brand-item">CASADIO</span>
+            <span class="brand-item">Eureka</span>
+            <span class="brand-item">FIORENZATO</span>
+            <span class="brand-item">la marzocco</span>
+            <span class="brand-item">SIMONELLI</span>
+            <span class="brand-item">FAEMA</span>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="container footer-content">
+            <div class="row">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h3 class="footer-heading">Liên hệ với chúng tôi</h3>
+                    
+                    <span class="footer-label">Địa chỉ</span>
+                    <p class="footer-text">
+                        CS1: Số nhà 35, Ngõ 19 Phố Kim Đồng, Phường Giáp Bát, Quận Hoàng Mai, Hà Nội<br>
+                        CS2: 12 Trần Thị Do, Phường Tân Thới Hiệp - Khu phố 24, quận 12, Hồ Chí Minh
+                    </p>
+
+                    <span class="footer-label">Liên hệ</span>
+                    <div class="footer-text">
+                        <div class="mb-1"><i class="fas fa-phone-alt"></i> 0817 909 090</div>
+                        <div class="mb-1"><i class="fas fa-phone-alt"></i> 0827 909 090</div>
+                        <div><i class="fas fa-envelope"></i> coffeejenka274@gmail.com</div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 d-flex align-items-center justify-content-center justify-content-lg-end">
+                    <div class="text-end d-none d-lg-block">
+                        <img src="/images/brand/logo.png" alt="Jenka Coffee" style="height: 100px; filter: brightness(0) invert(1); opacity: 0.5;">
+                    </div>
+                </div>
+            </div>
+            <div class="border-top border-secondary mt-5 pt-3 text-center small text-dark-50">
+                &copy; 2025 Jenka Coffee Vietnam. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Quick View Modal -->
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-0 border-0">
+            <div class="modal-body p-0">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="row g-0">
+                    <div class="col-md-6">
+                        <img src="/images/products/may_pha_1.jpg" class="img-fluid w-100 h-100 object-fit-cover" alt="Product" style="min-height: 400px;">
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-4 p-lg-5 d-flex flex-column h-100 justify-content-center">
+                            <h4 class="fw-bold mb-2">Máy pha cà phê Casadio Undici A1</h4>
+                            <div class="mb-3 text-warning">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                <span class="text-muted small ms-2">(12 đánh giá)</span>
+                            </div>
+                            <h2 class="text-danger fw-bold mb-3">35.000.000₫</h2>
+                            <p class="text-muted mb-4">Máy pha cà phê chuyên nghiệp, nhập khẩu Ý. Thiết kế bền bỉ, công suất mạnh mẽ.</p>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="/cart/add" class="btn btn-danger py-2 fw-bold text-uppercase">Thêm vào giỏ</a>
+                                <a href="/products/detail" class="btn btn-outline-dark py-2 fw-bold text-uppercase">Xem chi tiết</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
