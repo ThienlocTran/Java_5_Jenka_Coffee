@@ -11,12 +11,12 @@
 
 ## 👥 Thành viên nhóm (Team Members)
 
-| STT | Thành viên                 | Vai trò (Role)        | Nhiệm vụ chính |
-|:---:|:---------------------------|:----------------------|:---|
-| 1 | **Trần Thiên Lộc**         | 👑 Leader / Fullstack | Setup dự án, Layout UI, Trang chủ, Core Admin |
-| 2 | **Võ Xuân Phú**            | Backend / Frontend    | Giỏ hàng, Thanh toán, Quản lý Đơn hàng & SP |
-| 3 | **Đặng Nguyễn Thiên Ngọc** | Backend / Frontend    | Quản lý Danh mục, Trang tĩnh, Xử lý lỗi |
-| 4 | **Nguyễn Tứ Văn**          | Backend / Frontend    | Đăng ký, Đăng nhập, Quản lý Tài khoản (Auth) |
+| STT | Thành viên                 | Vai trò (Role)        | Nhiệm vụ chính                                |
+|:---:|:---------------------------|:----------------------|:----------------------------------------------|
+|  1  | **Trần Thiên Lộc**         | 👑 Leader / Fullstack | Setup dự án, Layout UI, Trang chủ, Core Admin |
+|  2  | **Võ Xuân Phú**            | Backend / Frontend    | Giỏ hàng, Thanh toán, Quản lý Đơn hàng & SP   |
+|  3  | **Đặng Nguyễn Thiên Ngọc** | Backend / Frontend    | Quản lý Danh mục, Trang tĩnh, Xử lý lỗi       |
+|  4  | **Nguyễn Tứ Văn**          | Backend / Frontend    | Đăng ký, Đăng nhập, Quản lý Tài khoản (Auth)  |
 
 ## 🛠️ Công nghệ sử dụng (Tech Stack)
 
