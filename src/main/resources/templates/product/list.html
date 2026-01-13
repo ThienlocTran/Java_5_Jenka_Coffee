@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách sản phẩm - Jenka Coffee</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<div class="container mt-5 pt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-uppercase fw-bold" style="color: #4b3d33;">Quản lý sản phẩm</h2>
+        <a href="/product/create" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm mới</a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 80px;"> <!-- Image -->
+                        <col style="width: 250px;"> <!-- Name -->
+                        <col style="width: 150px;"> <!-- Category -->
+                        <col style="width: 150px;"> <!-- Price -->
+                        <col style="width: 120px;"> <!-- Status -->
+                        <col style="width: 120px;"> <!-- Actions -->
+                    </colgroup>
+                    <thead class="bg-light">
+                        <tr>
+                            <th scope="col" class="ps-4 py-3">Hình ảnh</th>
+                            <th scope="col" class="py-3">Tên sản phẩm</th>
+                            <th scope="col" class="py-3">Loại hàng</th>
+                            <th scope="col" class="py-3">Giá</th>
+                            <th scope="col" class="py-3">Trạng thái</th>
+                            <th scope="col" class="text-end pe-4 py-3">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="item : ${items}">
+                            <td class="ps-4">
+                                <div style="width: 50px; height: 50px; background-color: #f8f9fa; border-radius: 4px; overflow: hidden; border: 1px solid #dee2e6;">
+                                    <img th:src="@{${item.image}}" alt="Product" 
+                                         style="width: 100%; height: 100%; object-fit: cover;" 
+                                         loading="lazy"
+                                         onerror="this.src='/images/brand/logo.png'">
+                                </div>
+                            </td>
+                            <td class="fw-bold text-truncate" th:text="${item.name}" title="${item.name}">Product Name</td>
+                            <td class="text-truncate" th:text="${item.category.name}">Category</td>
+                            <td class="text-danger fw-bold" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
+                            <td>
+                                <span th:if="${item.available}" class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">Đang bán</span>
+                                <span th:unless="${item.available}" class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-pill">Ngừng bán</span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <a th:href="@{/product/edit/{id}(id=${item.id})}" class="btn btn-light btn-sm text-primary me-2" title="Chỉnh sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a th:href="@{/product/delete/{id}(id=${item.id})}" class="btn btn-light btn-sm text-danger" title="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(items)}">
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                Chưa có sản phẩm nào.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
