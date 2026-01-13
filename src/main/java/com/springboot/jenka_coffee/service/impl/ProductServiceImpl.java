@@ -3,47 +3,54 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.repository.ProductDAO;
 import com.springboot.jenka_coffee.service.ProductService;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class ProductServiceImpl implements ProductService {
-    final
-    ProductDAO dao;
 
-    public ProductServiceImpl(ProductDAO dao) {
-        this.dao = dao;
+    final
+    ProductDAO pdao;
+
+    public ProductServiceImpl(ProductDAO pdao) {
+        this.pdao = pdao;
     }
 
     @Override
     public List<Product> findAll() {
-        return dao.findAll();
+        return pdao.findAll();
     }
 
     @Override
     public Product findById(Integer id) {
-        return dao.findById(id).orElse(null);
+        // .orElse(null) giúp tránh lỗi nếu ID không tồn tại
+        return pdao.findById(id).orElse(null);
     }
 
     @Override
     public List<Product> findByCategoryId(String cid) {
-        return dao.findByCategoryId(cid);
+        // Cách 1: Viết method trong DAO (Khuyên dùng)
+        // return pdao.findByCategoryId(cid);
+
+        // Cách 2: Java Stream (Dùng tạm nếu lười sửa DAO)
+        return pdao.findAll().stream()
+                .filter(p -> p.getCategory().getId().equals(cid))
+                .toList();
     }
 
     @Override
     public Product create(Product product) {
-        return dao.save(product);
+        return pdao.save(product);
     }
 
     @Override
     public Product update(Product product) {
-        return dao.save(product);
+        return pdao.save(product);
     }
 
     @Override
     public void delete(Integer id) {
-        dao.deleteById(id);
+        pdao.deleteById(id);
     }
 }
