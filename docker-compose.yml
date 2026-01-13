@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  sql-server:
+    container_name: jenka-sql-server
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=123456  # Mật khẩu chung cho cả team
+    volumes:
+      - ./sql-data:/var/opt/mssql # Đây là cái "thùng" chứa dữ liệu
+    restart: always
+
+# Giải thích:
+# - ./sql-data: Nó sẽ tự tạo 1 thư mục sql-data ngay tại chỗ ông chạy lệnh để lưu file DB.
+# - restart: always: Tự bật lại DB nếu lỡ máy tính bị reset.
