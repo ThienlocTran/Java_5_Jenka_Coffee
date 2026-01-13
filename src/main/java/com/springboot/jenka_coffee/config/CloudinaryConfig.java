@@ -1,4 +1,4 @@
-package com.springboot.jenka_coffee.service;
+package com.springboot.jenka_coffee.config;
 
 import com.cloudinary.Cloudinary;
 import org.springframework.context.annotation.Bean;
