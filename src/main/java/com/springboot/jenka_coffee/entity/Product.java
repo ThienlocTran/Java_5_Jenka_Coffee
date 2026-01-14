@@ -32,6 +32,8 @@ public class Product implements Serializable {
     @Column(name = "Price", nullable = false)
     private Double price;
 
+    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    private String description;
 
     @Column(name = "createDate")
     private LocalDate createDate = LocalDate.now();
