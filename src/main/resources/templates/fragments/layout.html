@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 </head>
 <body>
@@ -209,8 +210,15 @@
     </div>
 </div>
 
+<!-- Cart Success Notification -->
+<div class="cart-notification">
+    <div class="cart-notification-icon">
+        <i class="fas fa-check"></i>
+    </div>
+    <div class="cart-notification-text">Sản phẩm đã được thêm vào giỏ hàng</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
         // Event delegation for dynamically added elements
@@ -262,14 +270,28 @@
                     $('.cart-badge').text(response.count);
                     $('.mini-cart-total .text-danger').text(new Intl.NumberFormat('vi-VN').format(response.total) + ' đ');
                     
+                    // Show Notification Popup (after animation roughly finishes)
+                    setTimeout(function() {
+                        $('.cart-notification').fadeIn(300).css('display', 'flex');
+                        setTimeout(function() {
+                            $('.cart-notification').fadeOut(300);
+                        }, 2000); // Show for 2 seconds
+                    }, 1000);
+
+                    // Show Dropdown temporarily (Restored per user feedback style)
+                    $('.mini-cart-dropdown').css('display', 'block');
+                    setTimeout(function() {
+                        $('.mini-cart-dropdown').css('display', '');
+                    }, 3000);
+                    
                     // Update Mini Cart Items
                     var itemsHtml = '';
                     if (response.items.length === 0) {
                         itemsHtml = '<div class="text-center py-3"><p class="mb-0 text-muted small">Giỏ hàng trống</p></div>';
                     } else {
-                        // Take top 3 (or all depending on req, let's show top 3)
+                        var reversedItems = response.items.slice().reverse();
                         var count = 0;
-                        $.each(response.items, function(index, item) {
+                        $.each(reversedItems, function(index, item) {
                             if (count < 3) {
                                 itemsHtml += `
                                 <div class="mini-cart-item">
@@ -297,7 +319,6 @@
                 },
                 error: function(err) {
                     console.error('Error adding to cart', err);
-                    alert('Lỗi khi thêm vào giỏ hàng');
                 }
             });
         });

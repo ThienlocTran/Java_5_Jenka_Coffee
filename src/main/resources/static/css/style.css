@@ -1021,9 +1021,49 @@ footer {
     background-color: #28c76f;
 }
 
-/* Green */
+/* Cyan */
 .bg-customers {
     background-color: #00cfe8;
 }
 
-/* Cyan */
+/* Add to Cart Success Notification */
+.cart-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    z-index: 9999;
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cart-notification-icon {
+    width: 60px;
+    height: 60px;
+    background-color: #2ecc71;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.cart-notification-icon i {
+    color: white;
+    font-size: 30px;
+}
+
+.cart-notification-text {
+    font-size: 16px;
+    font-weight: 500;
+}
