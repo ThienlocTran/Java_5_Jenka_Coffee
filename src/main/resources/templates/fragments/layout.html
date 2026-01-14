@@ -16,7 +16,7 @@
 <header th:fragment="header">
     <nav class="navbar navbar-expand-lg navbar-jenka fixed-top py-4">
         <div class="container">
-            <a class="navbar-brand fw-bold text-danger" href="/site/index" style="font-size: 1.5rem;">
+            <a class="navbar-brand fw-bold text-danger" href="/home" style="font-size: 1.5rem;">
                 <img src="/images/brand/logo.png" alt="logo" onerror="this.src='https://via.placeholder.com/150x50?text=Jenka+Coffee'">
             </a>
 
@@ -26,7 +26,7 @@
 
             <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="/site/index">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/home">Trang chủ</a></li>
                     
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -34,7 +34,13 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li th:each="category : ${categories}">
-                                <a class="dropdown-item" th:href="@{/product/list(categoryId=${category.id})}" th:text="${category.name}">Category Name</a>
+                                <a class="dropdown-item d-flex align-items-center gap-2" th:href="@{/product/list(categoryId=${category.id})}">
+                                    <img th:src="@{|/images/icon_category/${categoryIcons.get(category.id)}|}" 
+                                         alt="icon" 
+                                         style="width: 20px; height: 20px; object-fit: contain;"
+                                         onerror="this.style.display='none'">
+                                    <span th:text="${category.name}">Category Name</span>
+                                </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/product/list">Tất cả sản phẩm</a></li>

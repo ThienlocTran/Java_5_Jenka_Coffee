@@ -11,14 +11,32 @@ import java.util.List;
 public class ProductServiceImpl implements ProductService {
 
     final ProductDAO pdao;
+    final com.springboot.jenka_coffee.service.UploadService uploadService;
 
-    public ProductServiceImpl(ProductDAO pdao) {
+    public ProductServiceImpl(ProductDAO pdao, com.springboot.jenka_coffee.service.UploadService uploadService) {
         this.pdao = pdao;
+        this.uploadService = uploadService;
     }
 
     @Override
     public List<Product> findAll() {
         return pdao.findAll();
+    }
+
+    @Override
+    public Product saveProduct(Product product, org.springframework.web.multipart.MultipartFile file) {
+        // --- XỬ LÝ ẢNH ---
+        // Nếu người dùng có chọn ảnh mới -> Upload lên Cloudinary
+        if (file != null && !file.isEmpty()) {
+            String url = uploadService.saveImage(file);
+            if (url != null) {
+                product.setImage(url);
+            }
+        }
+        // Nếu không chọn ảnh mới -> Giữ nguyên ảnh cũ (Do input hidden trong form lo)
+
+        // --- LƯU VÀO DB ---
+        return pdao.save(product);
     }
 
     @Override

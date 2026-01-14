@@ -17,7 +17,12 @@ public class GlobalControllerAdvice {
     }
 
     @ModelAttribute("categories")
-    public List<Category> populateCategories() {
+    public java.util.List<com.springboot.jenka_coffee.entity.Category> populateCategories() {
         return categoryService.findAll();
+    }
+
+    @ModelAttribute("categoryIcons")
+    public java.util.Map<String, String> populateCategoryIcons() {
+        return categoryService.getCategoryIcons();
     }
 }

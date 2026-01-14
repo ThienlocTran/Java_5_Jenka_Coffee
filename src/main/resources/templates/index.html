@@ -63,9 +63,9 @@
             <div class="col" th:each="c : ${categories}">
                 <div class="category-item-container">
                     <div class="category-image-box">
-                        <!-- Assuming image naming convention: /images/category/{id}.png -->
+                        <!-- Map ID to filename from GlobalControllerAdvice -->
                         <!-- Fallback to logo if not found -->
-                        <img th:src="@{|/images/category/${c.id}.png|}" 
+                        <img th:src="@{|/images/icon_category/${categoryIcons.get(c.id)}|}" 
                              th:alt="${c.name}"
                              onerror="this.src='/images/logo/logo.png'">
                     </div>

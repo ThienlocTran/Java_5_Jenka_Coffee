@@ -4,7 +4,6 @@ import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
-import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,13 +18,9 @@ public class ProductController {
 
     final CategoryService categoryService; // Để đổ dữ liệu vào combobox loại hàng
 
-    final UploadService uploadService; // Để up ảnh
-
-    public ProductController(ProductService productService, CategoryService categoryService,
-            UploadService uploadService) {
+    public ProductController(ProductService productService, CategoryService categoryService) {
         this.productService = productService;
         this.categoryService = categoryService;
-        this.uploadService = uploadService;
     }
 
     // 1. Hiện danh sách sản phẩm (Trang chủ)
@@ -66,19 +61,8 @@ public class ProductController {
             @ModelAttribute("item") Product product, // Hứng dữ liệu từ form
             @RequestParam("photo_file") MultipartFile file // Hứng file ảnh
     ) {
-        // --- XỬ LÝ ẢNH ---
-        // Nếu người dùng có chọn ảnh mới -> Upload lên Cloudinary
-        if (file != null && !file.isEmpty()) {
-            String url = uploadService.saveImage(file);
-            if (url != null) {
-                product.setImage(url);
-            }
-        }
-        // Nếu không chọn ảnh mới -> Giữ nguyên ảnh cũ (Do input hidden trong form lo)
-
-        // --- LƯU VÀO DB ---
-        // Nếu id có sẵn -> Update. Nếu id null -> Insert mới
-        productService.create(product);
+        // --- XỬ LÝ ẢNH VÀ LƯU DB (LOGIC TRONG SERVICE) ---
+        productService.saveProduct(product, file);
 
         return "redirect:/product/list"; // Lưu xong quay về trang danh sách
     }

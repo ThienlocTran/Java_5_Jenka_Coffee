@@ -68,6 +68,38 @@ h6 {
     font-size: 0.6rem;
 }
 
+/* --- DROPDOWN MENU STYLES --- */
+.dropdown-menu {
+    border: none;
+    border-radius: 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-top: 0;
+    padding: 0;
+}
+
+.dropdown-item {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 20px;
+    color: #212529;
+    background-color: transparent;
+    transition: all 0.2s;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #fafafa;
+    color: var(--jk-accent);
+}
+
+
 /* --- HERO SECTION --- */
 /* Ensure layout is clean */
 .hero-img {
@@ -790,10 +822,10 @@ footer {
         /* Force tighter width for main content */
     }
 
-    /* Allow header to be wider as requested to prevent overflow */
-    .navbar-jenka .container {
+    /* Align header with body content */
+    /*.navbar-jenka .container {
         max-width: 1320px !important;
-    }
+    }*/
 }
 
 /* Ensure nav items don't wrap */
