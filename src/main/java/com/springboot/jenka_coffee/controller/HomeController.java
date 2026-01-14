@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.controller;
 
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,17 +15,17 @@ import java.util.List;
 public class HomeController {
 
     final ProductService productService;
-    final com.springboot.jenka_coffee.service.CategoryService categoryService;
+    final CategoryService categoryService;
 
     public HomeController(ProductService productService,
-            com.springboot.jenka_coffee.service.CategoryService categoryService) {
+            CategoryService categoryService) {
         this.productService = productService;
         this.categoryService = categoryService;
     }
 
     @RequestMapping("/home")
     public String home(Model model) {
-        java.util.List<com.springboot.jenka_coffee.entity.Product> list = productService.findAll();
+        List<Product> list = productService.findAll();
         model.addAttribute("items", list);
         model.addAttribute("categories", categoryService.findAll());
 
