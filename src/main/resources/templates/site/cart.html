@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<head>
+    <meta charset="UTF-8">
+    <title>Giỏ hàng</title>
+</head>
 <body>
-
 <section class="py-5 bg-light">
     <div class="container">
         <!-- Breadcrumb -->
@@ -13,27 +16,88 @@
         </nav>
 
         <div class="row">
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm rounded-4 mb-4">
-                    <div class="card-body">
-                        <h4 class="fw-bold mb-4">Giỏ hàng của bạn</h4>
-                        <div class="alert alert-warning" role="alert">
-                            Chức năng đang được phát triển.
+            <div class="col-lg-12">
+                 <h2 class="text-center mb-4 text-uppercase fw-bold">GIỎ HÀNG CỦA BẠN</h2>
+                 
+                 <div th:if="${#lists.isEmpty(items)}" class="text-center py-5">
+                    <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+                    <p class="fs-5 text-muted">Giỏ hàng đang trống.</p>
+                    <a href="/" class="btn btn-primary rounded-pill px-4">Tiếp tục mua sắm</a>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(items)}">
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sản phẩm</th>
+                                            <th>Giá</th>
+                                            <th>Số lượng</th>
+                                            <th>Thành tiền</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="item : ${items}">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img th:src="@{|/images/${item.image}|}" alt="Product" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                                    <div>
+                                                        <h6 class="mb-0 fw-bold" th:text="${item.name}">Product Name</h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="fw-bold text-muted text-nowrap" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">100.000 đ</td>
+                                            <td>
+                                                <input type="number" min="1" th:value="${item.quantity}" 
+                                                       th:onchange="'updateCart(\'' + ${item.productId} + '\', this.value)'"
+                                                       class="form-control text-center border-0 bg-light" style="width: 70px;">
+                                            </td>
+                                            <td class="fw-bold text-danger text-nowrap" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' đ'">200.000 đ</td>
+                                            <td class="text-end">
+                                                <a th:href="@{/cart/remove/{id}(id=${item.productId})}" class="btn btn-light rounded-circle text-danger p-2" title="Xóa">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-6 mb-3">
+                             <a href="/" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="fas fa-arrow-left me-2"></i> Tiếp tục mua sắm
+                            </a>
+                        </div>
+                        <div class="col-lg-6 text-end">
+                            <div class="card border-0 shadow-sm rounded-4 p-4">
+                                <h4 class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Tổng cộng:</span>
+                                    <span class="text-danger fw-bold" th:text="${#numbers.formatInteger(total, 0, 'POINT')} + ' đ'">0 đ</span>
+                                </h4>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                     <a th:href="@{/cart/clear}" class="btn btn-outline-danger rounded-pill px-4">Xóa hết</a>
+                                     <a href="/checkout" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Thanh toán</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4">
-                 <div class="card border-0 shadow-sm rounded-4">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Tổng cộng</h5>
-                        <!-- Summary content -->
-                    </div>
-                 </div>
-            </div>
         </div>
     </div>
-</section>
 
+    <script>
+        function updateCart(id, qty) {
+            if (qty < 1) return;
+            window.location.href = '/cart/update/' + id + '/' + qty;
+        }
+    </script>
+</section>
 </body>
 </html>
