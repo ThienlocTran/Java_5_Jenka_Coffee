@@ -35,6 +35,9 @@ public class ProductController {
     @GetMapping("/product/detail/{id}")
     public String detail(@PathVariable("id") Integer id, Model model) {
         Map<String, Object> details = productService.getProductDetail(id);
+        if (details == null) {
+            return "redirect:/home";
+        }
         model.addAllAttributes(details);
         return "site/products/product-detail";
     }
