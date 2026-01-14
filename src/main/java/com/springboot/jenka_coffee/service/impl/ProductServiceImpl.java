@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import java.util.Map;
+import java.util.HashMap;
+
 @Service
 public class ProductServiceImpl implements ProductService {
 
@@ -54,6 +57,25 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<Product> getRelatedProducts(String categoryId, Integer productId) {
         return pdao.findTop4ByCategoryIdAndIdNot(categoryId, productId);
+    }
+
+    @Override
+    public List<Product> filterProducts(String categoryId) {
+        if (categoryId != null && !categoryId.isEmpty()) {
+            return findByCategoryId(categoryId);
+        }
+        return findAll();
+    }
+
+    @Override
+    public Map<String, Object> getProductDetail(Integer productId) {
+        Product item = findById(productId);
+        List<Product> similarItems = getRelatedProducts(item.getCategory().getId(), item.getId());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("item", item);
+        result.put("similarItems", similarItems);
+        return result;
     }
 
     @Override
