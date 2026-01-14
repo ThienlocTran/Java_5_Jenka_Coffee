@@ -15,7 +15,7 @@
 <div class="container mt-5 pt-5 mb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-uppercase fw-bold" style="color: #4b3d33;">Quản lý sản phẩm</h2>
-        <a href="/product/create" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm mới</a>
+        <a href="/admin/product/create" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm mới</a>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -58,10 +58,10 @@
                                 <span th:unless="${item.available}" class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-pill">Ngừng bán</span>
                             </td>
                             <td class="text-end pe-4">
-                                <a th:href="@{/product/edit/{id}(id=${item.id})}" class="btn btn-light btn-sm text-primary me-2" title="Chỉnh sửa">
+                                <a th:href="@{/admin/product/edit/{id}(id=${item.id})}" class="btn btn-light btn-sm text-primary me-2" title="Chỉnh sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a th:href="@{/product/delete/{id}(id=${item.id})}" class="btn btn-light btn-sm text-danger" title="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
+                                <a th:href="@{/admin/product/delete/{id}(id=${item.id})}" class="btn btn-light btn-sm text-danger" title="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>
                             </td>
