@@ -15,23 +15,21 @@ import java.util.List;
 @Controller
 public class ProductController {
 
-    final
-    ProductService productService;
+    final ProductService productService;
 
-    final
-    CategoryService categoryService; // Để đổ dữ liệu vào combobox loại hàng
+    final CategoryService categoryService; // Để đổ dữ liệu vào combobox loại hàng
 
-    final
-    UploadService uploadService; // Để up ảnh
+    final UploadService uploadService; // Để up ảnh
 
-    public ProductController(ProductService productService, CategoryService categoryService, UploadService uploadService) {
+    public ProductController(ProductService productService, CategoryService categoryService,
+            UploadService uploadService) {
         this.productService = productService;
         this.categoryService = categoryService;
         this.uploadService = uploadService;
     }
 
     // 1. Hiện danh sách sản phẩm (Trang chủ)
-    @GetMapping({"/", "/product/list"})
+    @GetMapping({ "/", "/product/list" })
     public String index(Model model) {
         List<Product> list = productService.findAll();
         model.addAttribute("items", list);

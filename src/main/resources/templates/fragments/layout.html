@@ -27,13 +27,23 @@
             <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="/site/index">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy pha cà phê</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy xay cà phê</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy xay máy ép</a></li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Sản phẩm
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li th:each="category : ${categories}">
+                                <a class="dropdown-item" th:href="@{/product/list(categoryId=${category.id})}" th:text="${category.name}">Category Name</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/product/list">Tất cả sản phẩm</a></li>
+                        </ul>
+                    </li>
 
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Cà phê & Đồ ăn vặt</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Dụng cụ pha chế</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products/list">Máy cũ lướt</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about-us">Về chúng tôi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Tin tức</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Dịch vụ</a></li>
                 </ul>
             </div>
 

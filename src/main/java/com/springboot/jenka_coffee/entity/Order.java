@@ -5,8 +5,9 @@ import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,8 +29,8 @@ public class Order implements Serializable {
     private String address;
 
 
-    @Column(name = "Createdate")
-    private LocalDate createDate =  LocalDate.now();
+    @Column(name = "CreateDate")
+    private LocalDateTime createDate =  LocalDateTime.now();
 
     @Column(name = "Phone", length = 15)
     private String phone;
