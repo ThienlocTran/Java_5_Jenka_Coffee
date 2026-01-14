@@ -5,38 +5,57 @@ $(document).ready(function () {
         var productId = $(this).data('id');
         var btn = $(this);
 
-        // Animation
+        // Enhanced Flying Animation
         var img = btn.closest('.product-card').find('.card-img-top');
         if (img.length) {
             var cartIcon = $('.cart-icon-wrap');
-            var imgClone = img.clone().offset({
-                top: img.offset().top,
-                left: img.offset().left
-            }).css({
-                'opacity': '0.8',
-                'position': 'absolute',
-                'height': '150px',
-                'width': '150px',
-                'z-index': '1000'
-            }).appendTo($('body')).animate({
-                'top': cartIcon.offset().top + 10,
-                'left': cartIcon.offset().left + 10,
-                'width': '75px',
-                'height': '75px'
-            }, 1000, 'easeInOutExpo');
+            
+            // Create flying image clone with better styling
+            var imgClone = img.clone()
+                .css({
+                    'position': 'fixed',
+                    'top': img.offset().top - $(window).scrollTop(),
+                    'left': img.offset().left,
+                    'width': img.width(),
+                    'height': img.height(),
+                    'z-index': '9999',
+                    'opacity': '0.9',
+                    'border-radius': '8px',
+                    'box-shadow': '0 8px 20px rgba(0,0,0,0.3)',
+                    'pointer-events': 'none',
+                    'object-fit': 'contain',
+                    'background': 'white',
+                    'padding': '10px'
+                })
+                .appendTo('body');
 
-            setTimeout(function () {
-                cartIcon.effect("shake", {
-                    times: 2
-                }, 200);
-            }, 1500);
+            // Calculate cart icon position (fixed position)
+            var cartOffset = cartIcon.offset();
+            var cartTop = cartOffset.top - $(window).scrollTop();
+            var cartLeft = cartOffset.left;
 
+            // Animate to cart with smooth curve
             imgClone.animate({
-                'width': 0,
-                'height': 0
-            }, function () {
-                $(this).detach();
+                'top': cartTop + 10,
+                'left': cartLeft + 10,
+                'width': '60px',
+                'height': '60px',
+                'opacity': '0.3'
+            }, {
+                duration: 1000,
+                easing: 'easeInOutCubic',
+                complete: function () {
+                    $(this).remove();
+                }
             });
+
+            // Shake cart icon when product arrives
+            setTimeout(function () {
+                cartIcon.addClass('cart-shake');
+                setTimeout(function () {
+                    cartIcon.removeClass('cart-shake');
+                }, 500);
+            }, 900);
         }
 
         // AJAX Call

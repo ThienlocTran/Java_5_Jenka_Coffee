@@ -1110,3 +1110,41 @@ footer {
 .bg-zalo {
     background-color: #0068FF;
 }
+
+/* --- CART SHAKE ANIMATION --- */
+@keyframes cartShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.cart-shake {
+    animation: cartShake 0.5s ease-in-out;
+}
+
+/* --- CART ICON PULSE EFFECT --- */
+@keyframes cartPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.cart-icon-wrap.pulse {
+    animation: cartPulse 0.3s ease-in-out;
+}
+
+/* --- FLYING PRODUCT ANIMATION --- */
+@keyframes flyToCart {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.9;
+    }
+    50% {
+        transform: scale(0.8) rotate(10deg);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(0.3) rotate(20deg);
+        opacity: 0;
+    }
+}
