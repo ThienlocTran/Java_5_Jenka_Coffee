@@ -43,10 +43,6 @@ public class SiteController {
         return "site/products/product-list";
     }
 
-    @GetMapping("/checkout")
-    public String checkout() {
-        return "site/checkout";
-    }
 
     // Orders
     @GetMapping("/orders/history")

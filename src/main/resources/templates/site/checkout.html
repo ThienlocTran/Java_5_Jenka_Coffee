@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán - Jenka Coffee</title>
+</head>
+<body>
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/cart/view" class="text-decoration-none text-muted">Giỏ hàng</a></li>
+                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page">Thanh toán</li>
+            </ol>
+        </nav>
+
+        <h2 class="text-center mb-4 text-uppercase fw-bold">THANH TOÁN ĐƠN HÀNG</h2>
+
+        <!-- Alert Messages -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <form th:action="@{/checkout}" th:object="${checkoutRequest}" method="post" id="checkoutForm">
+            <div class="row">
+                <!-- Left Column: Shipping Information -->
+                <div class="col-lg-7 mb-4">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-shipping-fast text-danger me-2"></i>
+                                THÔNG TIN GIAO HÀNG
+                            </h5>
+
+                            <!-- Fullname -->
+                            <div class="mb-3">
+                                <label for="fullname" class="form-label fw-bold">
+                                    Họ và tên <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       th:classappend="${#fields.hasErrors('fullname')} ? 'is-invalid' : ''"
+                                       id="fullname" 
+                                       th:field="*{fullname}"
+                                       placeholder="Nguyễn Văn A">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('fullname')}" th:errors="*{fullname}"></div>
+                            </div>
+
+                            <!-- Email & Phone -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label fw-bold">
+                                        Email <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="email" 
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                           id="email" 
+                                           th:field="*{email}"
+                                           placeholder="example@gmail.com">
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label fw-bold">
+                                        Số điện thoại <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="tel" 
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid' : ''"
+                                           id="phone" 
+                                           th:field="*{phone}"
+                                           placeholder="0912345678">
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+                                </div>
+                            </div>
+
+                            <!-- Province, District, Ward -->
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="province" class="form-label fw-bold">
+                                        Tỉnh/Thành phố <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select"
+                                            th:classappend="${#fields.hasErrors('province')} ? 'is-invalid' : ''"
+                                            id="province" 
+                                            th:field="*{province}">
+                                        <option value="">-- Chọn Tỉnh/TP --</option>
+                                        <option value="Hà Nội">Hà Nội</option>
+                                        <option value="Hồ Chí Minh">Hồ Chí Minh</option>
+                                        <option value="Đà Nẵng">Đà Nẵng</option>
+                                        <option value="Hải Phòng">Hải Phòng</option>
+                                        <option value="Cần Thơ">Cần Thơ</option>
+                                        <option value="An Giang">An Giang</option>
+                                        <option value="Bà Rịa - Vũng Tàu">Bà Rịa - Vũng Tàu</option>
+                                        <option value="Bắc Giang">Bắc Giang</option>
+                                        <option value="Bắc Kạn">Bắc Kạn</option>
+                                        <option value="Bạc Liêu">Bạc Liêu</option>
+                                        <option value="Bắc Ninh">Bắc Ninh</option>
+                                        <option value="Bến Tre">Bến Tre</option>
+                                        <option value="Bình Định">Bình Định</option>
+                                        <option value="Bình Dương">Bình Dương</option>
+                                        <option value="Bình Phước">Bình Phước</option>
+                                        <option value="Bình Thuận">Bình Thuận</option>
+                                        <option value="Cà Mau">Cà Mau</option>
+                                        <option value="Cao Bằng">Cao Bằng</option>
+                                        <option value="Đắk Lắk">Đắk Lắk</option>
+                                        <option value="Đắk Nông">Đắk Nông</option>
+                                        <option value="Điện Biên">Điện Biên</option>
+                                        <option value="Đồng Nai">Đồng Nai</option>
+                                        <option value="Đồng Tháp">Đồng Tháp</option>
+                                        <option value="Gia Lai">Gia Lai</option>
+                                        <option value="Hà Giang">Hà Giang</option>
+                                        <option value="Hà Nam">Hà Nam</option>
+                                        <option value="Hà Tĩnh">Hà Tĩnh</option>
+                                        <option value="Hải Dương">Hải Dương</option>
+                                        <option value="Hậu Giang">Hậu Giang</option>
+                                        <option value="Hòa Bình">Hòa Bình</option>
+                                        <option value="Hưng Yên">Hưng Yên</option>
+                                        <option value="Khánh Hòa">Khánh Hòa</option>
+                                        <option value="Kiên Giang">Kiên Giang</option>
+                                        <option value="Kon Tum">Kon Tum</option>
+                                        <option value="Lai Châu">Lai Châu</option>
+                                        <option value="Lâm Đồng">Lâm Đồng</option>
+                                        <option value="Lạng Sơn">Lạng Sơn</option>
+                                        <option value="Lào Cai">Lào Cai</option>
+                                        <option value="Long An">Long An</option>
+                                        <option value="Nam Định">Nam Định</option>
+                                        <option value="Nghệ An">Nghệ An</option>
+                                        <option value="Ninh Bình">Ninh Bình</option>
+                                        <option value="Ninh Thuận">Ninh Thuận</option>
+                                        <option value="Phú Thọ">Phú Thọ</option>
+                                        <option value="Phú Yên">Phú Yên</option>
+                                        <option value="Quảng Bình">Quảng Bình</option>
+                                        <option value="Quảng Nam">Quảng Nam</option>
+                                        <option value="Quảng Ngãi">Quảng Ngãi</option>
+                                        <option value="Quảng Ninh">Quảng Ninh</option>
+                                        <option value="Quảng Trị">Quảng Trị</option>
+                                        <option value="Sóc Trăng">Sóc Trăng</option>
+                                        <option value="Sơn La">Sơn La</option>
+                                        <option value="Tây Ninh">Tây Ninh</option>
+                                        <option value="Thái Bình">Thái Bình</option>
+                                        <option value="Thái Nguyên">Thái Nguyên</option>
+                                        <option value="Thanh Hóa">Thanh Hóa</option>
+                                        <option value="Thừa Thiên Huế">Thừa Thiên Huế</option>
+                                        <option value="Tiền Giang">Tiền Giang</option>
+                                        <option value="Trà Vinh">Trà Vinh</option>
+                                        <option value="Tuyên Quang">Tuyên Quang</option>
+                                        <option value="Vĩnh Long">Vĩnh Long</option>
+                                        <option value="Vĩnh Phúc">Vĩnh Phúc</option>
+                                        <option value="Yên Bái">Yên Bái</option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('province')}" th:errors="*{province}"></div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="district" class="form-label fw-bold">
+                                        Quận/Huyện <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select"
+                                            th:classappend="${#fields.hasErrors('district')} ? 'is-invalid' : ''"
+                                            id="district" 
+                                            th:field="*{district}">
+                                        <option value="">-- Chọn Quận/Huyện --</option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('district')}" th:errors="*{district}"></div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="ward" class="form-label fw-bold">
+                                        Phường/Xã <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select"
+                                            th:classappend="${#fields.hasErrors('ward')} ? 'is-invalid' : ''"
+                                            id="ward" 
+                                            th:field="*{ward}">
+                                        <option value="">-- Chọn Phường/Xã --</option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('ward')}" th:errors="*{ward}"></div>
+                                </div>
+                            </div>
+
+                            <!-- Address -->
+                            <div class="mb-3">
+                                <label for="address" class="form-label fw-bold">
+                                    Địa chỉ cụ thể <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('address')} ? 'is-invalid' : ''"
+                                       id="address" 
+                                       th:field="*{address}"
+                                       placeholder="Số nhà, tên đường...">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></div>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="mb-3">
+                                <label for="note" class="form-label fw-bold">Ghi chú đơn hàng (Tùy chọn)</label>
+                                <textarea class="form-control"
+                                          th:classappend="${#fields.hasErrors('note')} ? 'is-invalid' : ''"
+                                          id="note" 
+                                          th:field="*{note}"
+                                          rows="3" 
+                                          placeholder="Ghi chú về đơn hàng, ví dụ: thời gian hay chỉ dẫn địa điểm giao hàng chi tiết hơn."></textarea>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></div>
+                            </div>
+
+                            <!-- Payment Method -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    Phương thức thanh toán <span class="text-danger">*</span>
+                                </label>
+                                <div class="border rounded p-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" 
+                                               type="radio" 
+                                               th:field="*{paymentMethod}"
+                                               value="COD" 
+                                               id="paymentCOD">
+                                        <label class="form-check-label" for="paymentCOD">
+                                            <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                            <strong>Thanh toán khi nhận hàng (COD)</strong>
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" 
+                                               type="radio" 
+                                               th:field="*{paymentMethod}"
+                                               value="BANK_TRANSFER" 
+                                               id="paymentBank">
+                                        <label class="form-check-label" for="paymentBank">
+                                            <i class="fas fa-university text-primary me-2"></i>
+                                            <strong>Chuyển khoản ngân hàng</strong>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="radio" 
+                                               th:field="*{paymentMethod}"
+                                               value="MOMO" 
+                                               id="paymentMomo">
+                                        <label class="form-check-label" for="paymentMomo">
+                                            <i class="fas fa-mobile-alt text-danger me-2"></i>
+                                            <strong>Ví điện tử MoMo</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('paymentMethod')}" th:errors="*{paymentMethod}"></div>
+                            </div>
+
+                            <!-- Terms Agreement -->
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       th:field="*{agreeTerms}"
+                                       id="agreeTerms">
+                                <label class="form-check-label" for="agreeTerms">
+                                    Tôi đã đọc và đồng ý với 
+                                    <a href="#" class="text-danger">Điều khoản và Điều kiện</a> 
+                                    của website <span class="text-danger">*</span>
+                                </label>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('agreeTerms')}" th:errors="*{agreeTerms}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Order Summary -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 100px;">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4">
+                                <i class="fas fa-shopping-bag text-danger me-2"></i>
+                                ĐƠN HÀNG CỦA BẠN
+                            </h5>
+
+                            <!-- Cart Items -->
+                            <div class="order-items mb-3" style="max-height: 300px; overflow-y: auto;">
+                                <div th:each="item : ${cartItems}" class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                                    <div class="position-relative">
+                                        <img th:src="@{${item.image}}" 
+                                             alt="Product" 
+                                             class="rounded" 
+                                             style="width: 60px; height: 60px; object-fit: cover;">
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                                              th:text="${item.quantity}">1</span>
+                                    </div>
+                                    <div class="ms-3 flex-grow-1">
+                                        <h6 class="mb-1 small" th:text="${item.name}">Product Name</h6>
+                                        <small class="text-muted" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">0 đ</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong class="text-danger" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pricing Summary -->
+                            <div class="border-top pt-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tạm tính:</span>
+                                    <strong th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' đ'">0 đ</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Phí vận chuyển:</span>
+                                    <strong class="text-success">Miễn phí</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                                    <span>Giảm giá:</span>
+                                    <strong class="text-muted">0 đ</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="mb-0">Tổng cộng:</h5>
+                                    <h4 class="mb-0 text-danger fw-bold" th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' đ'">0 đ</h4>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-danger btn-lg fw-bold text-uppercase shadow">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        Đặt hàng
+                                    </button>
+                                    <a href="/cart/view" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        Quay lại giỏ hàng
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<script>
+    // Dynamic District & Ward Selection
+    const districtData = {
+        'Hà Nội': ['Ba Đình', 'Hoàn Kiếm', 'Tây Hồ', 'Long Biên', 'Cầu Giấy', 'Đống Đa', 'Hai Bà Trưng', 'Hoàng Mai', 'Thanh Xuân', 'Hà Đông', 'Nam Từ Liêm', 'Bắc Từ Liêm'],
+        'Hồ Chí Minh': ['Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12', 'Thủ Đức', 'Bình Thạnh', 'Tân Bình', 'Tân Phú', 'Phú Nhuận', 'Gò Vấp'],
+        'Đà Nẵng': ['Hải Châu', 'Thanh Khê', 'Sơn Trà', 'Ngũ Hành Sơn', 'Liên Chiểu', 'Cẩm Lệ', 'Hòa Vang']
+    };
+
+    const wardData = {
+        'Ba Đình': ['Phúc Xá', 'Trúc Bạch', 'Vĩnh Phúc', 'Cống Vị', 'Liễu Giai', 'Nguyễn Trung Trực', 'Quán Thánh', 'Ngọc Hà', 'Điện Biên', 'Đội Cấn', 'Ngọc Khánh', 'Kim Mã', 'Giảng Võ', 'Thành Công'],
+        'Hoàn Kiếm': ['Phúc Tân', 'Đồng Xuân', 'Hàng Mã', 'Hàng Buồm', 'Hàng Đào', 'Hàng Bồ', 'Cửa Đông', 'Lý Thái Tổ', 'Hàng Bạc', 'Hàng Gai', 'Chương Dương', 'Hàng Trống', 'Cửa Nam', 'Hàng Bông', 'Tràng Tiền', 'Trần Hưng Đạo', 'Phan Chu Trinh'],
+        'Quận 1': ['Tân Định', 'Đa Kao', 'Bến Nghé', 'Bến Thành', 'Nguyễn Thái Bình', 'Phạm Ngũ Lão', 'Cầu Ông Lãnh', 'Cô Giang', 'Nguyễn Cư Trinh', 'Cầu Kho'],
+        'Quận 2': ['Thảo Điền', 'An Phú', 'Bình An', 'Bình Trưng Đông', 'Bình Trưng Tây', 'Bình Khánh', 'An Khánh', 'Cát Lái', 'Thạnh Mỹ Lợi', 'An Lợi Đông', 'Thủ Thiêm']
+    };
+
+    document.getElementById('province').addEventListener('change', function() {
+        const province = this.value;
+        const districtSelect = document.getElementById('district');
+        const wardSelect = document.getElementById('ward');
+        
+        districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+        
+        if (province && districtData[province]) {
+            districtData[province].forEach(function(district) {
+                const option = document.createElement('option');
+                option.value = district;
+                option.textContent = district;
+                districtSelect.appendChild(option);
+            });
+        }
+    });
+
+    document.getElementById('district').addEventListener('change', function() {
+        const district = this.value;
+        const wardSelect = document.getElementById('ward');
+        
+        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+        
+        if (district && wardData[district]) {
+            wardData[district].forEach(function(ward) {
+                const option = document.createElement('option');
+                option.value = ward;
+                option.textContent = ward;
+                wardSelect.appendChild(option);
+            });
+        } else if (district) {
+            for (let i = 1; i <= 10; i++) {
+                const option = document.createElement('option');
+                option.value = 'Phường ' + i;
+                option.textContent = 'Phường ' + i;
+                wardSelect.appendChild(option);
+            }
+        }
+    });
+
+    // Form Validation Enhancement
+    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+        const agreeTerms = document.getElementById('agreeTerms');
+        if (!agreeTerms.checked) {
+            e.preventDefault();
+            alert('Vui lòng đồng ý với điều khoản và điều kiện!');
+            agreeTerms.focus();
+            return false;
+        }
+    });
+</script>
+</body>
+</html>
