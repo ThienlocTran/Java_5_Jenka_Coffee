@@ -53,58 +53,45 @@
                 <div class="mini-cart-wrapper">
                     <a href="/cart/view" class="cart-icon-wrap position-relative">
                         <i class="fas fa-shopping-cart fa-lg"></i>
-                        <span class="badge cart-badge position-absolute top-0 start-100 translate-middle">3</span>
+                        <span class="badge cart-badge position-absolute top-0 start-100 translate-middle" th:text="${cartCount}">0</span>
                     </a>
                     
                     <!-- Mini Cart Dropdown -->
                     <div class="mini-cart-dropdown">
                         <div class="mini-cart-items">
-                            <div class="mini-cart-item">
-                                <img src="/images/products/may_pha_1.jpg" alt="Product" class="mini-cart-img">
-                                <div class="mini-cart-info">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <p class="mini-cart-title">Máy pha cà phê Casadio Undici A1</p>
-                                            <span class="mini-cart-price">35.000.000₫</span>
-                                        </div>
-                                        <a href="#" class="text-secondary remove-item"><i class="fas fa-times-circle"></i></a>
-                                    </div>
-                                    <div class="d-flex align-items-center mt-2">
-                                        <div class="input-group input-group-sm" style="width: 80px;">
-                                            <button class="btn btn-outline-secondary p-0 px-1" type="button">-</button>
-                                            <input type="text" class="form-control text-center p-0" value="1">
-                                            <button class="btn btn-outline-secondary p-0 px-1" type="button">+</button>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div th:if="${#lists.isEmpty(cartItems)}" class="text-center py-3">
+                                <p class="mb-0 text-muted small">Giỏ hàng trống</p>
                             </div>
-                            <div class="mini-cart-item">
-                                <img src="/images/products/may_xay_1.jpg" alt="Product" class="mini-cart-img">
+                            
+                            <!-- Show max 3 items -->
+                            <div th:each="item, stat : ${cartItems}" th:if="${stat.index < 3}" class="mini-cart-item">
+                                <img th:src="@{|/images/${item.image}|}" alt="Product" class="mini-cart-img">
                                 <div class="mini-cart-info">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <p class="mini-cart-title">Máy xay cà phê HC600</p>
-                                            <span class="mini-cart-price">5.500.000₫</span>
+                                            <a th:href="@{/cart/view}" class="text-decoration-none text-dark">
+                                                <p class="mini-cart-title" th:text="${item.name}">Product Name</p>
+                                            </a>
+                                            <span class="mini-cart-price" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">0 đ</span>
                                         </div>
-                                        <a href="#" class="text-secondary remove-item"><i class="fas fa-times-circle"></i></a>
+                                        <a th:href="@{/cart/remove/{id}(id=${item.productId})}" class="text-secondary remove-item"><i class="fas fa-times-circle"></i></a>
                                     </div>
-                                    <div class="d-flex align-items-center mt-2">
-                                        <div class="input-group input-group-sm" style="width: 80px;">
-                                            <button class="btn btn-outline-secondary p-0 px-1" type="button">-</button>
-                                            <input type="text" class="form-control text-center p-0" value="1">
-                                            <button class="btn btn-outline-secondary p-0 px-1" type="button">+</button>
-                                        </div>
+                                    <div class="d-flex align-items-center mt-2 justify-content-between">
+                                         <span class="small text-muted">x <span th:text="${item.quantity}">1</span></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="mini-cart-total">
+                        <div class="mini-cart-total" th:unless="${#lists.isEmpty(cartItems)}">
                             <span>Tổng thanh toán:</span>
-                            <span class="text-danger fs-6">40.500.000₫</span>
+                            <span class="text-danger fs-6 fw-bold" th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' đ'">0 đ</span>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-3">
+                        <div class="d-grid gap-2 mt-3" th:unless="${#lists.isEmpty(cartItems)}">
+                            <a href="/cart/view" class="btn btn-outline-dark btn-sm text-uppercase fw-bold py-2 mb-1">Xem giỏ hàng</a>
+                            <!-- User suggested Checkout link, but standard flow often verifies cart first. 
+                                 However, keeping functionality as per request: -->
                             <a href="/checkout" class="btn btn-dark btn-sm text-uppercase fw-bold py-2">Đặt hàng</a>
                         </div>
                     </div>
