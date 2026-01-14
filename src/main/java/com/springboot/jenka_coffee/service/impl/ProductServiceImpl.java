@@ -10,8 +10,7 @@ import java.util.List;
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    final
-    ProductDAO pdao;
+    final ProductDAO pdao;
 
     public ProductServiceImpl(ProductDAO pdao) {
         this.pdao = pdao;
@@ -31,12 +30,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<Product> findByCategoryId(String cid) {
         // Cách 1: Viết method trong DAO (Khuyên dùng)
-        // return pdao.findByCategoryId(cid);
-
-        // Cách 2: Java Stream (Dùng tạm nếu lười sửa DAO)
-        return pdao.findAll().stream()
-                .filter(p -> p.getCategory().getId().equals(cid))
-                .toList();
+        return pdao.findByCategoryId(cid);
     }
 
     @Override

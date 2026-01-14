@@ -60,59 +60,16 @@
     <div class="category-menu-wrapper container">
         <h4 class="text-uppercase fw-bold mb-4 text-start" style="color: #4b3d33;">MENU SẢN PHẨM</h4>
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3 justify-content-center">
-            <!-- Item 1: Máy pha cà phê -->
-            <div class="col">
+            <div class="col" th:each="c : ${categories}">
                 <div class="category-item-container">
                     <div class="category-image-box">
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" alt="Máy pha cà phê">
+                        <!-- Assuming image naming convention: /images/category/{id}.png -->
+                        <!-- Fallback to logo if not found -->
+                        <img th:src="@{|/images/category/${c.id}.png|}" 
+                             th:alt="${c.name}"
+                             onerror="this.src='/images/logo/logo.png'">
                     </div>
-                    <div class="category-title">Máy pha cà phê</div>
-                </div>
-            </div>
-            <!-- Item 2: Máy xay cà phê -->
-            <div class="col">
-                <div class="category-item-container">
-                    <div class="category-image-box">
-                        <img th:src="@{/images/product/May_xay_ca_phe/may_xay_01.jpg}" alt="Máy xay cà phê">
-                    </div>
-                    <div class="category-title">Máy xay cà phê</div>
-                </div>
-            </div>
-            <!-- Item 3: Máy xay sinh tố -->
-            <div class="col">
-                <div class="category-item-container">
-                    <div class="category-image-box">
-                        <img th:src="@{/images/product/may_xay_may_ep/may_ep_01.jpg}" alt="Máy xay sinh tố, máy ép">
-                    </div>
-                    <div class="category-title">Máy xay sinh tố, máy ép</div>
-                </div>
-            </div>
-            <!-- Item 4: Dụng cụ pha chế -->
-            <div class="col">
-                <div class="category-item-container">
-                    <div class="category-image-box">
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_03.png}" alt="Dụng cụ pha chế">
-                    </div>
-                    <div class="category-title">Dụng cụ pha chế</div>
-                </div>
-            </div>
-            <!-- Item 5: Cà phê & Đồ ăn -->
-            <div class="col">
-                <div class="category-item-container">
-                    <div class="category-image-box">
-                        <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_01.jpg}" alt="Cà phê và đồ ăn">
-                    </div>
-                    <div class="category-title">Cà phê và đồ ăn</div>
-                </div>
-            </div>
-            <!-- Item 6: Máy cũ (Placeholder) -->
-            <div class="col">
-                <div class="category-item-container">
-                    <div class="category-image-box">
-                        <!-- Using placeholder since original file was HTML -->
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_04.png}" alt="Máy pha, máy xay cũ lướt">
-                    </div>
-                    <div class="category-title">Máy pha, máy xay cũ lướt</div>
+                    <div class="category-title" th:text="${c.name}">Category Name</div>
                 </div>
             </div>
         </div>
@@ -122,51 +79,20 @@
     <div class="mb-5 container">
         <h4 class="text-uppercase fw-bold mb-4" style="color: #4b3d33;">KHUYẾN MÃI CỰC HOT</h4>
         <div class="row g-4">
-            <!-- Promo Item 1 -->
-            <div class="col-md-4">
+            <div class="col-md-4" th:each="p : ${promotedItems}">
                 <div class="promotion-card">
-                    <div class="promo-badge">20% OFF</div>
+                    <div class="promo-badge">HOT</div>
                     <div class="promo-details">
-                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>GEMILAI 3149</div>
+                        <div class="promo-title" th:text="${p.name}">PRODUCT NAME</div>
                         <div class="promo-price-group">
-                            <span class="promo-old-price">21.500.000 ₫</span>
-                            <span class="promo-new-price">17.200.000 ₫</span>
+                            <!-- Fake old price for demo: current price * 1.2 -->
+                            <span class="promo-old-price" th:text="${#numbers.formatDecimal(p.price * 1.25, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                            <span class="promo-new-price" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
                         </div>
                     </div>
                     <div class="promo-img-container">
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_01.webp}" alt="Promo Product 1">
-                    </div>
-                </div>
-            </div>
-            <!-- Promo Item 2 -->
-            <div class="col-md-4">
-                <div class="promotion-card">
-                    <div class="promo-badge">20% OFF</div>
-                    <div class="promo-details">
-                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>GEMILAI 3200B PRO</div>
-                        <div class="promo-price-group">
-                            <span class="promo-old-price">14.375.000 ₫</span>
-                            <span class="promo-new-price">11.500.000 ₫</span>
-                        </div>
-                    </div>
-                    <div class="promo-img-container">
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_02.png}" alt="Promo Product 2">
-                    </div>
-                </div>
-            </div>
-            <!-- Promo Item 3 -->
-            <div class="col-md-4">
-                <div class="promotion-card">
-                    <div class="promo-badge">20% OFF</div>
-                    <div class="promo-details">
-                        <div class="promo-title">MÁY PHA CÀ PHÊ<br>CASADIO UNDICI A1</div>
-                        <div class="promo-price-group">
-                            <span class="promo-old-price">51.250.000 ₫</span>
-                            <span class="promo-new-price">41.000.000 ₫</span>
-                        </div>
-                    </div>
-                    <div class="promo-img-container">
-                        <img th:src="@{/images/product/may_pha_ca_phe/may_pha_03.png}" alt="Promo Product 3">
+                        <img th:src="@{${p.image}}" th:alt="${p.name}"
+                             onerror="this.src='/images/logo/logo.png'">
                     </div>
                 </div>
             </div>

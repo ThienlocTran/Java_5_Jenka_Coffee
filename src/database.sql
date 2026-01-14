@@ -95,12 +95,11 @@ INSERT INTO Accounts (username, password, fullname, email, admin) VALUES
                                                                       ('admin', '123', N'Trần Thiên Lộc (Leader)', 'loctt@fpt.edu.vn', 1),
                                                                       ('user', '123', N'Nguyễn Văn Khách', 'khachhang@gmail.com', 0),
                                                                       ('tuvan', '123', N'Tứ Văn (Staff)', 'van@jenka.com', 1);
-
 -- 2. Thêm Categories
 INSERT INTO Categories (id, name) VALUES
-                                      ('MAY_PHA', N'Máy Pha Cà Phê'),
-                                      ('HAT_CF', N'Hạt Cà Phê Cao Cấp'),
-                                      ('PHU_KIEN', N'Phụ Kiện Pha Chế');
+                                      (N'MAY_PHA', N'Máy Pha Cà Phê'),
+                                      (N'HAT_CF', N'Hạt Cà Phê Cao Cấp'),
+                                      (N'PHU_KIEN', N'Phụ Kiện Pha Chế');
 
 -- 3. Thêm Products (Máy xịn sò)
 -- Chèn lại với tên file ảnh thật có trong máy bro
