@@ -1,10 +1,10 @@
-$(document).ready(function() {
+$(document).ready(function () {
     // Event delegation for dynamically added elements
-    $(document).on('click', '.btn-add-to-cart', function(e) {
+    $(document).on('click', '.btn-add-to-cart', function (e) {
         e.preventDefault();
         var productId = $(this).data('id');
         var btn = $(this);
-        
+
         // Animation
         var img = btn.closest('.product-card').find('.card-img-top');
         if (img.length) {
@@ -24,8 +24,8 @@ $(document).ready(function() {
                 'width': '75px',
                 'height': '75px'
             }, 1000, 'easeInOutExpo');
-            
-            setTimeout(function() {
+
+            setTimeout(function () {
                 cartIcon.effect("shake", {
                     times: 2
                 }, 200);
@@ -34,7 +34,7 @@ $(document).ready(function() {
             imgClone.animate({
                 'width': 0,
                 'height': 0
-            }, function() {
+            }, function () {
                 $(this).detach();
             });
         }
@@ -43,25 +43,25 @@ $(document).ready(function() {
         $.ajax({
             url: '/cart/api/add/' + productId,
             type: 'GET',
-            success: function(response) {
+            success: function (response) {
                 // Update Badge
                 $('.cart-badge').text(response.count);
                 $('.mini-cart-total .text-danger').text(new Intl.NumberFormat('vi-VN').format(response.total) + ' đ');
-                
+
                 // Show Notification Popup (after animation roughly finishes)
-                setTimeout(function() {
+                setTimeout(function () {
                     $('.cart-notification').fadeIn(300).css('display', 'flex');
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $('.cart-notification').fadeOut(300);
                     }, 2000); // Show for 2 seconds
                 }, 1000);
 
                 // Show Dropdown temporarily (Restored per user feedback style)
                 $('.mini-cart-dropdown').css('display', 'block');
-                setTimeout(function() {
+                setTimeout(function () {
                     $('.mini-cart-dropdown').css('display', '');
                 }, 3000);
-                
+
                 // Update Mini Cart Items
                 var itemsHtml = '';
                 if (response.items.length === 0) {
@@ -69,11 +69,11 @@ $(document).ready(function() {
                 } else {
                     var reversedItems = response.items.slice().reverse();
                     var count = 0;
-                    $.each(reversedItems, function(index, item) {
+                    $.each(reversedItems, function (index, item) {
                         if (count < 3) {
                             itemsHtml += `
                             <div class="mini-cart-item">
-                                <img src="/images/${item.image}" alt="Product" class="mini-cart-img">
+                                <img src="${item.image}" alt="Product" class="mini-cart-img">
                                 <div class="mini-cart-info">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
@@ -95,7 +95,7 @@ $(document).ready(function() {
                 }
                 $('.mini-cart-items').html(itemsHtml);
             },
-            error: function(err) {
+            error: function (err) {
                 console.error('Error adding to cart', err);
             }
         });

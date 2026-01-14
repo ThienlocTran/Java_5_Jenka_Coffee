@@ -67,7 +67,7 @@
                             
                             <!-- Show max 3 items -->
                             <div th:each="item, stat : ${cartItems}" th:if="${stat.index < 3}" class="mini-cart-item">
-                                <img th:src="@{|/images/${item.image}|}" alt="Product" class="mini-cart-img">
+                                <img th:src="@{${item.image}}" alt="Product" class="mini-cart-img">
                                 <div class="mini-cart-info">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
