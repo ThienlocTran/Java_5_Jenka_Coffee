@@ -149,7 +149,7 @@
                             </div>
 
                             <div class="mt-auto product-btn-group">
-                                 <a href="#" class="btn-cart-icon"><i class="fas fa-shopping-cart"></i></a>
+                                 <a href="#" class="btn-cart-icon btn-add-to-cart" th:data-id="${item.id}"><i class="fas fa-shopping-cart"></i></a>
                                  <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn-buy-now">Xem ngay</a>
                             </div>
                         </div>

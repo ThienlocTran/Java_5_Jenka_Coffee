@@ -19,7 +19,7 @@ public class CartServiceImpl implements CartService {
     @Autowired
     private ProductService productService;
 
-    private Map<Integer, CartItem> map = new HashMap<>();
+    private final Map<Integer, CartItem> map = new HashMap<>();
 
     @Override
     public void add(Integer productId) {
@@ -66,7 +66,7 @@ public class CartServiceImpl implements CartService {
     @Override
     public int getCount() {
         return map.values().stream()
-                .mapToInt(item -> item.getQuantity())
+                .mapToInt(CartItem::getQuantity)
                 .sum();
     }
 
@@ -75,5 +75,14 @@ public class CartServiceImpl implements CartService {
         return map.values().stream()
                 .mapToDouble(item -> item.getPrice() * item.getQuantity())
                 .sum();
+    }
+
+    @Override
+    public Map<String, Object> getCartSummary() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("count", getCount());
+        response.put("total", getAmount());
+        response.put("items", getItems());
+        return response;
     }
 }

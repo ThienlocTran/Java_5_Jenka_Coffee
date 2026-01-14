@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.dto.response.CartItem;
 import java.util.Collection;
+import java.util.Map;
 
 public interface CartService {
     void add(Integer productId);
@@ -17,4 +18,6 @@ public interface CartService {
     int getCount();
 
     double getAmount();
+
+    Map<String, Object> getCartSummary();
 }
