@@ -26,11 +26,14 @@
             <!-- Product Details -->
             <div class="col-lg-6">
                 <div class="h-100 d-flex flex-column justify-content-center">
-                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:text="*{category.name}">Category</h5>
+                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:if="*{category != null}" th:text="*{category.name}">Category</h5>
+                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:unless="*{category != null}">Chưa phân loại</h5>
+                    
                     <h1 class="display-5 fw-bold mb-3" th:text="*{name}">Tên sản phẩm tại đây</h1>
                     
                     <div class="mb-4">
-                         <span class="fs-2 text-danger fw-bold me-2" th:text="*{#numbers.formatDecimal(price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,500,000 ₫</span>
+                         <span class="fs-2 text-danger fw-bold me-2" th:if="*{price != null}" th:text="*{#numbers.formatDecimal(price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,500,000 ₫</span>
+                         <span class="fs-2 text-danger fw-bold me-2" th:unless="*{price != null}">Liên hệ</span>
                          <!-- Fake original price/discount if needed 
                          <span class="text-decoration-line-through text-muted fs-5">2,000,000 ₫</span>
                          -->
@@ -71,13 +74,13 @@
             <h3 class="fw-bold m-0 position-relative link-hover-effect">
                 Hàng cùng loại
             </h3>
-            <a th:href="@{|/product/list?cid=*{category.id}|}" class="btn btn-outline-danger rounded-pill px-4 btn-sm">Xem tất cả</a>
+            <a th:if="*{category != null}" th:href="@{|/product/list?cid=*{category.id}|}" class="btn btn-outline-danger rounded-pill px-4 btn-sm">Xem tất cả</a>
         </div>
         
         <div class="position-relative">
             <!-- Navigation Buttons -->
             <button class="btn btn-dark rounded-circle position-absolute top-50 start-0 translate-middle-y z-3 shadow-sm" 
-                    id="prevBtn" style="left: -20px !important;">
+                    id="prevBtn">
                 <i class="fas fa-chevron-left"></i>
             </button>
             <button class="btn btn-dark rounded-circle position-absolute top-50 end-0 translate-middle-y z-3 shadow-sm" 
@@ -87,7 +90,7 @@
 
             <!-- Carousel Track -->
             <div id="similarProductTrack" class="d-flex overflow-hidden scroll-smooth mx-2" style="scroll-behavior: smooth;">
-                <div class="flex-shrink-0 p-2 col-6 col-md-4 col-lg-3" th:each="p : ${similarItems}">
+                <div class="flex-shrink-0 p-2 col-6 col-md-4 col-lg-3" th:each="p : ${similarItems}" th:if="${p != null}">
                     <div class="card h-100 border-0 shadow-sm product-card">
                         <div class="position-relative overflow-hidden">
                             <span class="badge bg-danger position-absolute top-0 start-0 m-3 z-2">-15%</span>
@@ -106,14 +109,14 @@
                         </div>
                         
                         <div class="card-body text-center p-4">
-                            <div class="text-muted small mb-2 text-uppercase" th:text="${p.category.name}">CATEGORY</div>
+                            <div class="text-muted small mb-2 text-uppercase" th:text="${p.category != null ? p.category.name : 'Unknown'}">CATEGORY</div>
                             <h5 class="card-title fw-bold mb-3">
                                 <a th:href="@{|/product/detail/${p.id}|}" class="text-decoration-none text-dark stretched-link" th:text="${p.name}">
                                     Product Name
                                 </a>
                             </h5>
-                            <div class="d-flex justify-content-center gap-2 align-items-baseline">
-                                <span class="text-danger fw-bold fs-5" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">123,000 ₫</span>
+                <div class="d-flex justify-content-center gap-2 align-items-baseline">
+                                <span class="text-danger fw-bold fs-5" th:if="${p.price != null}" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">123,000 ₫</span>
                             </div>
                         </div>
                     </div>
@@ -126,6 +129,7 @@
                 const track = document.getElementById('similarProductTrack');
                 const prevBtn = document.getElementById('prevBtn');
                 const nextBtn = document.getElementById('nextBtn');
+                if (!track) return;
 
                 function getScrollAmount() {
                     const item = track.firstElementChild;
@@ -140,58 +144,25 @@
                     return 2;
                 }
 
-                nextBtn.addEventListener('click', () => {
-                    const itemWidth = getScrollAmount();
-                    const itemsToScroll = getItemsPerScroll();
-                    track.scrollBy({ left: itemWidth * itemsToScroll, behavior: 'smooth' });
-                });
+                if(nextBtn) {
+                     nextBtn.addEventListener('click', () => {
+                        const itemWidth = getScrollAmount();
+                        const itemsToScroll = getItemsPerScroll();
+                        track.scrollBy({ left: itemWidth * itemsToScroll, behavior: 'smooth' });
+                    });
+                }
 
-                prevBtn.addEventListener('click', () => {
-                    const itemWidth = getScrollAmount();
-                    const itemsToScroll = getItemsPerScroll();
-                    track.scrollBy({ left: -(itemWidth * itemsToScroll), behavior: 'smooth' });
-                });
+                if(prevBtn) {
+                    prevBtn.addEventListener('click', () => {
+                        const itemWidth = getScrollAmount();
+                        const itemsToScroll = getItemsPerScroll();
+                        track.scrollBy({ left: -(itemWidth * itemsToScroll), behavior: 'smooth' });
+                    });
+                }
             });
         </script>
     </div>
 </section>
-
-<style>
-/* Local styles for product detail */
-.product-card {
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-.product-img {
-    height: 250px;
-    object-fit: cover;
-    transition: transform 0.5s;
-}
-.product-card:hover .product-img {
-    transform: scale(1.05);
-}
-.product-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.2);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.product-card:hover .product-overlay {
-    opacity: 1;
-}
-.link-hover-effect::after {
-    content: '';
-    display: block;
-    width: 60px;
-    height: 3px;
-    background: #dc3545;
-    margin-top: 5px;
-}
-</style>
 
 </body>
 </html>

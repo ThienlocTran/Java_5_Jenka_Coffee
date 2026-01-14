@@ -52,6 +52,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<Product> getRelatedProducts(String categoryId, Integer productId) {
+        return pdao.findTop4ByCategoryIdAndIdNot(categoryId, productId);
+    }
+
+    @Override
     public Product create(Product product) {
         return pdao.save(product);
     }

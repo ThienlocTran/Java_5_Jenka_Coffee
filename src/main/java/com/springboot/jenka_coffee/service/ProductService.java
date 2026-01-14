@@ -20,4 +20,6 @@ public interface ProductService {
     void delete(Integer id);
 
     Product saveProduct(Product product, MultipartFile file);
+
+    List<Product> getRelatedProducts(String categoryId, Integer productId);
 }

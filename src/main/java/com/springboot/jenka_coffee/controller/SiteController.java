@@ -1,20 +1,10 @@
 package com.springboot.jenka_coffee.controller;
 
-import com.springboot.jenka_coffee.entity.Product;
-import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
 @Controller
 public class SiteController {
-
-    private final ProductService productService;
-
-    public SiteController(ProductService productService) {
-        this.productService = productService;
-    }
 
     // Auth mappings
     @GetMapping("/auth/login")
@@ -51,14 +41,6 @@ public class SiteController {
     @GetMapping("/products/list")
     public String productList() {
         return "site/products/product-list";
-    }
-
-    @GetMapping("/product/detail/{id}")
-    public String productDetail(@PathVariable("id") Integer id, Model model) {
-        Product product = productService.findById(id);
-        model.addAttribute("item", product);
-        model.addAttribute("similarItems", productService.findByCategoryId(product.getCategory().getId()));
-        return "site/products/product-detail";
     }
 
     // Cart & Checkout

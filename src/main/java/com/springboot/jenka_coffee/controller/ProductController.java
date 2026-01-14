@@ -34,4 +34,15 @@ public class ProductController {
         model.addAttribute("items", list);
         return "site/products/product-list"; // Trả về file product-list.html mới
     }
+
+    // 2. Chi tiết sản phẩm
+    @GetMapping("/product/detail/{id}")
+    public String detail(@PathVariable("id") Integer id, Model model) {
+        Product item = productService.findById(id);
+        model.addAttribute("item", item);
+        List<Product> similarItems = productService.getRelatedProducts(item.getCategory().getId(), item.getId());
+
+        model.addAttribute("similarItems", similarItems);
+        return "site/products/product-detail";
+    }
 }
