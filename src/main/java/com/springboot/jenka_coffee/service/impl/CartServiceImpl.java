@@ -6,7 +6,6 @@ import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.SessionScope;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,10 +15,13 @@ import java.util.Map;
 @SessionScope
 public class CartServiceImpl implements CartService {
 
-    @Autowired
-    private ProductService productService;
+    private final ProductService productService;
 
     private final Map<Integer, CartItem> map = new HashMap<>();
+
+    public CartServiceImpl(ProductService productService) {
+        this.productService = productService;
+    }
 
     @Override
     public void add(Integer productId) {

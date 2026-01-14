@@ -51,15 +51,19 @@ public class AdminProductController {
     // 4. Save Action
     @PostMapping("/save")
     public String save(@ModelAttribute("item") Product product,
-            @RequestParam("photo_file") MultipartFile file) {
+            @RequestParam(value = "imageFile", required = false) MultipartFile file) {
         productService.saveProduct(product, file);
         return "redirect:/admin/product/list";
     }
 
-    // 5. Delete Action
-    @GetMapping("/delete/{id}")
-    public String delete(@PathVariable("id") Integer id) {
-        productService.delete(id);
+    // 5. Toggle Available (Soft Delete)
+    @GetMapping("/toggle/{id}")
+    public String toggleAvailable(@PathVariable("id") Integer id) {
+        Product product = productService.findById(id);
+        if (product != null) {
+            product.setAvailable(!product.getAvailable());
+            productService.update(product);
+        }
         return "redirect:/admin/product/list";
     }
 }

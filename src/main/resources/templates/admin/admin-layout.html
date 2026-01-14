@@ -140,30 +140,30 @@
     <div th:replace="${content}"></div>
 </main>
 
-<!-- ========== DELETE CONFIRMATION MODAL (Dùng chung) ========== -->
-<div class="modal fade modal-delete" id="deleteModal" tabindex="-1" aria-hidden="true">
+<!-- ========== TOGGLE STATUS MODAL (Dùng chung) ========== -->
+<div class="modal fade modal-delete" id="toggleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-exclamation-triangle"></i>
-                    Xác nhận xóa
+                    Xác nhận thay đổi
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="delete-icon">
-                    <i class="fas fa-trash-alt"></i>
+                    <i class="fas fa-eye-slash"></i>
                 </div>
-                <div class="delete-message">Bạn có chắc chắn muốn xóa?</div>
-                <div class="delete-warning">Hành động này không thể hoàn tác!</div>
+                <div class="toggle-message">Bạn có chắc chắn muốn thay đổi trạng thái?</div>
+                <div class="delete-warning">Sản phẩm sẽ được ẩn/hiện trên trang khách hàng!</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i>Hủy
                 </button>
-                <a href="#" id="confirmDeleteBtn" class="btn btn-danger btn-delete">
-                    <i class="fas fa-trash me-2"></i>Xóa
+                <a href="#" id="confirmToggleBtn" class="btn btn-primary btn-delete">
+                    <i class="fas fa-check me-2"></i>Xác nhận
                 </a>
             </div>
         </div>

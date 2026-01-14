@@ -118,10 +118,13 @@
                                    title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button th:onclick="|openDeleteModal('/admin/product/delete/${item.id}', '${item.name}')|"
-                                        class="btn btn-sm btn-danger" 
-                                        title="Xóa">
-                                    <i class="fas fa-trash"></i>
+                                <button class="btn btn-sm toggle-btn" 
+                                        th:classappend="${item.available} ? 'btn-secondary' : 'btn-success'"
+                                        th:data-toggle-url="@{/admin/product/toggle/{id}(id=${item.id})}"
+                                        th:data-item-name="${item.name}"
+                                        th:data-current-status="${item.available}"
+                                        th:title="${item.available} ? 'Ẩn sản phẩm' : 'Hiện sản phẩm'">
+                                    <i class="fas" th:classappend="${item.available} ? 'fa-eye-slash' : 'fa-eye'"></i>
                                 </button>
                             </div>
                         </td>

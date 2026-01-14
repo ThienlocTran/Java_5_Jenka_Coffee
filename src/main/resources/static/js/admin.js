@@ -75,29 +75,44 @@ if (window.innerWidth <= 768) {
     });
 }
 
-// ========== DELETE MODAL HANDLER ==========
-let deleteUrl = '';
+// ========== TOGGLE STATUS MODAL HANDLER ==========
+let toggleUrl = '';
 
 /**
- * Mở modal xác nhận xóa
- * @param {string} url - URL để xóa (VD: /admin/product/delete/123)
+ * Mở modal xác nhận toggle status
+ * @param {string} url - URL để toggle (VD: /admin/product/toggle/123)
  * @param {string} itemName - Tên item để hiển thị (optional)
+ * @param {boolean} currentStatus - Trạng thái hiện tại (true = đang hiện, false = đang ẩn)
  */
-function openDeleteModal(url, itemName = '') {
-    deleteUrl = url;
+function openToggleModal(url, itemName = '', currentStatus = true) {
+    toggleUrl = url;
     
-    // Cập nhật message nếu có tên item
-    const messageElement = document.querySelector('.delete-message');
+    // Cập nhật message dựa trên trạng thái hiện tại
+    const messageElement = document.querySelector('.toggle-message');
+    const iconElement = document.querySelector('.delete-icon i');
+    
     if (messageElement) {
-        if (itemName) {
-            messageElement.textContent = `Bạn có chắc chắn muốn xóa "${itemName}"?`;
+        if (currentStatus) {
+            // Đang hiện -> sẽ ẩn
+            messageElement.textContent = itemName 
+                ? `Bạn có chắc chắn muốn ẩn "${itemName}"?`
+                : 'Bạn có chắc chắn muốn ẩn sản phẩm này?';
+            if (iconElement) {
+                iconElement.className = 'fas fa-eye-slash';
+            }
         } else {
-            messageElement.textContent = 'Bạn có chắc chắn muốn xóa?';
+            // Đang ẩn -> sẽ hiện
+            messageElement.textContent = itemName 
+                ? `Bạn có chắc chắn muốn hiện "${itemName}"?`
+                : 'Bạn có chắc chắn muốn hiện sản phẩm này?';
+            if (iconElement) {
+                iconElement.className = 'fas fa-eye';
+            }
         }
     }
     
     // Hiển thị modal
-    const modalElement = document.getElementById('deleteModal');
+    const modalElement = document.getElementById('toggleModal');
     if (modalElement) {
         const modal = new bootstrap.Modal(modalElement);
         modal.show();
@@ -105,27 +120,45 @@ function openDeleteModal(url, itemName = '') {
 }
 
 /**
- * Xử lý khi click nút Xóa trong modal
+ * Khởi tạo event listeners cho các nút toggle
+ */
+function initToggleButtons() {
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = this.getAttribute('data-toggle-url');
+            const itemName = this.getAttribute('data-item-name') || '';
+            const currentStatus = this.getAttribute('data-current-status') === 'true';
+            openToggleModal(url, itemName, currentStatus);
+        });
+    });
+}
+
+/**
+ * Xử lý khi click nút Xác nhận trong modal
  */
 document.addEventListener('DOMContentLoaded', function() {
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    // Khởi tạo toggle buttons
+    initToggleButtons();
+    
+    const confirmBtn = document.getElementById('confirmToggleBtn');
     if (confirmBtn) {
         confirmBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (deleteUrl) {
-                window.location.href = deleteUrl;
+            if (toggleUrl) {
+                window.location.href = toggleUrl;
             }
         });
     }
 
     // Reset khi đóng modal
-    const modalElement = document.getElementById('deleteModal');
+    const modalElement = document.getElementById('toggleModal');
     if (modalElement) {
         modalElement.addEventListener('hidden.bs.modal', function() {
-            deleteUrl = '';
-            const messageElement = document.querySelector('.delete-message');
+            toggleUrl = '';
+            const messageElement = document.querySelector('.toggle-message');
             if (messageElement) {
-                messageElement.textContent = 'Bạn có chắc chắn muốn xóa?';
+                messageElement.textContent = 'Bạn có chắc chắn muốn thay đổi trạng thái?';
             }
         });
     }
@@ -234,7 +267,7 @@ function confirmAction(message, callback) {
 // ========== EXPORT FUNCTIONS ==========
 // Export các hàm để có thể gọi từ HTML
 window.toggleSidebar = toggleSidebar;
-window.openDeleteModal = openDeleteModal;
+window.openToggleModal = openToggleModal;
 window.showToast = showToast;
 window.confirmAction = confirmAction;
 window.initTableSearch = initTableSearch;
