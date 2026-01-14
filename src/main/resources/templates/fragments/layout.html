@@ -34,11 +34,7 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li th:each="category : ${categories}">
-                                <a class="dropdown-item d-flex align-items-center gap-2" th:href="@{/product/list(categoryId=${category.id})}">
-                                    <img th:src="@{|/images/icon_category/${categoryIcons.get(category.id)}|}" 
-                                         alt="icon" 
-                                         style="width: 20px; height: 20px; object-fit: contain;"
-                                         onerror="this.style.display='none'">
+                                <a class="dropdown-item" th:href="@{/product/list(categoryId=${category.id})}">
                                     <span th:text="${category.name}">Category Name</span>
                                 </a>
                             </li>
