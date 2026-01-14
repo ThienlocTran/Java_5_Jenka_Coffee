@@ -840,7 +840,7 @@ footer {
     position: absolute;
     right: 0;
     top: 100%;
-    width: 300px;
+    width: 360px;
     background-color: #fff;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
     z-index: 1000;
@@ -848,6 +848,17 @@ footer {
     border-radius: 4px;
     padding: 15px;
     animation: fadeIn 0.2s ease-in-out;
+}
+
+.remove-item {
+    font-size: 1.1rem;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.remove-item:hover {
+    opacity: 1;
+    color: var(--jk-accent) !important;
 }
 
 /* Show on hover */

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<body>
+
+<section class="py-5 bg-light">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
+                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page">Giỏ hàng</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body">
+                        <h4 class="fw-bold mb-4">Giỏ hàng của bạn</h4>
+                        <div class="alert alert-warning" role="alert">
+                            Chức năng đang được phát triển.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                 <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3">Tổng cộng</h5>
+                        <!-- Summary content -->
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+</body>
+</html>
