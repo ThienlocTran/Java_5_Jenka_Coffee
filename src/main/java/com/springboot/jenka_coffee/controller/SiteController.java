@@ -43,12 +43,6 @@ public class SiteController {
         return "site/products/product-list";
     }
 
-    // Cart & Checkout
-    @GetMapping("/cart/view")
-    public String cart() {
-        return "site/cart";
-    }
-
     @GetMapping("/checkout")
     public String checkout() {
         return "site/checkout";

@@ -47,7 +47,7 @@
 
                     <!-- Actions -->
                     <div class="d-flex gap-3 mb-5">
-                        <a th:href="@{|/cart/add/${item.id}|}" class="btn btn-outline-dark btn-lg px-4 rounded-pill flex-grow-1 fw-bold">
+                        <a href="#" class="btn btn-outline-dark btn-lg px-4 rounded-pill flex-grow-1 fw-bold btn-add-to-cart" th:data-id="*{id}">
                             <i class="fas fa-shopping-cart me-2"></i> Thêm giỏ hàng
                         </a>
                         <a th:href="@{|/checkout/now/${item.id}|}" class="btn btn-danger btn-lg px-4 rounded-pill flex-grow-1 fw-bold">
@@ -99,7 +99,7 @@
                             
                             <!-- Hover Actions -->
                             <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
-                                 <a th:href="@{|/cart/add/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" title="Thêm vào giỏ">
+                                 <a href="#" class="btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart" th:data-id="${p.id}" title="Thêm vào giỏ">
                                     <i class="fas fa-shopping-cart"></i>
                                 </a>
                                 <a th:href="@{|/product/detail/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
