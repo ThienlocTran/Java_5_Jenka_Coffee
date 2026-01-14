@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:fragment="admin_layout(content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Jenka Coffee</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Admin CSS -->
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --navbar-height: 70px;
+            --primary-color: #2c1a16;
+            --accent-color: #D32F2F;
+            --sidebar-bg: #1a0f0d;
+            --sidebar-hover: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f6f9;
+            overflow-x: hidden;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--primary-color) 100%);
+            color: #fff;
+            z-index: 1000;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .admin-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header img {
+            max-width: 120px;
+            filter: brightness(0) invert(1);
+        }
+
+        .sidebar-header h5 {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .menu-section-title {
+            padding: 15px 20px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sidebar-menu .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-menu .nav-link:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+            border-left-color: var(--accent-color);
+        }
+
+        .sidebar-menu .nav-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+            border-left-color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .sidebar-menu .nav-link i {
+            width: 25px;
+            text-align: center;
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-menu .badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+        }
+
+        /* ========== NAVBAR ========== */
+        .admin-navbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--navbar-height);
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar-toggle {
+            font-size: 1.5rem;
+            color: #333;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .navbar-toggle:hover {
+            color: var(--accent-color);
+        }
+
+        .navbar-search {
+            position: relative;
+        }
+
+        .navbar-search input {
+            width: 300px;
+            padding: 8px 15px 8px 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .navbar-search input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+        }
+
+        .navbar-search i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .navbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar-icon {
+            position: relative;
+            font-size: 1.3rem;
+            color: #666;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .navbar-icon:hover {
+            color: var(--accent-color);
+        }
+
+        .navbar-icon .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 0.65rem;
+        }
+
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 25px;
+            transition: background 0.3s;
+        }
+
+        .navbar-user:hover {
+            background: #f5f5f5;
+        }
+
+        .navbar-user img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent-color);
+        }
+
+        .navbar-user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-user-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .navbar-user-role {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .admin-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--navbar-height);
+            padding: 30px;
+            min-height: calc(100vh - var(--navbar-height));
+            transition: all 0.3s ease;
+        }
+
+        /* ========== PAGE HEADER ========== */
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .page-breadcrumb {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .page-breadcrumb a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        /* ========== CARDS ========== */
+        .admin-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card-header-custom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-title-custom {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        .sidebar-collapsed .admin-sidebar {
+            width: 80px;
+        }
+
+        .sidebar-collapsed .admin-navbar {
+            left: 80px;
+        }
+
+        .sidebar-collapsed .admin-content {
+            margin-left: 80px;
+        }
+
+        .sidebar-collapsed .sidebar-menu .nav-link span {
+            display: none;
+        }
+
+        .sidebar-collapsed .sidebar-header h5,
+        .sidebar-collapsed .menu-section-title {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .admin-navbar {
+                left: 0;
+            }
+
+            .admin-content {
+                margin-left: 0;
+            }
+
+            .sidebar-open .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            .navbar-search input {
+                width: 200px;
+            }
+        }
+
+        /* ========== UTILITIES ========== */
+        .btn-primary-custom {
+            background: var(--accent-color);
+            border: none;
+            color: #fff;
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary-custom:hover {
+            background: #b71c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
+        }
+
+        /* ========== DELETE MODAL CUSTOM ========== */
+        .modal-delete .modal-content {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .modal-delete .modal-header {
+            background: linear-gradient(135deg, #D32F2F 0%, #b71c1c 100%);
+            color: #fff;
+            border: none;
+            padding: 20px 25px;
+        }
+
+        .modal-delete .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .modal-delete .modal-title i {
+            font-size: 1.5rem;
+        }
+
+        .modal-delete .modal-body {
+            padding: 30px 25px;
+            text-align: center;
+        }
+
+        .modal-delete .delete-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #ffebee;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-delete .delete-icon i {
+            font-size: 2.5rem;
+            color: #D32F2F;
+        }
+
+        .modal-delete .delete-message {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .modal-delete .delete-warning {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .modal-delete .modal-footer {
+            border: none;
+            padding: 20px 25px;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .modal-delete .btn-cancel {
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+
+        .modal-delete .btn-delete {
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-weight: 500;
+            background: #D32F2F;
+            border: none;
+        }
+
+        .modal-delete .btn-delete:hover {
+            background: #b71c1c;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="admin-sidebar">
+    <div class="sidebar-header">
+        <img src="/images/brand/logo.png" alt="Jenka Coffee" onerror="this.style.display='none'">
+        <h5>Admin Panel</h5>
+    </div>
+
+    <nav class="sidebar-menu">
+        <!-- Dashboard Section -->
+        <div class="menu-section-title">Dashboard</div>
+        <a href="/admin/dashboard" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/dashboard')} ? 'active' : ''">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Tổng quan</span>
+        </a>
+
+        <!-- Quản lý Section -->
+        <div class="menu-section-title">Quản lý</div>
+        
+        <a href="/admin/product/list" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/product')} ? 'active' : ''">
+            <i class="fas fa-box"></i>
+            <span>Sản phẩm</span>
+        </a>
+
+        <a href="/admin/category/list" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/category')} ? 'active' : ''">
+            <i class="fas fa-tags"></i>
+            <span>Danh mục</span>
+        </a>
+
+        <a href="/admin/order/list" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/order')} ? 'active' : ''">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Đơn hàng</span>
+            <span class="badge bg-danger">5</span>
+        </a>
+
+        <a href="/admin/account/list" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/account')} ? 'active' : ''">
+            <i class="fas fa-users"></i>
+            <span>Tài khoản</span>
+        </a>
+
+        <!-- Báo cáo Section -->
+        <div class="menu-section-title">Báo cáo</div>
+        
+        <a href="/admin/report/revenue" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/report/revenue')} ? 'active' : ''">
+            <i class="fas fa-chart-line"></i>
+            <span>Doanh thu</span>
+        </a>
+
+        <a href="/admin/report/customer" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/report/customer')} ? 'active' : ''">
+            <i class="fas fa-user-chart"></i>
+            <span>Khách hàng</span>
+        </a>
+
+        <a href="/admin/report/product" class="nav-link" th:classappend="${#strings.contains(#httpServletRequest.requestURI, '/admin/report/product')} ? 'active' : ''">
+            <i class="fas fa-box-open"></i>
+            <span>Sản phẩm bán chạy</span>
+        </a>
+
+        <!-- Cài đặt Section -->
+        <div class="menu-section-title">Hệ thống</div>
+        
+        <a href="/admin/settings" class="nav-link">
+            <i class="fas fa-cog"></i>
+            <span>Cài đặt</span>
+        </a>
+
+        <a href="/home" class="nav-link">
+            <i class="fas fa-globe"></i>
+            <span>Xem website</span>
+        </a>
+
+        <a href="/logout" class="nav-link">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Đăng xuất</span>
+        </a>
+    </nav>
+</aside>
+
+<!-- ========== NAVBAR ========== -->
+<nav class="admin-navbar">
+    <div class="navbar-left">
+        <i class="fas fa-bars navbar-toggle" onclick="toggleSidebar()"></i>
+        
+        <div class="navbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Tìm kiếm...">
+        </div>
+    </div>
+
+    <div class="navbar-right">
+        <i class="fas fa-bell navbar-icon">
+            <span class="badge bg-danger">3</span>
+        </i>
+        
+        <i class="fas fa-envelope navbar-icon">
+            <span class="badge bg-primary">5</span>
+        </i>
+
+        <div class="navbar-user" data-bs-toggle="dropdown">
+            <img src="/images/logo/logo.png" alt="Admin" onerror="this.src='https://ui-avatars.com/api/?name=Admin&background=D32F2F&color=fff'">
+            <div class="navbar-user-info">
+                <div class="navbar-user-name">Admin</div>
+                <div class="navbar-user-role">Quản trị viên</div>
+            </div>
+            <i class="fas fa-chevron-down" style="color: #999; font-size: 0.8rem;"></i>
+        </div>
+        
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/admin/profile"><i class="fas fa-user me-2"></i> Hồ sơ</a></li>
+            <li><a class="dropdown-item" href="/admin/settings"><i class="fas fa-cog me-2"></i> Cài đặt</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ========== MAIN CONTENT ========== -->
+<main class="admin-content">
+    <!-- Dynamic Content Injection -->
+    <div th:replace="${content}"></div>
+</main>
+
+<!-- ========== DELETE CONFIRMATION MODAL (Dùng chung) ========== -->
+<div class="modal fade modal-delete" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Xác nhận xóa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="delete-message">Bạn có chắc chắn muốn xóa?</div>
+                <div class="delete-warning">Hành động này không thể hoàn tác!</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy
+                </button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger btn-delete">
+                    <i class="fas fa-trash me-2"></i>Xóa
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Toggle Sidebar
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-collapsed');
+    }
+
+    // Mobile Sidebar Toggle
+    if (window.innerWidth <= 768) {
+        document.querySelector('.navbar-toggle').addEventListener('click', function() {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    // ========== DELETE MODAL HANDLER (Dùng chung) ==========
+    let deleteUrl = '';
+
+    // Hàm mở modal xóa với URL động
+    function openDeleteModal(url, itemName = '') {
+        deleteUrl = url;
+        
+        // Cập nhật message nếu có tên item
+        if (itemName) {
+            document.querySelector('.delete-message').textContent = 
+                `Bạn có chắc chắn muốn xóa "${itemName}"?`;
+        } else {
+            document.querySelector('.delete-message').textContent = 
+                'Bạn có chắc chắn muốn xóa?';
+        }
+        
+        // Hiển thị modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
+
+    // Xử lý khi click nút Xóa trong modal
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (deleteUrl) {
+            window.location.href = deleteUrl;
+        }
+    });
+
+    // Reset khi đóng modal
+    document.getElementById('deleteModal').addEventListener('hidden.bs.modal', function() {
+        deleteUrl = '';
+        document.querySelector('.delete-message').textContent = 'Bạn có chắc chắn muốn xóa?';
+    });
+
+    // ========== CÁCH SỬ DỤNG DELETE MODAL ==========
+    // Trong trang admin, thêm onclick vào nút xóa:
+    // 
+    // <button onclick="openDeleteModal('/admin/product/delete/123', 'Tên sản phẩm')" 
+    //         class="btn btn-danger">
+    //     <i class="fas fa-trash"></i> Xóa
+    // </button>
+    //
+    // Hoặc với Thymeleaf:
+    // <button th:onclick="|openDeleteModal('/admin/product/delete/${item.id}', '${item.name}')|" 
+    //         class="btn btn-danger">
+    //     <i class="fas fa-trash"></i> Xóa
+    // </button>
+</script>
+
+</body>
+</html>

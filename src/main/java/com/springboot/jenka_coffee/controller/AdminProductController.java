@@ -27,7 +27,7 @@ public class AdminProductController {
     public String index(Model model) {
         List<Product> list = productService.findAll();
         model.addAttribute("items", list);
-        return "product/list"; // Admin table view
+        return "admin/products/list"; // Admin table view
     }
 
     // 2. Create Form
@@ -36,7 +36,7 @@ public class AdminProductController {
         Product p = new Product();
         model.addAttribute("item", p);
         model.addAttribute("categories", categoryService.findAll());
-        return "product/form";
+        return "admin/products/form";
     }
 
     // 3. Edit Form
@@ -45,7 +45,7 @@ public class AdminProductController {
         Product p = productService.findById(id);
         model.addAttribute("item", p);
         model.addAttribute("categories", categoryService.findAll());
-        return "product/form";
+        return "admin/products/form";
     }
 
     // 4. Save Action

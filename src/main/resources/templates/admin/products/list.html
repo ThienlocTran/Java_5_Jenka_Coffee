@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Quản lý Sản phẩm</h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / <span>Sản phẩm</span>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-list me-2"></i>
+                Danh sách sản phẩm
+            </h5>
+            <a href="/admin/product/create" class="btn btn-primary-custom">
+                <i class="fas fa-plus me-2"></i>Thêm sản phẩm
+            </a>
+        </div>
+
+        <!-- Filter & Search -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Tìm kiếm sản phẩm..." id="searchInput">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="categoryFilter">
+                    <option value="">Tất cả danh mục</option>
+                    <option value="MAY_PHA">Máy Pha Cà Phê</option>
+                    <option value="MAY_XAY">Máy Xay Cà Phê</option>
+                    <option value="XAY_EP">Máy Xay & Máy Ép</option>
+                    <option value="CF_AN_VAT">Cà Phê & Đồ Ăn Vặt</option>
+                    <option value="DUNG_CU">Dụng Cụ Pha Chế</option>
+                    <option value="HANG_CU">Máy Pha & Xay Cũ Lướt</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="1">Đang bán</option>
+                    <option value="0">Ngừng bán</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-filter me-2"></i>Lọc
+                </button>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" class="form-check-input">
+                        </th>
+                        <th style="width: 80px;">Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Danh mục</th>
+                        <th>Giá</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(items)}">
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Chưa có sản phẩm nào</p>
+                        </td>
+                    </tr>
+                    
+                    <tr th:each="item : ${items}">
+                        <td>
+                            <input type="checkbox" class="form-check-input">
+                        </td>
+                        <td>
+                            <img th:src="@{${item.image}}" 
+                                 th:alt="${item.name}"
+                                 class="rounded"
+                                 style="width: 60px; height: 60px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/60?text=No+Image'">
+                        </td>
+                        <td>
+                            <strong th:text="${item.name}">Product Name</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-info" th:text="${item.category.name}">Category</span>
+                        </td>
+                        <td>
+                            <strong class="text-success" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">0 đ</strong>
+                        </td>
+                        <td>
+                            <small class="text-muted" th:text="${#temporals.format(item.createDate, 'dd/MM/yyyy')}">01/01/2026</small>
+                        </td>
+                        <td>
+                            <span th:if="${item.available}" class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Đang bán
+                            </span>
+                            <span th:unless="${item.available}" class="badge bg-secondary">
+                                <i class="fas fa-times-circle"></i> Ngừng bán
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a th:href="@{/admin/product/edit/{id}(id=${item.id})}" 
+                                   class="btn btn-sm btn-warning" 
+                                   title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button th:onclick="|openDeleteModal('/admin/product/delete/${item.id}', '${item.name}')|"
+                                        class="btn btn-sm btn-danger" 
+                                        title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+                Hiển thị <strong th:text="${#lists.size(items)}">0</strong> sản phẩm
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Simple search filter
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const searchValue = this.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+            const productName = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase();
+            if (productName && productName.includes(searchValue)) {
+                row.style.display = '';
+            } else if (productName) {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+</body>
+</html>
