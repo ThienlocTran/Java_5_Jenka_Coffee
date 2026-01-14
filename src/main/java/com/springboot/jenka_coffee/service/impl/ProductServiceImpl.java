@@ -3,15 +3,20 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.repository.ProductDAO;
 import com.springboot.jenka_coffee.service.ProductService;
+import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class ProductServiceImpl implements ProductService {
 
     final ProductDAO pdao;
-    final com.springboot.jenka_coffee.service.UploadService uploadService;
+    final UploadService uploadService;
 
     public ProductServiceImpl(ProductDAO pdao, com.springboot.jenka_coffee.service.UploadService uploadService) {
         this.pdao = pdao;
@@ -49,6 +54,39 @@ public class ProductServiceImpl implements ProductService {
     public List<Product> findByCategoryId(String cid) {
         // Cách 1: Viết method trong DAO (Khuyên dùng)
         return pdao.findByCategoryId(cid);
+    }
+
+    @Override
+    public List<Product> getRelatedProducts(String categoryId, Integer productId) {
+        return pdao.findTop4ByCategoryIdAndIdNot(categoryId, productId);
+    }
+
+    @Override
+    public List<Product> filterProducts(String categoryId) {
+        if (categoryId != null && !categoryId.isEmpty()) {
+            return findByCategoryId(categoryId);
+        }
+        return findAll();
+    }
+
+    @Override
+    public Map<String, Object> getProductDetail(Integer productId) {
+        Product item = findById(productId);
+        if (item == null) {
+            return null;
+        }
+
+        // Handle case where product exists but has no category (though data integrity
+        // should prevent this)
+        String categoryId = (item.getCategory() != null) ? item.getCategory().getId() : null;
+        List<Product> similarItems = (categoryId != null)
+                ? getRelatedProducts(categoryId, item.getId())
+                : Collections.emptyList();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("item", item);
+        result.put("similarItems", similarItems);
+        return result;
     }
 
     @Override

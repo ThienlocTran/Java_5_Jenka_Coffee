@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<body>
+
+<section class="py-1 bg-light" th:object="${item}">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/product/list" class="text-decoration-none text-muted">Sản phẩm</a></li>
+                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page" th:text="*{name}">Tên sản phẩm</li>
+            </ol>
+        </nav>
+
+        <div class="row g-5">
+            <!-- Product Image -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <img th:src="@{*{image}}" class="img-fluid w-100 object-fit-cover" 
+                         alt="Product Image" style="height: 500px;" 
+                         onerror="this.src='https://via.placeholder.com/600x600?text=No+Image'">
+                </div>
+            </div>
+
+            <!-- Product Details -->
+            <div class="col-lg-6">
+                <div class="h-100 d-flex flex-column justify-content-center">
+                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:if="*{category != null}" th:text="*{category.name}">Category</h5>
+                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:unless="*{category != null}">Chưa phân loại</h5>
+                    
+                    <h1 class="display-5 fw-bold mb-3" th:text="*{name}">Tên sản phẩm tại đây</h1>
+                    
+                    <div class="mb-4">
+                         <span class="fs-2 text-danger fw-bold me-2" th:if="*{price != null}" th:text="*{#numbers.formatDecimal(price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,500,000 ₫</span>
+                         <span class="fs-2 text-danger fw-bold me-2" th:unless="*{price != null}">Liên hệ</span>
+                         <!-- Fake original price/discount if needed 
+                         <span class="text-decoration-line-through text-muted fs-5">2,000,000 ₫</span>
+                         -->
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-muted lh-lg">
+                            Mô tả ngắn về sản phẩm sẽ hiển thị ở đây. Đây là không gian để giới thiệu các tính năng nổi bật, chất lượng, và lý do tại sao khách hàng nên mua sản phẩm này. Hãy viết thật hấp dẫn!
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-3 mb-5">
+                        <a th:href="@{|/cart/add/${item.id}|}" class="btn btn-outline-dark btn-lg px-4 rounded-pill flex-grow-1 fw-bold">
+                            <i class="fas fa-shopping-cart me-2"></i> Thêm giỏ hàng
+                        </a>
+                        <a th:href="@{|/checkout/now/${item.id}|}" class="btn btn-danger btn-lg px-4 rounded-pill flex-grow-1 fw-bold">
+                            Mua ngay
+                        </a>
+                    </div>
+                    
+                    <!-- Additional Info -->
+                    <div class="d-flex gap-4 text-muted small">
+                        <div><i class="fas fa-check-circle text-success me-1"></i> Chính hãng 100%</div>
+                        <div><i class="fas fa-shipping-fast text-success me-1"></i> Miễn phí vận chuyển</div>
+                        <div><i class="fas fa-shield-alt text-success me-1"></i> Bảo hành 12 tháng</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Similar Products -->
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h3 class="fw-bold m-0 position-relative link-hover-effect">
+                Hàng cùng loại
+            </h3>
+            <a th:if="*{category != null}" th:href="@{|/product/list?cid=*{category.id}|}" class="btn btn-outline-danger rounded-pill px-4 btn-sm">Xem tất cả</a>
+        </div>
+        
+        <div class="position-relative">
+            <!-- Navigation Buttons -->
+            <button class="btn btn-dark rounded-circle position-absolute top-50 start-0 translate-middle-y z-3 shadow-sm" 
+                    id="prevBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="btn btn-dark rounded-circle position-absolute top-50 end-0 translate-middle-y z-3 shadow-sm" 
+                    id="nextBtn" style="right: -20px !important;">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Carousel Track -->
+            <div id="similarProductTrack" class="d-flex overflow-hidden scroll-smooth mx-2" style="scroll-behavior: smooth;">
+                <div class="flex-shrink-0 p-2 col-6 col-md-4 col-lg-3" th:each="p : ${similarItems}" th:if="${p != null}">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative overflow-hidden">
+                            <span class="badge bg-danger position-absolute top-0 start-0 m-3 z-2">-15%</span>
+                            <img th:src="@{${p.image}}" class="card-img-top product-img" alt="..."
+                                 onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                            
+                            <!-- Hover Actions -->
+                            <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
+                                 <a th:href="@{|/cart/add/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" title="Thêm vào giỏ">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </a>
+                                <a th:href="@{|/product/detail/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body text-center p-4">
+                            <div class="text-muted small mb-2 text-uppercase" th:text="${p.category != null ? p.category.name : 'Unknown'}">CATEGORY</div>
+                            <h5 class="card-title fw-bold mb-3">
+                                <a th:href="@{|/product/detail/${p.id}|}" class="text-decoration-none text-dark stretched-link" th:text="${p.name}">
+                                    Product Name
+                                </a>
+                            </h5>
+                <div class="d-flex justify-content-center gap-2 align-items-baseline">
+                                <span class="text-danger fw-bold fs-5" th:if="${p.price != null}" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">123,000 ₫</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const track = document.getElementById('similarProductTrack');
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                if (!track) return;
+
+                function getScrollAmount() {
+                    const item = track.firstElementChild;
+                    if (!item) return 0;
+                    return item.offsetWidth; 
+                }
+
+                function getItemsPerScroll() {
+                    // Approximate columns based on width or breakpoints
+                    if (window.innerWidth >= 992) return 4;
+                    if (window.innerWidth >= 768) return 3;
+                    return 2;
+                }
+
+                if(nextBtn) {
+                     nextBtn.addEventListener('click', () => {
+                        const itemWidth = getScrollAmount();
+                        const itemsToScroll = getItemsPerScroll();
+                        track.scrollBy({ left: itemWidth * itemsToScroll, behavior: 'smooth' });
+                    });
+                }
+
+                if(prevBtn) {
+                    prevBtn.addEventListener('click', () => {
+                        const itemWidth = getScrollAmount();
+                        const itemsToScroll = getItemsPerScroll();
+                        track.scrollBy({ left: -(itemWidth * itemsToScroll), behavior: 'smooth' });
+                    });
+                }
+            });
+        </script>
+    </div>
+</section>
+
+</body>
+</html>
