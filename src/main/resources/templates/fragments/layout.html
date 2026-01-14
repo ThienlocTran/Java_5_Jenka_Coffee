@@ -91,10 +91,8 @@
                         </div>
                         
                         <div class="d-grid gap-2 mt-3" th:unless="${#lists.isEmpty(cartItems)}">
-                            <a href="/cart/view" class="btn btn-outline-dark btn-sm text-uppercase fw-bold py-2 mb-1">Xem giỏ hàng</a>
-                            <!-- User suggested Checkout link, but standard flow often verifies cart first. 
-                                 However, keeping functionality as per request: -->
-                            <a href="/checkout" class="btn btn-dark btn-sm text-uppercase fw-bold py-2">Đặt hàng</a>
+                            <a th:href="@{/cart/view}" class="btn btn-outline-dark btn-sm text-uppercase fw-bold py-2 mb-1">Xem giỏ hàng</a>
+                            <a th:href="@{/checkout}" class="btn btn-dark btn-sm text-uppercase fw-bold py-2">Đặt hàng</a>
                         </div>
                     </div>
                 </div>

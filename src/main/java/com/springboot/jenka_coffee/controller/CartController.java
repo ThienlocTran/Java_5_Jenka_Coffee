@@ -1,6 +1,6 @@
 package com.springboot.jenka_coffee.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,9 +17,11 @@ import com.springboot.jenka_coffee.service.CartService;
 @RequestMapping("/cart")
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
 
+    final CartService cartService;
+    public CartController(CartService cartService) {
+        this.cartService = cartService;
+    }
     @GetMapping("/view")
     public String view(Model model) {
         model.addAttribute("items", cartService.getItems());
