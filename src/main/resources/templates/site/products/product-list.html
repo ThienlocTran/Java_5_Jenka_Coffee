@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<body>
+
+    <!-- BREADCRUMB -->
+    <div class="bg-light py-3 mb-4">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/index" class="text-decoration-none text-muted">Trang chủ</a></li>
+                    <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">Sản phẩm</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container mb-5">
+        <div class="row">
+            <!-- SIDEBAR FILTERS -->
+            <div class="col-lg-3 mb-4 mb-lg-0">
+                <!-- Categories -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-uppercase mb-3" style="font-size: 1rem;">Danh mục</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2" th:each="c : ${categories}">
+                            <a th:href="@{/product/list(cid=${c.id})}" 
+                               class="text-decoration-none text-muted d-flex justify-content-between align-items-center"
+                               th:classappend="${param.cid != null and #strings.equals(param.cid, c.id)} ? 'text-danger fw-bold' : ''">
+                                <span th:text="${c.name}">Category Name</span>
+                                <span class="badge bg-light text-dark rounded-pill border">12</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Price Filter -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-uppercase mb-3" style="font-size: 1rem;">Mức giá</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="price1">
+                        <label class="form-check-label text-muted small" for="price1">Dưới 1 triệu</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="price2">
+                        <label class="form-check-label text-muted small" for="price2">1 triệu - 5 triệu</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="price3">
+                        <label class="form-check-label text-muted small" for="price3">5 triệu - 10 triệu</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="price4">
+                        <label class="form-check-label text-muted small" for="price4">Trên 10 triệu</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCT GRID -->
+            <div class="col-lg-9">
+                <!-- Sorting & View Options -->
+                <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                    <span class="text-muted small">Hiển thị <b class="text-dark">9</b> sản phẩm</span>
+                    <select class="form-select form-select-sm w-auto border-0 bg-light fw-bold" aria-label="Sort">
+                        <option selected>Mới nhất</option>
+                        <option value="1">Giá thấp đến cao</option>
+                        <option value="2">Giá cao đến thấp</option>
+                        <option value="3">Bán chạy nhất</option>
+                    </select>
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-3 g-3">
+                    <!-- Product Item 1 -->
+                    <div class="col" th:each="item : ${items}">
+                        <div class="card h-100 product-card border-0 shadow-sm">
+                            <div class="position-relative overflow-hidden">
+                                <!-- Badge -->
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-2">-10%</span>
+                                
+                                <img th:src="@{${item.image}}" class="card-img-top p-3 product-img" alt="Product"
+                                     onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                                
+                                <!-- Hover Actions -->
+                                <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
+                                     <a href="#" class="btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart" th:data-id="${item.id}" title="Thêm vào giỏ">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </a>
+                                    <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card-body text-center p-3">
+                                <div class="text-muted small mb-1 text-uppercase" th:text="${item.category != null ? item.category.name : 'Unknown'}">CATEGORY</div>
+                                <h6 class="card-title fw-bold mb-2">
+                                    <a th:href="@{/product/detail/{id}(id=${item.id})}" class="text-decoration-none text-dark stretched-link" th:text="${item.name}">
+                                        Product Name
+                                    </a>
+                                </h6>
+                                <div class="d-flex justify-content-center gap-2 align-items-baseline">
+                                    <span class="text-muted text-decoration-line-through small" th:text="${#numbers.formatDecimal(item.price * 1.1, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                                    <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-5">
+                    <ul class="pagination">
+                        <li class="page-item disabled">
+                            <a class="page-link border-0 text-muted" href="#"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link border-0 bg-danger text-white shadow-sm rounded-circle mx-1">1</span>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link border-0 text-dark rounded-circle mx-1" href="#">2</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link border-0 text-dark rounded-circle mx-1" href="#">3</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link border-0 text-muted" href="#"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

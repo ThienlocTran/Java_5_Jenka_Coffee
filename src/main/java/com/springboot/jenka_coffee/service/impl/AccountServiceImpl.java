@@ -3,13 +3,16 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.repository.AccountDAO;
 import com.springboot.jenka_coffee.service.AccountService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
 public class AccountServiceImpl implements AccountService {
-    @Autowired AccountDAO dao;
+    final AccountDAO dao;
+
+    public AccountServiceImpl(AccountDAO dao) {
+        this.dao = dao;
+    }
 
     @Override
     public Account findById(String username) {

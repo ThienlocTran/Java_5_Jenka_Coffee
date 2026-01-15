@@ -1,24 +1,31 @@
 package com.springboot.jenka_coffee.controller;
 
+import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Controller
 public class HomeController {
 
     final ProductService productService;
-    final com.springboot.jenka_coffee.service.CategoryService categoryService;
+    final CategoryService categoryService;
 
     public HomeController(ProductService productService,
-            com.springboot.jenka_coffee.service.CategoryService categoryService) {
+            CategoryService categoryService) {
         this.productService = productService;
         this.categoryService = categoryService;
     }
 
     @RequestMapping("/home")
-    public String home(org.springframework.ui.Model model) {
-        java.util.List<com.springboot.jenka_coffee.entity.Product> list = productService.findAll();
+    public String home(Model model) {
+        List<Product> list = productService.findAll();
         model.addAttribute("items", list);
         model.addAttribute("categories", categoryService.findAll());
 
@@ -27,14 +34,14 @@ public class HomeController {
         // If we want 'items' to be stable, we should pass 'list' before shuffling, or
         // copy it.
         // Assuming 'list' is mutable.
-        java.util.List<com.springboot.jenka_coffee.entity.Product> randomList = new java.util.ArrayList<>(list);
+        List<Product> randomList = new ArrayList<>(list);
 
         // Mocking promotions (3 items)
-        java.util.Collections.shuffle(randomList);
+        Collections.shuffle(randomList);
         model.addAttribute("promotedItems", randomList.stream().limit(3).collect(java.util.stream.Collectors.toList()));
 
         // Mocking related products (4 items)
-        java.util.Collections.shuffle(randomList);
+        Collections.shuffle(randomList);
         model.addAttribute("relatedItems", randomList.stream().limit(4).collect(java.util.stream.Collectors.toList()));
 
         return "index";
