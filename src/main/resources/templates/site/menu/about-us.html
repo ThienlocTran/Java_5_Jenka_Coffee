@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Về Chúng Tôi - Jenka Coffee</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<div class="container mt-5 pt-4">
+
+    <!-- Hero Banner -->
+    <div class="about-hero mb-5">
+        <img src="/images/banner/banner1.jpg" class="w-100 rounded" style="height: 400px; object-fit: cover;" alt="Jenka Coffee">
+        <div class="position-absolute top-50 start-50 translate-middle text-center text-white" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.8);"></div>
+        <h1 class="display-3 fw-bold text-uppercase">VỀ JENKA COFFEE</h1>
+        <p class="lead fs-4">Hương vị cà phê đích thực - Đam mê trong từng tách</p>
+    </div>
+</div>
+
+<!-- Story Section -->
+<section class="mb-5">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-6">
+            <h2 class="fw-bold mb-4 text-uppercase" style="color: #4b3d33;">CÂU CHUYỆN CỦA CHÚNG TÔI</h2>
+            <p class="mb-3" style="line-height: 1.8; text-align: justify;">
+                Jenka Coffee được sinh ra từ niềm đam mê với văn hóa cà phê đích thực.
+                Chúng tôi tin rằng cà phê không chỉ là một thức uống, mà là nguồn cảm hứng
+                và sự kết nối giữa con người với nhau.
+            </p>
+            <p class="mb-3" style="line-height: 1.8; text-align: justify;">
+                Với hơn 10 năm kinh nghiệm trong ngành máy pha cà phê chuyên nghiệp,
+                Jenka Coffee tự hào là đơn vị cung cấp các thiết bị pha chế hàng đầu
+                từ những thương hiệu nổi tiếng thế giới như Casadio, La Marzocco,
+                Mahlkönig, và nhiều hãng khác.
+            </p>
+            <p style="line-height: 1.8; text-align: justify;">
+                Chúng tôi không chỉ bán máy, mà còn mang đến giải pháp toàn diện
+                cho quán cà phê của bạn - từ tư vấn, lắp đặt, đào tạo vận hành
+                đến bảo hành và bảo trì lâu dài.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <img src="/images/banner/banner2.jpg" class="img-fluid rounded shadow" alt="Jenka Coffee Story">
+        </div>
+    </div>
+</section>
+
+<!-- Mission & Vision -->
+<section class="py-5 mb-5" style="background-color: #faf9f6; border-radius: 8px;">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-bullseye fa-3x" style="color: #D32F2F;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3 text-uppercase" style="color: #4b3d33;">SỨ MỆNH</h3>
+                    <p style="line-height: 1.8; text-align: justify;">
+                        Mang đến những trải nghiệm cà phê chất lượng cao,
+                        khơi dậy sự sáng tạo và năng lượng cho cuộc sống hàng ngày.
+                        Chúng tôi cam kết cung cấp thiết bị pha chế tốt nhất
+                        và dịch vụ chuyên nghiệp nhất cho khách hàng.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-eye fa-3x" style="color: #D32F2F;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3 text-uppercase" style="color: #4b3d33;">TầM NHÌN</h3>
+                    <p style="line-height: 1.8; text-align: justify;">
+                        Trở thành đơn vị hàng đầu Việt Nam trong lĩnh vực
+                        cung cấp thiết bị pha chế cà phê chuyên nghiệp,
+                        góp phần nâng cao văn hóa cà phê Việt Nam
+                        và đưa cà phê Việt vươn tầm quốc tế.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Core Values -->
+<section class="mb-5">
+    <h2 class="fw-bold mb-4 text-center text-uppercase" style="color: #4b3d33;">GIÁ TRỊ CỐT LÕI</h2>
+    <div class="row g-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="text-center p-3">
+                <div class="mb-3">
+                    <i class="fas fa-certificate fa-3x" style="color: #D32F2F;"></i>
+                </div>
+                <h5 class="fw-bold mb-2">CHẤT LƯỢNG</h5>
+                <p class="small">Sản phẩm chính hãng, nhập khẩu trực tiếp từ các thương hiệu uy tín</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="text-center p-3">
+                <div class="mb-3">
+                    <i class="fas fa-handshake fa-3x" style="color: #D32F2F;"></i>
+                </div>
+                <h5 class="fw-bold mb-2">UY TÍN</h5>
+                <p class="small">Cam kết bảo hành chính hãng và hỗ trợ khách hàng tận tâm</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="text-center p-3">
+                <div class="mb-3">
+                    <i class="fas fa-users fa-3x" style="color: #D32F2F;"></i>
+                </div>
+                <h5 class="fw-bold mb-2">CHUYÊN NGHIỆP</h5>
+                <p class="small">Đội ngũ kỹ thuật viên giàu kinh nghiệm, được đào tạo bài bản</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="text-center p-3">
+                <div class="mb-3">
+                    <i class="fas fa-heart fa-3x" style="color: #D32F2F;"></i>
+                </div>
+                <h5 class="fw-bold mb-2">ĐAM MÊ</h5>
+                <p class="small">Yêu cà phê, hiểu cà phê và chia sẻ niềm đam mê với khách hàng</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Services -->
+<section class="py-5 mb-5" style="background: linear-gradient(135deg, #2c1a16 0%, #4b3d33 100%); border-radius: 8px;">
+    <div class="container">
+        <h2 class="fw-bold mb-4 text-center text-uppercase text-white">DỊCH VỤ CỦA CHÚNG TÔI</h2>
+        <div class="row g-4 text-white">
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-coffee fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Cung cấp thiết bị</h5>
+                    <p class="small">Máy pha cà phê, máy xay, máy ép và các dụng cụ pha chế chuyên nghiệp</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-tools fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Sửa chữa & Bảo trì</h5>
+                    <p class="small">Dịch vụ sửa chữa, bảo dưỡng định kỳ với đội ngũ kỹ thuật chuyên nghiệp</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-chalkboard-teacher fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Đào tạo vận hành</h5>
+                    <p class="small">Hướng dẫn sử dụng thiết bị và kỹ thuật pha chế cà phê chuyên nghiệp</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-store fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Setup quán cà phê</h5>
+                    <p class="small">Tư vấn thiết kế và setup toàn bộ hệ thống cho quán cà phê</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-shipping-fast fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Giao hàng toàn quốc</h5>
+                    <p class="small">Vận chuyển nhanh chóng, an toàn đến tận nơi trên toàn quốc</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-headset fa-2x mb-3" style="color: #FFE082;"></i>
+                    <h5 class="fw-bold mb-2">Hỗ trợ 24/7</h5>
+                    <p class="small">Tư vấn và hỗ trợ khách hàng mọi lúc, mọi nơi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact CTA -->
+<section class="text-center py-5 mb-5">
+    <h2 class="fw-bold mb-3 text-uppercase" style="color: #4b3d33;">LIÊN HỆ VỚI CHÚNG TÔI</h2>
+    <p class="lead mb-4">Hãy để Jenka Coffee đồng hành cùng bạn trên hành trình kinh doanh cà phê</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="tel:0817909090" class="btn btn-danger btn-lg px-4">
+            <i class="fas fa-phone-alt me-2"></i>0817 909 090
+        </a>
+        <a href="tel:0827909090" class="btn btn-outline-dark btn-lg px-4">
+            <i class="fas fa-phone-alt me-2"></i>0827 909 090
+        </a>
+        <a href="mailto:coffeejenka274@gmail.com" class="btn btn-dark btn-lg px-4">
+            <i class="fas fa-envelope me-2"></i>Email
+        </a>
+    </div>
+</section>
+
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
