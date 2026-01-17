@@ -30,4 +30,25 @@ public class AccountServiceImpl implements AccountService {
                 .filter(acc -> acc.getAdmin() != null && acc.getAdmin())
                 .toList();
     }
+
+    @Override
+    public Account save(Account account) {
+        return dao.save(account);
+    }
+
+    @Override
+    public void delete(String username) {
+        dao.deleteById(username);
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        return dao.existsById(username);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return dao.findAll().stream()
+                .anyMatch(acc -> acc.getEmail().equalsIgnoreCase(email));
+    }
 }
