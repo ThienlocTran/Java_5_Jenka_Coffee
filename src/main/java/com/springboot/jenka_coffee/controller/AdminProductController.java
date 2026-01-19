@@ -27,7 +27,7 @@ public class AdminProductController {
     public String index(Model model) {
         List<Product> list = productService.findAll();
         model.addAttribute("items", list);
-        return "product/list"; // Admin table view
+        return "admin/products/list"; // Admin table view
     }
 
     // 2. Create Form
@@ -36,7 +36,7 @@ public class AdminProductController {
         Product p = new Product();
         model.addAttribute("item", p);
         model.addAttribute("categories", categoryService.findAll());
-        return "product/form";
+        return "admin/products/form";
     }
 
     // 3. Edit Form
@@ -45,21 +45,25 @@ public class AdminProductController {
         Product p = productService.findById(id);
         model.addAttribute("item", p);
         model.addAttribute("categories", categoryService.findAll());
-        return "product/form";
+        return "admin/products/form";
     }
 
     // 4. Save Action
     @PostMapping("/save")
     public String save(@ModelAttribute("item") Product product,
-            @RequestParam("photo_file") MultipartFile file) {
+            @RequestParam(value = "imageFile", required = false) MultipartFile file) {
         productService.saveProduct(product, file);
         return "redirect:/admin/product/list";
     }
 
-    // 5. Delete Action
-    @GetMapping("/delete/{id}")
-    public String delete(@PathVariable("id") Integer id) {
-        productService.delete(id);
+    // 5. Toggle Available (Soft Delete)
+    @GetMapping("/toggle/{id}")
+    public String toggleAvailable(@PathVariable("id") Integer id) {
+        Product product = productService.findById(id);
+        if (product != null) {
+            product.setAvailable(!product.getAvailable());
+            productService.update(product);
+        }
         return "redirect:/admin/product/list";
     }
 }

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title" th:text="${item.username == null ? 'Thêm tài khoản mới' : 'Chỉnh sửa tài khoản'}">
+            <i class="fas fa-user-edit me-3"></i>
+            Chỉnh sửa tài khoản
+        </h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / 
+            <a href="/admin/account/list">Tài khoản</a> / 
+            <span th:text="${item.username == null ? 'Thêm mới' : 'Chỉnh sửa'}">Chỉnh sửa</span>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <span th:text="${success}">Thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <span th:text="${error}">Có lỗi xảy ra!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Form Card -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-user-cog me-2"></i>
+                <span th:text="${item.username == null ? 'Thông tin tài khoản mới' : 'Cập nhật thông tin tài khoản'}">
+                    Cập nhật thông tin tài khoản
+                </span>
+            </h5>
+            <div th:if="${item.username != null}" class="text-muted">
+                <small>
+                    <i class="fas fa-user me-1"></i>
+                    Username: <strong th:text="${item.username}">admin</strong>
+                </small>
+            </div>
+        </div>
+
+        <form th:action="@{/admin/account/save}" 
+              th:object="${item}" 
+              method="post" 
+              enctype="multipart/form-data"
+              class="needs-validation" 
+              novalidate>
+            
+            <!-- Hidden field for existing username (primary key) -->
+            <input type="hidden" th:field="*{username}" th:if="${item.username != null}">
+            
+            <div class="row">
+                <!-- Left Column - Basic Info -->
+                <div class="col-md-8">
+                    <!-- Username (only for new accounts) -->
+                    <div class="mb-3" th:if="${item.username == null}">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user me-1"></i>
+                            Tên đăng nhập <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="username" 
+                               th:field="*{username}"
+                               th:classappend="${#fields.hasErrors('username')} ? 'is-invalid' : ''"
+                               placeholder="Nhập tên đăng nhập (3-50 ký tự)"
+                               minlength="3"
+                               maxlength="50"
+                               pattern="[a-zA-Z0-9_]+"
+                               required>
+                        <div class="form-text">Chỉ được sử dụng chữ cái, số và dấu gạch dưới</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('username')}" th:errors="*{username}">
+                            Vui lòng nhập tên đăng nhập hợp lệ
+                        </div>
+                    </div>
+
+                    <!-- Username (readonly for existing accounts) -->
+                    <div class="mb-3" th:if="${item.username != null}">
+                        <label class="form-label">
+                            <i class="fas fa-user me-1"></i>
+                            Tên đăng nhập
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               th:value="${item.username}"
+                               readonly
+                               style="background-color: #f8f9fa;">
+                        <div class="form-text text-muted">Tên đăng nhập không thể thay đổi</div>
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="mb-3">
+                        <label for="fullname" class="form-label">
+                            <i class="fas fa-id-card me-1"></i>
+                            Họ và tên <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="fullname" 
+                               th:field="*{fullname}"
+                               th:classappend="${#fields.hasErrors('fullname')} ? 'is-invalid' : ''"
+                               placeholder="Nhập họ và tên đầy đủ"
+                               maxlength="100"
+                               required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('fullname')}" th:errors="*{fullname}">
+                            Vui lòng nhập họ và tên
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>
+                            Email <span class="text-danger">*</span>
+                        </label>
+                        <input type="email" 
+                               class="form-control" 
+                               id="email" 
+                               th:field="*{email}"
+                               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                               placeholder="example@domain.com"
+                               maxlength="100"
+                               required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                            Vui lòng nhập email hợp lệ
+                        </div>
+                    </div>
+
+                    <!-- Password Section -->
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-1"></i>
+                            Mật khẩu 
+                            <span th:if="${item.username == null}" class="text-danger">*</span>
+                            <span th:if="${item.username != null}" class="text-muted">(để trống nếu không đổi)</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="password" 
+                                   th:field="*{password}"
+                                   th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
+                                   placeholder="Nhập mật khẩu mới"
+                                   minlength="3"
+                                   th:required="${item.username == null}">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Mật khẩu tối thiểu 3 ký tự</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">
+                            Vui lòng nhập mật khẩu
+                        </div>
+                    </div>
+
+                    <!-- Role & Status Row -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="admin" class="form-label">
+                                    <i class="fas fa-user-shield me-1"></i>
+                                    Vai trò <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" 
+                                        id="admin" 
+                                        th:field="*{admin}"
+                                        required>
+                                    <option value="">-- Chọn vai trò --</option>
+                                    <option th:value="false">Khách hàng</option>
+                                    <option th:value="true">Quản trị viên</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Vui lòng chọn vai trò
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="activated" class="form-label">
+                                    <i class="fas fa-toggle-on me-1"></i>
+                                    Trạng thái tài khoản
+                                </label>
+                                <select class="form-select" id="activated" th:field="*{activated}">
+                                    <option th:value="true">Đã kích hoạt</option>
+                                    <option th:value="false">Chưa kích hoạt</option>
+                                </select>
+                                <div class="form-text">
+                                    Tài khoản chưa kích hoạt sẽ không thể đăng nhập
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Avatar & Info -->
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-camera me-1"></i>
+                            Ảnh đại diện
+                        </label>
+                        
+                        <!-- Avatar Preview -->
+                        <div class="text-center mb-3">
+                            <div class="position-relative d-inline-block">
+                                <img id="avatarPreview" 
+                                     th:src="${item.photo != null ? '/images/users/' + item.photo : 'https://ui-avatars.com/api/?name=' + (item.fullname != null ? item.fullname : 'User') + '&background=D32F2F&color=fff&size=200'}"
+                                     class="rounded-circle border border-3"
+                                     style="width: 150px; height: 150px; object-fit: cover; border-color: #D32F2F !important;">
+                                <div class="position-absolute bottom-0 end-0">
+                                    <span class="badge bg-primary rounded-pill">
+                                        <i class="fas fa-camera"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Button -->
+                        <input type="file" 
+                               class="form-control" 
+                               id="photoFile" 
+                               name="photoFile"
+                               accept="image/*"
+                               onchange="previewAvatar(event)">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Định dạng: JPG, PNG, GIF. Tối đa 2MB
+                        </small>
+                        
+                        <!-- Hidden field for existing photo -->
+                        <input type="hidden" th:field="*{photo}">
+                    </div>
+
+                    <!-- Role Badge -->
+                    <div class="text-center mb-3">
+                        <div id="roleBadge">
+                            <span th:if="${item.admin}" class="badge bg-danger fs-6 px-3 py-2">
+                                <i class="fas fa-crown me-2"></i>Quản trị viên
+                            </span>
+                            <span th:unless="${item.admin}" class="badge bg-primary fs-6 px-3 py-2">
+                                <i class="fas fa-user me-2"></i>Khách hàng
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="generateRandomPassword()">
+                            <i class="fas fa-random me-2"></i>Tạo mật khẩu ngẫu nhiên
+                        </button>
+                    </div>
+
+                    <!-- Security Warning -->
+                    <div class="alert alert-warning mt-3" th:if="${item.admin}">
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Cảnh báo:</strong> Tài khoản này có quyền quản trị viên. 
+                            Hãy cẩn thận khi thay đổi thông tin.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                <a href="/admin/account/list" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
+                </a>
+                <div>
+                    <button type="reset" class="btn btn-outline-secondary me-2" onclick="resetForm()">
+                        <i class="fas fa-redo me-2"></i>Làm mới
+                    </button>
+                    <button type="submit" class="btn btn-primary-custom" id="saveBtn">
+                        <i class="fas fa-save me-2"></i>
+                        <span th:text="${item.username == null ? 'Tạo tài khoản' : 'Cập nhật tài khoản'}">
+                            Cập nhật tài khoản
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+    // Form validation
+    (function() {
+        'use strict';
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                } else {
+                    // Show loading state
+                    const saveBtn = document.getElementById('saveBtn');
+                    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang lưu...';
+                    saveBtn.disabled = true;
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+
+    // Avatar preview
+    function previewAvatar(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // Check file size (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Kích thước file quá lớn! Vui lòng chọn file nhỏ hơn 2MB.');
+                event.target.value = '';
+                return;
+            }
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                alert('Vui lòng chọn file hình ảnh!');
+                event.target.value = '';
+                return;
+            }
+
+            // Preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('avatarPreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Toggle password visibility
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('passwordToggleIcon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+
+    // Generate random password
+    function generateRandomPassword() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%';
+        let password = '';
+        for (let i = 0; i < 8; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        document.getElementById('password').value = password;
+        document.getElementById('password').type = 'text';
+        document.getElementById('passwordToggleIcon').classList.remove('fa-eye');
+        document.getElementById('passwordToggleIcon').classList.add('fa-eye-slash');
+        
+        // Show notification
+        alert('Đã tạo mật khẩu ngẫu nhiên: ' + password + '\nVui lòng lưu lại mật khẩu này!');
+    }
+
+    // Reset form
+    function resetForm() {
+        if (confirm('Bạn có chắc chắn muốn làm mới form? Tất cả thay đổi sẽ bị mất.')) {
+            document.querySelector('form').reset();
+            // Reset avatar preview
+            const originalSrc = document.getElementById('avatarPreview').getAttribute('th:src') || 
+                               'https://ui-avatars.com/api/?name=User&background=D32F2F&color=fff&size=200';
+            document.getElementById('avatarPreview').src = originalSrc;
+        }
+    }
+
+    // Update role badge when role changes
+    document.getElementById('admin').addEventListener('change', function() {
+        const roleBadge = document.getElementById('roleBadge');
+        if (this.value === 'true') {
+            roleBadge.innerHTML = '<span class="badge bg-danger fs-6 px-3 py-2"><i class="fas fa-crown me-2"></i>Quản trị viên</span>';
+        } else if (this.value === 'false') {
+            roleBadge.innerHTML = '<span class="badge bg-primary fs-6 px-3 py-2"><i class="fas fa-user me-2"></i>Khách hàng</span>';
+        }
+    });
+
+    // Username validation (only for new accounts)
+    const usernameInput = document.getElementById('username');
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            // Remove invalid characters
+            this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
+        });
+    }
+
+    // Auto-generate avatar when name changes
+    document.getElementById('fullname').addEventListener('blur', function() {
+        const avatarImg = document.getElementById('avatarPreview');
+        const currentSrc = avatarImg.src;
+        
+        // Only update if using default avatar (ui-avatars)
+        if (currentSrc.includes('ui-avatars.com') && this.value) {
+            const newSrc = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(this.value) + '&background=D32F2F&color=fff&size=200';
+            avatarImg.src = newSrc;
+        }
+    });
+</script>
+</body>
+</html>

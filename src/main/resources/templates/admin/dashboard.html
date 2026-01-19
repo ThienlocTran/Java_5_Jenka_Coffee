@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="page-breadcrumb">
+            <i class="fas fa-home"></i> Trang chủ / <span>Dashboard</span>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="admin-card" style="border-left: 4px solid #D32F2F;">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small mb-1">Tổng doanh thu</div>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;">125.500.000 đ</h3>
+                        <small style="color: #D32F2F;"><i class="fas fa-arrow-up"></i> 12% tháng trước</small>
+                    </div>
+                    <div class="ms-3">
+                        <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-dollar-sign fa-2x" style="color: #D32F2F;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="admin-card" style="border-left: 4px solid #2196F3;">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small mb-1">Đơn hàng mới</div>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;">45</h3>
+                        <small style="color: #2196F3;"><i class="fas fa-arrow-up"></i> 8 đơn hôm nay</small>
+                    </div>
+                    <div class="ms-3">
+                        <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-shopping-cart fa-2x" style="color: #2196F3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="admin-card" style="border-left: 4px solid #FF9800;">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small mb-1">Sản phẩm</div>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;">156</h3>
+                        <small style="color: #FF9800;"><i class="fas fa-box"></i> 12 sản phẩm mới</small>
+                    </div>
+                    <div class="ms-3">
+                        <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-box fa-2x" style="color: #FF9800;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="admin-card" style="border-left: 4px solid #4CAF50;">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small mb-1">Khách hàng</div>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;">1,234</h3>
+                        <small style="color: #4CAF50;"><i class="fas fa-users"></i> 45 người mới</small>
+                    </div>
+                    <div class="ms-3">
+                        <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-users fa-2x" style="color: #4CAF50;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-shopping-bag me-2"></i>
+                Đơn hàng gần đây
+            </h5>
+            <a href="/admin/orders" class="btn btn-primary-custom btn-sm">
+                Xem tất cả
+            </a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Khách hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>#ORD-001</strong></td>
+                        <td>Nguyễn Văn A</td>
+                        <td>14/01/2026</td>
+                        <td><strong style="color: #D32F2F;">2.500.000 đ</strong></td>
+                        <td><span class="badge" style="background: #FF9800; color: white;">Chờ xác nhận</span></td>
+                        <td>
+                            <button class="btn btn-sm" style="background: #2196F3; color: white;" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>#ORD-002</strong></td>
+                        <td>Trần Thị B</td>
+                        <td>14/01/2026</td>
+                        <td><strong style="color: #D32F2F;">1.800.000 đ</strong></td>
+                        <td><span class="badge" style="background: #2196F3; color: white;">Đang giao</span></td>
+                        <td>
+                            <button class="btn btn-sm" style="background: #2196F3; color: white;" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>#ORD-003</strong></td>
+                        <td>Lê Văn C</td>
+                        <td>13/01/2026</td>
+                        <td><strong style="color: #D32F2F;">3.200.000 đ</strong></td>
+                        <td><span class="badge" style="background: #4CAF50; color: white;">Hoàn thành</span></td>
+                        <td>
+                            <button class="btn btn-sm" style="background: #2196F3; color: white;" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

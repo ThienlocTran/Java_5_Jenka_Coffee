@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/admin-layout :: admin_layout(~{::content})}">
+
+<div th:fragment="content">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-users me-3"></i>
+            Quản lý tài khoản
+        </h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard">Dashboard</a> / Tài khoản
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <span th:text="${success}">Thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <span th:text="${error}">Có lỗi xảy ra!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Main Card -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-list me-2"></i>
+                Danh sách tài khoản
+            </h5>
+            <a href="/admin/account/add" class="btn btn-primary-custom">
+                <i class="fas fa-plus me-2"></i>
+                Thêm tài khoản
+            </a>
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" placeholder="Tìm kiếm theo tên, email..." id="searchInput">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="roleFilter">
+                    <option value="">Tất cả vai trò</option>
+                    <option value="admin">Quản trị viên</option>
+                    <option value="user">Khách hàng</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="1">Đã kích hoạt</option>
+                    <option value="0">Chưa kích hoạt</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Accounts Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="accountsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">
+                            <input type="checkbox" class="form-check-input" id="selectAll">
+                        </th>
+                        <th width="15%">Tên đăng nhập</th>
+                        <th width="20%">Họ tên</th>
+                        <th width="20%">Email</th>
+                        <th width="10%">Vai trò</th>
+                        <th width="10%">Trạng thái</th>
+                        <th width="10%">Ảnh đại diện</th>
+                        <th width="10%">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Sample Data - Replace with Thymeleaf loop -->
+                    <tr th:each="account : ${accounts}">
+                        <td>
+                            <input type="checkbox" class="form-check-input row-checkbox" th:value="${account.username}">
+                        </td>
+                        <td>
+                            <strong th:text="${account.username}">admin</strong>
+                        </td>
+                        <td th:text="${account.fullname}">Trần Thiên Lộc (Leader)</td>
+                        <td>
+                            <a th:href="'mailto:' + ${account.email}" th:text="${account.email}" class="text-decoration-none">
+                                loctt@fpt.edu.vn
+                            </a>
+                        </td>
+                        <td>
+                            <span th:if="${account.admin}" class="badge bg-danger">
+                                <i class="fas fa-crown me-1"></i>
+                                Quản trị viên
+                            </span>
+                            <span th:unless="${account.admin}" class="badge bg-primary">
+                                <i class="fas fa-user me-1"></i>
+                                Khách hàng
+                            </span>
+                        </td>
+                        <td>
+                            <span th:if="${account.activated}" class="badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Đã kích hoạt
+                            </span>
+                            <span th:unless="${account.activated}" class="badge bg-warning">
+                                <i class="fas fa-pause-circle me-1"></i>
+                                Chưa kích hoạt
+                            </span>
+                        </td>
+                        <td>
+                            <img th:if="${account.photo}" 
+                                 th:src="@{'/images/users/' + ${account.photo}}" 
+                                 th:alt="${account.fullname}"
+                                 class="rounded-circle"
+                                 style="width: 40px; height: 40px; object-fit: cover;"
+                                 onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(this.alt) + '&background=D32F2F&color=fff'">
+                            <img th:unless="${account.photo}"
+                                 th:src="'https://ui-avatars.com/api/?name=' + ${account.fullname} + '&background=D32F2F&color=fff'"
+                                 th:alt="${account.fullname}"
+                                 class="rounded-circle"
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a th:href="@{'/admin/account/edit/' + ${account.username}}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Chỉnh sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger" 
+                                        th:onclick="'confirmDelete(\'' + ${account.username} + '\', \'' + ${account.fullname} + '\')'"
+                                        title="Xóa tài khoản">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Phân trang tài khoản">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Trước</a>
+                </li>
+                <li class="page-item active">
+                    <a class="page-link" href="#">1</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade modal-delete" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Xác nhận xóa tài khoản
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="delete-message">
+                    Bạn có chắc chắn muốn xóa tài khoản <strong id="deleteAccountName"></strong>?
+                </div>
+                <div class="delete-warning">
+                    Hành động này không thể hoàn tác! Tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy
+                </button>
+                <button type="button" class="btn btn-danger btn-delete" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Xóa tài khoản
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Account Modal - Removed since we use separate page -->
+
+<script>
+// JavaScript for Account Management
+let currentDeleteUsername = null;
+
+// Confirm delete function
+function confirmDelete(username, fullname) {
+    currentDeleteUsername = username;
+    document.getElementById('deleteAccountName').textContent = fullname;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+    deleteModal.show();
+}
+
+// Handle delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (currentDeleteUsername) {
+        // Add loading state
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
+        this.disabled = true;
+        
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/account/delete/' + currentDeleteUsername;
+        
+        // Add CSRF token if needed
+        const csrfToken = document.querySelector('meta[name="_csrf"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+});
+
+// Edit account function - redirect to edit page
+function editAccount(username) {
+    window.location.href = '/admin/account/edit/' + username;
+}
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#accountsTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Filter functionality
+document.getElementById('roleFilter').addEventListener('change', function() {
+    filterTable();
+});
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+    filterTable();
+});
+
+function filterTable() {
+    const roleFilter = document.getElementById('roleFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const rows = document.querySelectorAll('#accountsTable tbody tr');
+    
+    rows.forEach(row => {
+        let showRow = true;
+        
+        // Role filter
+        if (roleFilter) {
+            const roleBadge = row.querySelector('td:nth-child(5) .badge');
+            const isAdmin = roleBadge.classList.contains('bg-danger');
+            if ((roleFilter === 'admin' && !isAdmin) || (roleFilter === 'user' && isAdmin)) {
+                showRow = false;
+            }
+        }
+        
+        // Status filter
+        if (statusFilter && showRow) {
+            const statusBadge = row.querySelector('td:nth-child(6) .badge');
+            const isActive = statusBadge.classList.contains('bg-success');
+            if ((statusFilter === '1' && !isActive) || (statusFilter === '0' && isActive)) {
+                showRow = false;
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+// Select all functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+
+</html>

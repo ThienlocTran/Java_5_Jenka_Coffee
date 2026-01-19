@@ -1,0 +1,444 @@
+/* ========================================
+   ADMIN PANEL CSS - Jenka Coffee
+   ======================================== */
+
+:root {
+    --sidebar-width: 260px;
+    --navbar-height: 70px;
+    --primary-color: #FFFFFF;
+    --accent-color: #D32F2F;
+    --sidebar-bg: #FAFAFA;
+    --sidebar-hover: rgba(211, 47, 47, 0.08);
+    --text-dark: #212529;
+    --border-light: #EEEEEE;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f4f6f9;
+    overflow-x: hidden;
+}
+
+/* ========== SIDEBAR ========== */
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--sidebar-bg);
+    color: var(--text-dark);
+    z-index: 1000;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    border-right: 1px solid var(--border-light);
+}
+
+.admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(211, 47, 47, 0.2);
+    border-radius: 3px;
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    background: var(--primary-color);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.sidebar-header img {
+    max-width: 120px;
+    filter: none;
+}
+
+.sidebar-header h5 {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #999;
+}
+
+.sidebar-menu {
+    padding: 20px 0;
+}
+
+.menu-section-title {
+    padding: 15px 20px 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #999;
+}
+
+.sidebar-menu .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #666;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+    font-size: 0.95rem;
+}
+
+.sidebar-menu .nav-link:hover {
+    background: var(--sidebar-hover);
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+}
+
+.sidebar-menu .nav-link.active {
+    background: rgba(211, 47, 47, 0.1);
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+    font-weight: 600;
+}
+
+.sidebar-menu .nav-link i {
+    width: 25px;
+    text-align: center;
+    margin-right: 12px;
+    font-size: 1.1rem;
+}
+
+.sidebar-menu .badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+}
+
+/* ========== NAVBAR ========== */
+.admin-navbar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    height: var(--navbar-height);
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    padding: 0 30px;
+    transition: all 0.3s ease;
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.navbar-toggle {
+    font-size: 1.5rem;
+    color: #333;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.navbar-toggle:hover {
+    color: var(--accent-color);
+}
+
+.navbar-search {
+    position: relative;
+}
+
+.navbar-search input {
+    width: 300px;
+    padding: 8px 15px 8px 40px;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.navbar-search input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+}
+
+.navbar-search i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.navbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.navbar-icon {
+    position: relative;
+    font-size: 1.3rem;
+    color: #666;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.navbar-icon:hover {
+    color: var(--accent-color);
+}
+
+.navbar-icon .badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.65rem;
+}
+
+.navbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 8px 15px;
+    border-radius: 25px;
+    transition: background 0.3s;
+}
+
+.navbar-user:hover {
+    background: #f5f5f5;
+}
+
+.navbar-user img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-color);
+}
+
+.navbar-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar-user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.navbar-user-role {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+/* ========== MAIN CONTENT ========== */
+.admin-content {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--navbar-height);
+    padding: 30px;
+    min-height: calc(100vh - var(--navbar-height));
+    transition: all 0.3s ease;
+}
+
+/* ========== PAGE HEADER ========== */
+.page-header {
+    margin-bottom: 30px;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.page-breadcrumb {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+.page-breadcrumb a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+/* ========== CARDS ========== */
+.admin-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.card-header-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.card-title-custom {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* ========== BUTTONS ========== */
+.btn-primary-custom {
+    background: var(--accent-color);
+    border: none;
+    color: #fff;
+    padding: 10px 25px;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-primary-custom:hover {
+    background: #b71c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
+}
+
+/* ========== DELETE MODAL ========== */
+.modal-delete .modal-content {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.modal-delete .modal-header {
+    background: linear-gradient(135deg, #D32F2F 0%, #b71c1c 100%);
+    color: #fff;
+    border: none;
+    padding: 20px 25px;
+}
+
+.modal-delete .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.modal-delete .modal-title i {
+    font-size: 1.5rem;
+}
+
+.modal-delete .modal-body {
+    padding: 30px 25px;
+    text-align: center;
+}
+
+.modal-delete .delete-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    background: #ffebee;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-delete .delete-icon i {
+    font-size: 2.5rem;
+    color: #D32F2F;
+}
+
+.modal-delete .delete-message {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.modal-delete .delete-warning {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+.modal-delete .modal-footer {
+    border: none;
+    padding: 20px 25px;
+    justify-content: center;
+    gap: 15px;
+}
+
+.modal-delete .btn-cancel {
+    padding: 10px 30px;
+    border-radius: 25px;
+    font-weight: 500;
+}
+
+.modal-delete .btn-delete {
+    padding: 10px 30px;
+    border-radius: 25px;
+    font-weight: 500;
+    background: #D32F2F;
+    border: none;
+}
+
+.modal-delete .btn-delete:hover {
+    background: #b71c1c;
+}
+
+/* ========== RESPONSIVE ========== */
+.sidebar-collapsed .admin-sidebar {
+    width: 80px;
+}
+
+.sidebar-collapsed .admin-navbar {
+    left: 80px;
+}
+
+.sidebar-collapsed .admin-content {
+    margin-left: 80px;
+}
+
+.sidebar-collapsed .sidebar-menu .nav-link span {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-header h5,
+.sidebar-collapsed .menu-section-title {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+    }
+
+    .admin-navbar {
+        left: 0;
+    }
+
+    .admin-content {
+        margin-left: 0;
+    }
+
+    .sidebar-open .admin-sidebar {
+        transform: translateX(0);
+    }
+
+    .navbar-search input {
+        width: 200px;
+    }
+}
