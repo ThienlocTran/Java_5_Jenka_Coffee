@@ -12,7 +12,11 @@ sql-data/
 .settings
 .springBeans
 .sts4-cache
+pom.xml
+docker-compose.yml
+README.md
 
+src/main/resources/application.properties
 ### IntelliJ IDEA ###
 .idea
 *.iws

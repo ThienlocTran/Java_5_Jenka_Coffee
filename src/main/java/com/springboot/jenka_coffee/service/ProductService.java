@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.service;
 import com.springboot.jenka_coffee.entity.Product;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,4 +21,10 @@ public interface ProductService {
     void delete(Integer id);
 
     Product saveProduct(Product product, MultipartFile file);
+
+    List<Product> getRelatedProducts(String categoryId, Integer productId);
+
+    List<Product> filterProducts(String categoryId);
+
+    Map<String, Object> getProductDetail(Integer productId);
 }
