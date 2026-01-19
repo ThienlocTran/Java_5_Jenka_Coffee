@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Đơn hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<div class="container mt-5 mb-5" style="min-height: 500px;">
+
+    <h3 class="mb-4 text-uppercase fw-bold text-center" style="color: #4b3d33;">
+        <i class=""></i> Quản lý Đơn hàng (Admin)
+    </h3>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary">
+                <tr>
+                    <th class="ps-4">Mã Đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end pe-4">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${orders.isEmpty()}">
+                    <td colspan="6" class="text-center py-5">
+                        <p class="text-muted">Chưa có đơn hàng nào.</p>
+                    </td>
+                </tr>
+
+                <tr th:each="o : ${orders}">
+                    <td class="ps-4 fw-bold" th:text="${'#' + o.id}"></td>
+                    <td th:text="${o.address}"></td>
+
+                    <td th:text="${o.createDate}"></td>
+
+                    <td class="fw-bold text-danger"
+                        th:text="${o.total != null ? #numbers.formatDecimal(o.total, 0, 'COMMA', 0, 'POINT') : 0} + ' đ'">
+                    </td>
+
+                    <td>
+                        <span th:if="${o.status == 0}" class="badge bg-warning text-dark">Mới</span>
+                        <span th:if="${o.status == 1}" class="badge bg-primary">Giao hàng</span>
+                        <span th:if="${o.status == 2}" class="badge bg-success">Hoàn thành</span>
+                        <span th:if="${o.status == 3}" class="badge bg-danger">Đã hủy</span>
+                    </td>
+
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-danger"
+                                th:attr="onclick='showDeleteModal(' + ${o.id} + ')'"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash-alt"></i> Hủy đơn
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Xác nhận hủy</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="fs-5">Bạn có chắc muốn hủy đơn hàng <strong id="modalOrderId">...</strong>?</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Không</button>
+                <a id="confirmDeleteBtn" href="#" class="btn btn-danger">Đồng ý hủy</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function showDeleteModal(id) {
+        document.getElementById('modalOrderId').innerText = '#' + id;
+        document.getElementById('confirmDeleteBtn').href = '/admin/order/delete/' + id;
+    }
+</script>
+</body>
+</html>
