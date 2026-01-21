@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 public class HomeController {
@@ -38,11 +39,11 @@ public class HomeController {
 
         // Mocking promotions (3 items)
         Collections.shuffle(randomList);
-        model.addAttribute("promotedItems", randomList.stream().limit(3).collect(java.util.stream.Collectors.toList()));
+        model.addAttribute("promotedItems", randomList.stream().limit(3).collect(Collectors.toList()));
 
         // Mocking related products (4 items)
         Collections.shuffle(randomList);
-        model.addAttribute("relatedItems", randomList.stream().limit(4).collect(java.util.stream.Collectors.toList()));
+        model.addAttribute("relatedItems", randomList.stream().limit(4).collect(Collectors.toList()));
 
         return "index";
     }
