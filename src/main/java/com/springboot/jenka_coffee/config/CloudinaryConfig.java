@@ -9,7 +9,7 @@ import java.util.Map;
 
 @Configuration
 public class CloudinaryConfig {
-
+// vi du co su thay doi o day
     @Bean
     public Cloudinary cloudinary() {
         Map<String, String> config = new HashMap<>();
