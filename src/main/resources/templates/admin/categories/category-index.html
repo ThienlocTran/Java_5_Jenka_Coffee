@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Quản lý Loại hàng</h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / <span>Loại hàng</span>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <span th:text="${success}">Thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <span th:text="${error}">Có lỗi xảy ra!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-list me-2"></i>
+                Danh sách loại hàng
+            </h5>
+            <a href="/admin/category/add" class="btn btn-primary-custom">
+                <i class="fas fa-plus me-2"></i>Thêm loại hàng
+            </a>
+        </div>
+
+        <!-- Filter & Search -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Tìm kiếm theo mã hoặc tên loại hàng..." id="searchInput">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="sortFilter">
+                    <option value="id">Sắp xếp theo mã</option>
+                    <option value="name">Sắp xếp theo tên</option>
+                    <option value="products">Sắp xếp theo số sản phẩm</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary w-100" onclick="applySort()">
+                    <i class="fas fa-sort me-2"></i>Sắp xếp
+                </button>
+            </div>
+        </div>
+
+        <!-- Categories Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" class="form-check-input" id="selectAll">
+                        </th>
+                        <th style="width: 80px;">Ảnh</th>
+                        <th>Mã loại</th>
+                        <th>Tên loại hàng</th>
+                        <th>Số sản phẩm</th>
+                        <th style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(categories)}">
+                        <td colspan="6" class="text-center py-5">
+                            <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Chưa có loại hàng nào</p>
+                            <a href="/admin/category/add" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Thêm loại hàng đầu tiên
+                            </a>
+                        </td>
+                    </tr>
+                    
+                    <tr th:each="category : ${categories}">
+                        <td>
+                            <input type="checkbox" class="form-check-input row-checkbox" th:value="${category.id}">
+                        </td>
+                        <td>
+                            <img th:if="${categoryIcons.containsKey(category.id)}" 
+                                 th:src="@{'/images/icon_category/' + ${categoryIcons.get(category.id)}}" 
+                                 th:alt="${category.name}"
+                                 class="rounded"
+                                 style="width: 60px; height: 60px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/60?text=No+Image'">
+                            <img th:unless="${categoryIcons.containsKey(category.id)}"
+                                 src="https://via.placeholder.com/60?text=No+Image"
+                                 th:alt="${category.name}"
+                                 class="rounded"
+                                 style="width: 60px; height: 60px; object-fit: cover;">
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary fs-6" th:text="${category.id}">MAY_PHA</span>
+                        </td>
+                        <td>
+                            <strong th:text="${category.name}">Máy Pha Cà Phê</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                <i class="fas fa-box me-1"></i>
+                                <span th:text="${category.products != null ? category.products.size() : 0}">0</span> sản phẩm
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a th:href="@{'/admin/category/edit/' + ${category.id}}" 
+                                   class="btn btn-sm btn-warning" 
+                                   title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-danger" 
+                                        th:onclick="'confirmDelete(\'' + ${category.id} + '\', \'' + ${category.name} + '\', ' + (${category.products != null ? category.products.size() : 0}) + ')'"
+                                        title="Xóa loại hàng">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+                Hiển thị <strong th:text="${#lists.size(categories)}">0</strong> loại hàng
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<!-- Delete Confirmation Modal (Sử dụng modal chung từ admin-layout) -->
+<div class="modal fade modal-delete" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Xác nhận xóa loại hàng
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="delete-message">
+                    Bạn có chắc chắn muốn xóa loại hàng <strong id="deleteCategoryName"></strong>?
+                </div>
+                <div class="delete-warning" id="deleteWarning">
+                    Hành động này không thể hoàn tác!
+                </div>
+                <div class="alert alert-danger mt-3" id="productWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Cảnh báo:</strong> Loại hàng này có <span id="productCount">0</span> sản phẩm. 
+                    Bạn cần xóa tất cả sản phẩm trước khi xóa loại hàng.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy
+                </button>
+                <button type="button" class="btn btn-danger btn-delete" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Xóa loại hàng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript for Category Management
+let currentDeleteId = null;
+let currentProductCount = 0;
+
+// Confirm delete function
+function confirmDelete(categoryId, categoryName, productCount) {
+    currentDeleteId = categoryId;
+    currentProductCount = productCount;
+    
+    document.getElementById('deleteCategoryName').textContent = categoryName;
+    document.getElementById('productCount').textContent = productCount;
+    
+    const productWarning = document.getElementById('productWarning');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    if (productCount > 0) {
+        productWarning.style.display = 'block';
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Không thể xóa';
+        confirmBtn.classList.remove('btn-danger');
+        confirmBtn.classList.add('btn-secondary');
+    } else {
+        productWarning.style.display = 'none';
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng';
+        confirmBtn.classList.remove('btn-secondary');
+        confirmBtn.classList.add('btn-danger');
+    }
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    deleteModal.show();
+}
+
+// Handle delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (currentDeleteId && currentProductCount === 0) {
+        // Add loading state
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
+        this.disabled = true;
+        
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/category/delete/' + currentDeleteId;
+        
+        // Add CSRF token if needed
+        const csrfToken = document.querySelector('meta[name="_csrf"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+});
+
+// Simple search filter (giống product list)
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchValue = this.value.toLowerCase();
+    const rows = document.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const categoryId = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase();
+        const categoryName = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase();
+        if ((categoryId && categoryId.includes(searchValue)) || (categoryName && categoryName.includes(searchValue))) {
+            row.style.display = '';
+        } else if (categoryId || categoryName) {
+            row.style.display = 'none';
+        }
+    });
+});
+
+// Sort functionality
+function applySort() {
+    const sortBy = document.getElementById('sortFilter').value;
+    const tbody = document.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.querySelector('td[colspan]'));
+    
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortBy) {
+            case 'id':
+                aValue = a.querySelector('td:nth-child(3) .badge').textContent;
+                bValue = b.querySelector('td:nth-child(3) .badge').textContent;
+                return aValue.localeCompare(bValue);
+            case 'name':
+                aValue = a.querySelector('td:nth-child(4) strong').textContent;
+                bValue = b.querySelector('td:nth-child(4) strong').textContent;
+                return aValue.localeCompare(bValue);
+            case 'products':
+                aValue = parseInt(a.querySelector('td:nth-child(5) .badge span').textContent);
+                bValue = parseInt(b.querySelector('td:nth-child(5) .badge span').textContent);
+                return bValue - aValue; // Descending order
+            default:
+                return 0;
+        }
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Select all functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+</body>
+</html>
