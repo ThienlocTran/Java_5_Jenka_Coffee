@@ -2,7 +2,7 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.exception.ValidationException;
-import com.springboot.jenka_coffee.repository.AccountDAO;
+import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.service.AccountService;
 import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Service;
@@ -13,10 +13,10 @@ import java.util.List;
 @Service
 public class AccountServiceImpl implements AccountService {
 
-    private final AccountDAO dao;
+    private final AccountRepository dao;
     private final UploadService uploadService;
 
-    public AccountServiceImpl(AccountDAO dao, UploadService uploadService) {
+    public AccountServiceImpl(AccountRepository dao, UploadService uploadService) {
         this.dao = dao;
         this.uploadService = uploadService;
     }

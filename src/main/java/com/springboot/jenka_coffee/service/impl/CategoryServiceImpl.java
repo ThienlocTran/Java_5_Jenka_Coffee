@@ -1,8 +1,8 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Category;
-import com.springboot.jenka_coffee.repository.CategoryDAO; // Nhớ tạo Interface DAO extend JpaRepository nhé
-import com.springboot.jenka_coffee.repository.ProductDAO;
+import com.springboot.jenka_coffee.repository.CategoryRepository; // Nhớ tạo Interface DAO extend JpaRepository nhé
+import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CategoryService;
 
 import org.springframework.stereotype.Service;
@@ -13,42 +13,42 @@ import java.util.Map;
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
-    private final CategoryDAO categoryDAO;
-    private final ProductDAO productDAO;
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
-    public CategoryServiceImpl(CategoryDAO categoryDAO, ProductDAO productDAO) {
-        this.categoryDAO = categoryDAO;
-        this.productDAO = productDAO;
+    public CategoryServiceImpl(CategoryRepository categoryRepository, ProductRepository productRepository) {
+        this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
     public List<Category> findAll() {
-        return categoryDAO.findAll();
+        return categoryRepository.findAll();
     }
 
     @Override
     public Category findById(String id) {
-        return categoryDAO.findById(id).orElse(null);
+        return categoryRepository.findById(id).orElse(null);
     }
 
     @Override
     public Category save(Category category) {
-        return categoryDAO.save(category);
+        return categoryRepository.save(category);
     }
 
     @Override
     public void delete(String id) {
-        categoryDAO.deleteById(id);
+        categoryRepository.deleteById(id);
     }
 
     @Override
     public boolean existsById(String id) {
-        return categoryDAO.existsById(id);
+        return categoryRepository.existsById(id);
     }
 
     @Override
     public long countProductsByCategory(String categoryId) {
-        return productDAO.countByCategoryId(categoryId);
+        return productRepository.countByCategoryId(categoryId);
     }
 
     @Override

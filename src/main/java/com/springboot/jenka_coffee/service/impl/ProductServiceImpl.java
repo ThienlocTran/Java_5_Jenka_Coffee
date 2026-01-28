@@ -1,7 +1,7 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Product;
-import com.springboot.jenka_coffee.repository.ProductDAO;
+import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Service;
@@ -15,10 +15,10 @@ import java.util.HashMap;
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    final ProductDAO pdao;
+    final ProductRepository pdao;
     final UploadService uploadService;
 
-    public ProductServiceImpl(ProductDAO pdao, com.springboot.jenka_coffee.service.UploadService uploadService) {
+    public ProductServiceImpl(ProductRepository pdao, com.springboot.jenka_coffee.service.UploadService uploadService) {
         this.pdao = pdao;
         this.uploadService = uploadService;
     }

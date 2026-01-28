@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PointHistoryDAO extends JpaRepository<PointHistory, Long> {
+public interface PointHistoryRepository extends JpaRepository<PointHistory, Long> {
 
     // Tìm lịch sử điểm theo username, sắp xếp theo ngày tạo giảm dần
     List<PointHistory> findByUsernameOrderByCreateDateDesc(String username);

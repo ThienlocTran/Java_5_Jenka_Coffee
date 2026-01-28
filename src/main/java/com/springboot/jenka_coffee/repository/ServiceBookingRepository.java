@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ServiceBookingDAO extends JpaRepository<ServiceBooking, Long> {
+public interface ServiceBookingRepository extends JpaRepository<ServiceBooking, Long> {
 
     // Tìm tất cả booking theo username
     List<ServiceBooking> findByUsername(String username);

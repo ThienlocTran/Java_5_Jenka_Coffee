@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface VoucherDAO extends JpaRepository<Voucher, String> {
+public interface VoucherRepository extends JpaRepository<Voucher, String> {
 
     // Tìm tất cả voucher đang active
     List<Voucher> findByActiveTrue();

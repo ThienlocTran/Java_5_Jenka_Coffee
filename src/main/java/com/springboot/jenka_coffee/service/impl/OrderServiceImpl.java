@@ -1,7 +1,7 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.repository.OrderDAO;
+import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.service.OrderService;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     final
-    OrderDAO odao;
+    OrderRepository odao;
 
-    public OrderServiceImpl(OrderDAO odao) {
+    public OrderServiceImpl(OrderRepository odao) {
         this.odao = odao;
     }
 

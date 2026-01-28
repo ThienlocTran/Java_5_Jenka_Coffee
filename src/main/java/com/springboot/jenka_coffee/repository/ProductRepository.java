@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ProductDAO extends JpaRepository<Product, Integer> {
+public interface ProductRepository extends JpaRepository<Product, Integer> {
     List<Product> findByCategoryId(String cid);
 
     List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
