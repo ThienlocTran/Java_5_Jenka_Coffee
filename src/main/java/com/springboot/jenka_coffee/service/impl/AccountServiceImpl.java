@@ -10,7 +10,6 @@ import java.util.List;
 public class AccountServiceImpl implements AccountService {
     final AccountDAO dao;
 
-
     public AccountServiceImpl(AccountDAO dao) {
         this.dao = dao;
     }
@@ -51,5 +50,26 @@ public class AccountServiceImpl implements AccountService {
     public boolean existsByEmail(String email) {
         return dao.findAll().stream()
                 .anyMatch(acc -> acc.getEmail().equalsIgnoreCase(email));
+    }
+
+    @Override
+    public Account authenticate(String username, String password) {
+        Account account = dao.findById(username).orElse(null);
+
+        if (account == null) {
+            return null; // User not found
+        }
+
+        if (!account.getActivated()) {
+            return null; // Account deactivated
+        }
+
+        // TODO: In production, use BCrypt password hashing
+        // For now: plain text comparison (TEMPORARY - FOR DEMO ONLY)
+        if (account.getPasswordHash().equals(password)) {
+            return account;
+        }
+
+        return null; // Wrong password
     }
 }

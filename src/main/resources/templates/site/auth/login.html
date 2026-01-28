@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Jenka Coffee</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .login-body {
+            padding: 40px;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="login-card">
+                    <div class="login-header">
+                        <h3 class="mb-0">☕ Jenka Coffee</h3>
+                        <p class="mb-0 mt-2">Đăng nhập để tiếp tục</p>
+                    </div>
+                    
+                    <div class="login-body">
+                        <!-- Error message -->
+                        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-circle"></i> [[${error}]]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <!-- Success message (from logout) -->
+                        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle"></i> [[${success}]]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <form th:action="@{/auth/login}" method="post">
+                            <input type="hidden" name="redirect" th:value="${redirect}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tên đăng nhập</label>
+                                <input type="text" name="username" class="form-control" 
+                                       placeholder="Nhập username" required autofocus>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Mật khẩu</label>
+                                <input type="password" name="password" class="form-control" 
+                                       placeholder="Nhập mật khẩu" required>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" name="remember" class="form-check-input" id="remember" value="true">
+                                <label class="form-check-label" for="remember">
+                                    Ghi nhớ đăng nhập (30 ngày)
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-login w-100">
+                                Đăng nhập
+                            </button>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <a th:href="@{/home}" class="text-decoration-none">
+                                ← Quay lại trang chủ
+                            </a>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center text-muted small">
+                            <p class="mb-1"><strong>Demo Accounts:</strong></p>
+                            <p class="mb-1">Admin: <code>admin / 123</code></p>
+                            <p class="mb-0">User: <code>user / 123</code></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

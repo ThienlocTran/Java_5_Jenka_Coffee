@@ -1,9 +1,11 @@
 package com.springboot.jenka_coffee.controller.site;
 
 import com.springboot.jenka_coffee.dto.response.CartItem;
+import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.CategoryService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -18,7 +20,7 @@ public class GlobalControllerAdvice {
     private final CartService cartService;
 
     public GlobalControllerAdvice(CategoryService categoryService,
-       CartService cartService) {
+            CartService cartService) {
         this.categoryService = categoryService;
         this.cartService = cartService;
     }
@@ -46,5 +48,22 @@ public class GlobalControllerAdvice {
     @ModelAttribute("cartItems")
     public Collection<CartItem> getCartItems() {
         return cartService.getItems();
+    }
+
+    // Authentication attributes
+    @ModelAttribute("currentUser")
+    public Account getCurrentUser(HttpSession session) {
+        return (Account) session.getAttribute("user");
+    }
+
+    @ModelAttribute("isAdmin")
+    public boolean isAdmin(HttpSession session) {
+        Account user = (Account) session.getAttribute("user");
+        return user != null && user.getAdmin() != null && user.getAdmin();
+    }
+
+    @ModelAttribute("isLoggedIn")
+    public boolean isLoggedIn(HttpSession session) {
+        return session.getAttribute("user") != null;
     }
 }
