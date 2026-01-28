@@ -6,6 +6,7 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Getter
@@ -14,35 +15,42 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
-public class OrderDetail implements Serializable {
+@Table(name = "Payments")
+public class Payment implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
-    private BigDecimal price;
+    @Column(name = "OrderId", nullable = false)
+    private Long orderId;
 
-    @Column(name = "Quantity", nullable = false)
-    private Integer quantity;
+    @Column(name = "amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal amount;
 
-    // --- QUAN HỆ ---
+    @Column(name = "paymentMethod", length = 20, nullable = false)
+    private String paymentMethod; // COD, VNPAY, MOMO
 
-    // N-1 với Order
+    @Column(name = "transactionCode", length = 50)
+    private String transactionCode;
+
+    @Column(name = "paymentDate")
+    private LocalDateTime paymentDate = LocalDateTime.now();
+
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING, SUCCESS, FAILED
+
+    // --- RELATIONSHIPS ---
+
+    // N-1 with Order
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @JoinColumn(name = "OrderId", insertable = false, updatable = false)
     @ToString.Exclude
     private Order order;
 
-    // N-1 với Product
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
-    @ToString.Exclude
-    private Product product;
+    // --- HIBERNATE PROXY LOGIC ---
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
         if (this == o)
@@ -57,8 +65,8 @@ public class OrderDetail implements Serializable {
                 : this.getClass();
         if (thisEffectiveClass != oEffectiveClass)
             return false;
-        OrderDetail that = (OrderDetail) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
+        Payment payment = (Payment) o;
+        return getId() != null && Objects.equals(getId(), payment.getId());
     }
 
     @Override

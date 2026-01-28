@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Getter
@@ -14,35 +14,45 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
-public class OrderDetail implements Serializable {
+@Table(name = "PointHistory")
+public class PointHistory implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
-    private BigDecimal price;
+    @Column(name = "username", length = 50, nullable = false)
+    private String username;
 
-    @Column(name = "Quantity", nullable = false)
-    private Integer quantity;
+    @Column(name = "amount", nullable = false)
+    private Integer amount; // Positive = gain points, Negative = spend points
 
-    // --- QUAN HỆ ---
+    @Column(name = "OrderId")
+    private Long orderId;
 
-    // N-1 với Order
+    @Column(name = "reason", nullable = false)
+    private String reason;
+
+    @Column(name = "createDate")
+    private LocalDateTime createDate = LocalDateTime.now();
+
+    // --- RELATIONSHIPS ---
+
+    // N-1 with Account
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @JoinColumn(name = "username", insertable = false, updatable = false)
+    @ToString.Exclude
+    private Account account;
+
+    // N-1 with Order (nullable - for non-order points like events)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "OrderId", insertable = false, updatable = false)
     @ToString.Exclude
     private Order order;
 
-    // N-1 với Product
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
-    @ToString.Exclude
-    private Product product;
+    // --- HIBERNATE PROXY LOGIC ---
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
         if (this == o)
@@ -57,7 +67,7 @@ public class OrderDetail implements Serializable {
                 : this.getClass();
         if (thisEffectiveClass != oEffectiveClass)
             return false;
-        OrderDetail that = (OrderDetail) o;
+        PointHistory that = (PointHistory) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }
 
