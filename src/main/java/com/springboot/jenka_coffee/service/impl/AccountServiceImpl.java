@@ -64,21 +64,37 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account authenticate(String username, String password) {
+        System.out.println("=== DEBUG: Authenticate called ===");
+        System.out.println("Username: " + username);
+        System.out.println("Password: " + password);
+
         Account account = dao.findById(username).orElse(null);
 
         if (account == null) {
+            System.out.println("DEBUG: Account not found!");
             return null; // User not found
         }
 
+        System.out.println("DEBUG: Account found - " + account.getUsername());
+        System.out.println("DEBUG: Password hash: " + account.getPasswordHash());
+        System.out.println(
+                "DEBUG: Hash length: " + (account.getPasswordHash() != null ? account.getPasswordHash().length() : 0));
+
         if (!account.getActivated()) {
+            System.out.println("DEBUG: Account not activated!");
             return null; // Account deactivated
         }
 
         // BCrypt password verification
-        if (passwordSecurity.verifyPassword(password, account.getPasswordHash())) {
+        boolean passwordMatch = passwordSecurity.verifyPassword(password, account.getPasswordHash());
+        System.out.println("DEBUG: Password match: " + passwordMatch);
+
+        if (passwordMatch) {
+            System.out.println("DEBUG: Authentication SUCCESS!");
             return account;
         }
 
+        System.out.println("DEBUG: Authentication FAILED - wrong password");
         return null; // Wrong password
     }
 

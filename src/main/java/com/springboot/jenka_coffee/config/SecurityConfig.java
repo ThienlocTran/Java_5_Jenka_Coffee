@@ -26,18 +26,21 @@ public class SecurityConfig {
 
     /**
      * Security Filter Chain Configuration
-     * Disable default Spring Security vì đang dùng custom authentication
+     * Completely disable Spring Security default behavior
+     * We use custom session-based authentication in AuthController
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Tắt Spring Security's default login/logout
+                // Permit all requests - custom authentication handled in AuthController
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll())
-                // Disable CSRF for simplicity (enable in production if needed)
+                // Disable CSRF
                 .csrf(csrf -> csrf.disable())
-                // Disable default form login
+                // Disable default form login (prevents auto-generated password)
                 .formLogin(form -> form.disable())
+                // Disable logout
+                .logout(logout -> logout.disable())
                 // Disable HTTP Basic
                 .httpBasic(basic -> basic.disable());
 

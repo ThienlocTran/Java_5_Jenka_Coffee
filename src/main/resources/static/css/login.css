@@ -77,26 +77,6 @@ body {
     background: #FFFFFF;
 }
 
-.form-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 24px;
-}
-
-.form-checkbox input {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #E0E0E0;
-    cursor: pointer;
-}
-
-.form-checkbox label {
-    font-size: 13px;
-    color: #212529;
-    cursor: pointer;
-}
-
 .btn-login {
     width: 100%;
     padding: 14px;
@@ -154,28 +134,4 @@ body {
 
 .form-footer a:hover {
     color: #D32F2F;
-}
-
-.demo-info {
-    margin-top: 24px;
-    padding: 16px;
-    background: #F8F9FA;
-    border: 1px solid #E0E0E0;
-    font-size: 12px;
-    color: #6c757d;
-}
-
-.demo-info strong {
-    display: block;
-    color: #212529;
-    margin-bottom: 8px;
-    font-size: 13px;
-}
-
-.demo-info code {
-    background: #E0E0E0;
-    padding: 2px 6px;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #212529;
 }
