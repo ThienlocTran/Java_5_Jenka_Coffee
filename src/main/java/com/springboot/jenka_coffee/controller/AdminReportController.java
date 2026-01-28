@@ -29,4 +29,14 @@ public class AdminReportController {
 
         return "admin/reports/revenue-report";
     }
+    @GetMapping("/customer")
+    public String vipCustomer(Model model) {
+        // 1. Tạo list rỗng (Code sạch)
+        List<Object[]> vipList = new ArrayList<>();
+
+        // 2. Gửi sang View
+        model.addAttribute("vipList", vipList);
+
+        return "admin/reports/vip-customer";
+    }
 }
