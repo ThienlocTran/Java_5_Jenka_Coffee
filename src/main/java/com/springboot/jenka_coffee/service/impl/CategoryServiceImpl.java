@@ -2,29 +2,58 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.repository.CategoryDAO; // Nhớ tạo Interface DAO extend JpaRepository nhé
+import com.springboot.jenka_coffee.repository.ProductDAO;
 import com.springboot.jenka_coffee.service.CategoryService;
 
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
-    final CategoryDAO cdao;
+    private final CategoryDAO categoryDAO;
+    private final ProductDAO productDAO;
 
-    public CategoryServiceImpl(CategoryDAO cdao) {
-        this.cdao = cdao;
+    public CategoryServiceImpl(CategoryDAO categoryDAO, ProductDAO productDAO) {
+        this.categoryDAO = categoryDAO;
+        this.productDAO = productDAO;
     }
 
     @Override
     public List<Category> findAll() {
-        return cdao.findAll();
+        return categoryDAO.findAll();
     }
 
     @Override
-    public java.util.Map<String, String> getCategoryIcons() {
-        java.util.Map<String, String> icons = new java.util.HashMap<>();
+    public Category findById(String id) {
+        return categoryDAO.findById(id).orElse(null);
+    }
+
+    @Override
+    public Category save(Category category) {
+        return categoryDAO.save(category);
+    }
+
+    @Override
+    public void delete(String id) {
+        categoryDAO.deleteById(id);
+    }
+
+    @Override
+    public boolean existsById(String id) {
+        return categoryDAO.existsById(id);
+    }
+
+    @Override
+    public long countProductsByCategory(String categoryId) {
+        return productDAO.countByCategoryId(categoryId);
+    }
+
+    @Override
+    public Map<String, String> getCategoryIcons() {
+        Map<String, String> icons = new java.util.HashMap<>();
         icons.put("CF_AN_VAT", "ca_phe_do_an.webp");
         icons.put("DUNG_CU", "dung_cu_pha_che.webp");
         icons.put("HANG_CU", "may_pha_may_xay_cu.webp");

@@ -11,4 +11,7 @@ public interface ProductDAO extends JpaRepository<Product, Integer> {
     List<Product> findByCategoryId(String cid);
 
     List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
+
+    // Count products by category (for delete validation)
+    long countByCategoryId(String categoryId);
 }
