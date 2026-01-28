@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.controller.admin;
 
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
-import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -19,11 +18,8 @@ public class AdminAccountController {
 
     private final AccountService accountService;
 
-    private final UploadService uploadService;
-
-    public AdminAccountController(AccountService accountService, UploadService uploadService) {
+    public AdminAccountController(AccountService accountService) {
         this.accountService = accountService;
-        this.uploadService = uploadService;
     }
 
     /**
@@ -64,85 +60,39 @@ public class AdminAccountController {
      */
     @PostMapping("/save")
     public String saveAccount(@Valid @ModelAttribute("item") Account account,
-                            BindingResult result,
-                            @RequestParam(value = "photoFile", required = false) MultipartFile photoFile,
-                            RedirectAttributes redirectAttributes
-                            ) {
+            BindingResult result,
+            @RequestParam(value = "photoFile", required = false) MultipartFile photoFile,
+            RedirectAttributes redirectAttributes) {
+
+        // Check validation errors from form
+        if (result.hasErrors()) {
+            return "admin/accounts/account-form";
+        }
 
         try {
-            // Kiểm tra validation errors
-            if (result.hasErrors()) {
-                return "admin/accounts/account-form";
-            }
-
-            // Kiểm tra tài khoản mới
             boolean isNewAccount = (account.getUsername() == null || account.getUsername().trim().isEmpty());
 
+            // Delegate to service layer
             if (isNewAccount) {
-                // Kiểm tra username đã tồn tại
-                if (accountService.existsByUsername(account.getUsername())) {
-                    result.rejectValue("username", "error.account", "Tên đăng nhập đã tồn tại!");
-                    return "admin/accounts/account-form";
-                }
-
-                // Kiểm tra email đã tồn tại
-                if (accountService.existsByEmail(account.getEmail())) {
-                    result.rejectValue("email", "error.account", "Email đã được sử dụng!");
-                    return "admin/accounts/account-form";
-                }
+                accountService.createAccount(account, photoFile);
             } else {
-                // Tài khoản cũ - lấy thông tin hiện tại
-                Account existingAccount = accountService.findById(account.getUsername());
-                if (existingAccount == null) {
-                    redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
-                    return "redirect:/admin/account/list";
-                }
-
-                // Kiểm tra email trùng (trừ email hiện tại)
-                if (!existingAccount.getEmail().equals(account.getEmail()) &&
-                    accountService.existsByEmail(account.getEmail())) {
-                    result.rejectValue("email", "error.account", "Email đã được sử dụng!");
-                    return "admin/accounts/account-form";
-                }
-
-                // Giữ nguyên mật khẩu cũ nếu không nhập mật khẩu mới
-                if (account.getPasswordHash() == null || account.getPasswordHash().trim().isEmpty()) {
-                    account.setPasswordHash(existingAccount.getPasswordHash());
-                }
-
-                // Giữ nguyên ảnh cũ nếu không upload ảnh mới
-                if (photoFile == null || photoFile.isEmpty()) {
-                    account.setPhoto(existingAccount.getPhoto());
-                }
+                accountService.updateAccount(account.getUsername(), account, photoFile);
             }
-
-            // Xử lý upload ảnh
-            if (photoFile != null && !photoFile.isEmpty()) {
-                try {
-                    String fileName = uploadService.saveImage(photoFile);
-                    account.setPhoto(fileName);
-                } catch (Exception e) {
-                    result.rejectValue("photo", "error.account", "Lỗi khi upload ảnh: " + e.getMessage());
-                    return "admin/accounts/account-form";
-                }
-            }
-
-            // Đặt giá trị mặc định
-            if (account.getActivated() == null) {
-                account.setActivated(true);
-            }
-            if (account.getAdmin() == null) {
-                account.setAdmin(false);
-            }
-
-            // Lưu tài khoản
-            accountService.save(account);
 
             String message = isNewAccount ? "Thêm tài khoản thành công!" : "Cập nhật tài khoản thành công!";
             redirectAttributes.addFlashAttribute("success", message);
 
             return "redirect:/admin/account/list";
 
+        } catch (com.springboot.jenka_coffee.exception.ValidationException e) {
+            // Handle validation errors from service
+            if (e.getField() != null) {
+                result.rejectValue(e.getField(), "error.account", e.getMessage());
+            } else {
+                redirectAttributes.addFlashAttribute("error", e.getMessage());
+                return "redirect:/admin/account/list";
+            }
+            return "admin/accounts/account-form";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
             return "admin/accounts/account-form";
@@ -155,19 +105,17 @@ public class AdminAccountController {
     @PostMapping("/delete/{username}")
     public String deleteAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
         try {
-            Account account = accountService.findById(username);
-            if (account == null) {
-                redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
-                return "redirect:/admin/account/list";
-            }
-
-            // Không cho phép xóa tài khoản admin cuối cùng
-            if (account.getAdmin() != null && account.getAdmin()) {
-                List<Account> admins = accountService.getAdministrators();
-                if (admins.size() <= 1) {
+            // Check if can delete (business logic in service)
+            if (!accountService.canDeleteAccount(username)) {
+                Account account = accountService.findById(username);
+                if (account == null) {
+                    redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
+                } else if (account.getAdmin() != null && account.getAdmin()) {
                     redirectAttributes.addFlashAttribute("error", "Không thể xóa tài khoản admin cuối cùng!");
-                    return "redirect:/admin/account/list";
+                } else {
+                    redirectAttributes.addFlashAttribute("error", "Không thể xóa tài khoản này!");
                 }
+                return "redirect:/admin/account/list";
             }
 
             accountService.delete(username);

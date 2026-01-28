@@ -1,17 +1,24 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
+import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountDAO;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.service.UploadService;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @Service
 public class AccountServiceImpl implements AccountService {
-    final AccountDAO dao;
 
-    public AccountServiceImpl(AccountDAO dao) {
+    private final AccountDAO dao;
+    private final UploadService uploadService;
+
+    public AccountServiceImpl(AccountDAO dao, UploadService uploadService) {
         this.dao = dao;
+        this.uploadService = uploadService;
     }
 
     @Override
@@ -71,5 +78,90 @@ public class AccountServiceImpl implements AccountService {
         }
 
         return null; // Wrong password
+    }
+
+    @Override
+    public Account createAccount(Account account, MultipartFile photoFile) {
+        // Validation - check username exists
+        if (existsByUsername(account.getUsername())) {
+            throw new ValidationException("username", "Tên đăng nhập đã tồn tại!");
+        }
+
+        // Validation - check email exists
+        if (existsByEmail(account.getEmail())) {
+            throw new ValidationException("email", "Email đã được sử dụng!");
+        }
+
+        // Handle photo upload
+        if (photoFile != null && !photoFile.isEmpty()) {
+            try {
+                String fileName = uploadService.saveImage(photoFile);
+                account.setPhoto(fileName);
+            } catch (Exception e) {
+                throw new ValidationException("photo", "Lỗi khi upload ảnh: " + e.getMessage());
+            }
+        }
+
+        // Apply default values
+        if (account.getActivated() == null) {
+            account.setActivated(true);
+        }
+        if (account.getAdmin() == null) {
+            account.setAdmin(false);
+        }
+
+        return dao.save(account);
+    }
+
+    @Override
+    public Account updateAccount(String username, Account updatedAccount, MultipartFile photoFile) {
+        // Check if account exists
+        Account existingAccount = findById(username);
+        if (existingAccount == null) {
+            throw new ValidationException("Không tìm thấy tài khoản!");
+        }
+
+        // Validation - check email (if changed)
+        if (!existingAccount.getEmail().equals(updatedAccount.getEmail()) &&
+                existsByEmail(updatedAccount.getEmail())) {
+            throw new ValidationException("email", "Email đã được sử dụng!");
+        }
+
+        // Keep old password if new password is empty
+        if (updatedAccount.getPasswordHash() == null || updatedAccount.getPasswordHash().trim().isEmpty()) {
+            updatedAccount.setPasswordHash(existingAccount.getPasswordHash());
+        }
+
+        // Handle photo upload or keep old photo
+        if (photoFile != null && !photoFile.isEmpty()) {
+            try {
+                String fileName = uploadService.saveImage(photoFile);
+                updatedAccount.setPhoto(fileName);
+            } catch (Exception e) {
+                throw new ValidationException("photo", "Lỗi khi upload ảnh: " + e.getMessage());
+            }
+        } else {
+            updatedAccount.setPhoto(existingAccount.getPhoto());
+        }
+
+        return dao.save(updatedAccount);
+    }
+
+    @Override
+    public boolean canDeleteAccount(String username) {
+        Account account = findById(username);
+        if (account == null) {
+            return false;
+        }
+
+        // Cannot delete last admin
+        if (account.getAdmin() != null && account.getAdmin()) {
+            List<Account> admins = getAdministrators();
+            if (admins.size() <= 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
