@@ -1,7 +1,7 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Category;
-import com.springboot.jenka_coffee.repository.CategoryDAO; // Nhớ tạo Interface DAO extend JpaRepository nhé
+import com.springboot.jenka_coffee.repository.CategoryDAO;
 import com.springboot.jenka_coffee.service.CategoryService;
 
 import org.springframework.stereotype.Service;
@@ -20,6 +20,32 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public List<Category> findAll() {
         return cdao.findAll();
+    }
+
+    @Override
+    public Category findById(String id) {
+        return cdao.findById(id).orElse(null);
+    }
+
+    @Override
+    public Category save(Category category) {
+        return cdao.save(category);
+    }
+
+    @Override
+    public void delete(String id) {
+        cdao.deleteById(id);
+    }
+
+    @Override
+    public boolean existsById(String id) {
+        return cdao.existsById(id);
+    }
+
+    @Override
+    public long countProductsByCategory(String categoryId) {
+        Category category = findById(categoryId);
+        return category != null && category.getProducts() != null ? category.getProducts().size() : 0;
     }
 
     @Override
