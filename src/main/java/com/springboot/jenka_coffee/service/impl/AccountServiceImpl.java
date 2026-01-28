@@ -5,6 +5,7 @@ import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.service.AccountService;
 import com.springboot.jenka_coffee.service.UploadService;
+import com.springboot.jenka_coffee.util.PasswordSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,10 +16,12 @@ public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository dao;
     private final UploadService uploadService;
+    private final PasswordSecurity passwordSecurity;
 
-    public AccountServiceImpl(AccountRepository dao, UploadService uploadService) {
+    public AccountServiceImpl(AccountRepository dao, UploadService uploadService, PasswordSecurity passwordSecurity) {
         this.dao = dao;
         this.uploadService = uploadService;
+        this.passwordSecurity = passwordSecurity;
     }
 
     @Override
@@ -71,9 +74,8 @@ public class AccountServiceImpl implements AccountService {
             return null; // Account deactivated
         }
 
-        // TODO: In production, use BCrypt password hashing
-        // For now: plain text comparison (TEMPORARY - FOR DEMO ONLY)
-        if (account.getPasswordHash().equals(password)) {
+        // BCrypt password verification
+        if (passwordSecurity.verifyPassword(password, account.getPasswordHash())) {
             return account;
         }
 
@@ -110,6 +112,13 @@ public class AccountServiceImpl implements AccountService {
             account.setAdmin(false);
         }
 
+        // Hash password before saving
+        if (account.getPasswordHash() != null && !account.getPasswordHash().trim().isEmpty()) {
+            if (!passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
+                account.setPasswordHash(passwordSecurity.hashPassword(account.getPasswordHash()));
+            }
+        }
+
         return dao.save(account);
     }
 
@@ -130,6 +139,11 @@ public class AccountServiceImpl implements AccountService {
         // Keep old password if new password is empty
         if (updatedAccount.getPasswordHash() == null || updatedAccount.getPasswordHash().trim().isEmpty()) {
             updatedAccount.setPasswordHash(existingAccount.getPasswordHash());
+        } else {
+            // Hash new password if it's not already hashed
+            if (!passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
+                updatedAccount.setPasswordHash(passwordSecurity.hashPassword(updatedAccount.getPasswordHash()));
+            }
         }
 
         // Handle photo upload or keep old photo
