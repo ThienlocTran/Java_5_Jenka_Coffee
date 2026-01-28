@@ -9,15 +9,19 @@ import lombok.Getter;
 public class ValidationException extends RuntimeException {
 
     private final String field;
-    private final String message;
+    private final String errorCode;
 
     public ValidationException(String field, String message) {
+        this(field, message, "VALIDATION_ERROR");
+    }
+
+    public ValidationException(String field, String message, String errorCode) {
         super(message);
         this.field = field;
-        this.message = message;
+        this.errorCode = errorCode;
     }
 
     public ValidationException(String message) {
-        this(null, message);
+        this(null, message, "VALIDATION_ERROR");
     }
 }
