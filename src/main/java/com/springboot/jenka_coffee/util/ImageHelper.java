@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Image utility helper with fallback support
- * Provides default images when cloud images are not available
+ * Handles both cloud storage URLs and local paths
  */
 @Component
 public class ImageHelper {
@@ -15,14 +15,20 @@ public class ImageHelper {
 
     /**
      * Get product image URL with fallback
+     * Handles full URLs (cloud storage) and local paths
      * 
-     * @param imageName    Image filename from database (can be null or empty)
+     * @param imageName    Image filename or full URL from database
      * @param cloudBaseUrl Base URL for cloud storage (can be null)
      * @return Full image URL or default image path
      */
     public String getProductImage(String imageName, String cloudBaseUrl) {
         if (imageName == null || imageName.trim().isEmpty()) {
             return DEFAULT_PRODUCT_IMAGE;
+        }
+
+        // If it's already a full URL (cloud storage), return as-is
+        if (imageName.startsWith("http://") || imageName.startsWith("https://")) {
+            return imageName;
         }
 
         // If cloud URL is configured, use it
@@ -58,6 +64,12 @@ public class ImageHelper {
         if (avatarName == null || avatarName.trim().isEmpty()) {
             return DEFAULT_AVATAR;
         }
+
+        // If it's already a full URL, return as-is
+        if (avatarName.startsWith("http://") || avatarName.startsWith("https://")) {
+            return avatarName;
+        }
+
         return "/uploads/" + avatarName;
     }
 

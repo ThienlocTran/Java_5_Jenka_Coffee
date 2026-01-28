@@ -87,6 +87,15 @@ public class GlobalExceptionHandler {
     public String handleGenericException(Exception ex,
             RedirectAttributes redirectAttributes,
             HttpServletRequest request) {
+
+        // Ignore favicon.ico errors (browser requests this automatically)
+        if (ex instanceof org.springframework.web.servlet.resource.NoResourceFoundException) {
+            String requestUri = request.getRequestURI();
+            if (requestUri != null && (requestUri.contains("favicon") || requestUri.contains("/product/"))) {
+                return null; // Silently ignore - images are on cloud storage
+            }
+        }
+
         logger.error("Unexpected error: ", ex);
         redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + ex.getMessage());
         return getRedirectUrl(request);
