@@ -7,6 +7,7 @@ import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.SessionScope;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,8 +76,9 @@ public class CartServiceImpl implements CartService {
     @Override
     public double getAmount() {
         return map.values().stream()
-                .mapToDouble(item -> item.getPrice() * item.getQuantity())
-                .sum();
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .doubleValue();
     }
 
     @Override
