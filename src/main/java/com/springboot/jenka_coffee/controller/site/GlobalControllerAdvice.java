@@ -5,6 +5,7 @@ import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.CategoryService;
+import com.springboot.jenka_coffee.util.ImageHelper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,11 +19,14 @@ public class GlobalControllerAdvice {
 
     private final CategoryService categoryService;
     private final CartService cartService;
+    private final ImageHelper imageHelper;
 
     public GlobalControllerAdvice(CategoryService categoryService,
-            CartService cartService) {
+            CartService cartService,
+            ImageHelper imageHelper) {
         this.categoryService = categoryService;
         this.cartService = cartService;
+        this.imageHelper = imageHelper;
     }
 
     @ModelAttribute("categories")
@@ -65,5 +69,11 @@ public class GlobalControllerAdvice {
     @ModelAttribute("isLoggedIn")
     public boolean isLoggedIn(HttpSession session) {
         return session.getAttribute("user") != null;
+    }
+
+    // Image helper for fallback images
+    @ModelAttribute("imageHelper")
+    public ImageHelper getImageHelper() {
+        return imageHelper;
     }
 }

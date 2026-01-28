@@ -6,11 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SiteController {
 
-    // Auth mappings
-    @GetMapping("/auth/login")
-    public String login() {
-        return "site/auth/login";
-    }
+    // Removed /auth/login - now handled by AuthController
 
     @GetMapping("/auth/signup")
     public String signup() {
@@ -42,7 +38,6 @@ public class SiteController {
     public String productList() {
         return "site/products/product-list";
     }
-
 
     // Orders
     @GetMapping("/orders/history")

@@ -23,6 +23,24 @@ public class WebConfig implements WebMvcConfigurer {
                         "/home", "/", // Public home page
                         "/product/**", // Public product pages
                         "/static/**", // Static resources
-                        "/css/**", "/js/**", "/images/**");
+                        "/css/**", "/js/**", "/images/**", "/uploads/**");
+    }
+
+    @Override
+    public void addResourceHandlers(
+            org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+        // Static resources from classpath
+        registry.addResourceHandler("/css/**")
+                .addResourceLocations("classpath:/static/css/");
+
+        registry.addResourceHandler("/js/**")
+                .addResourceLocations("classpath:/static/js/");
+
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("classpath:/static/images/");
+
+        // Uploaded images from external directory
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:uploads/");
     }
 }
