@@ -1,56 +1,59 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Category;
-import com.springboot.jenka_coffee.repository.CategoryDAO;
+import com.springboot.jenka_coffee.repository.CategoryRepository; // Nhớ tạo Interface DAO extend JpaRepository nhé
+import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CategoryService;
 
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
-    final CategoryDAO cdao;
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
-    public CategoryServiceImpl(CategoryDAO cdao) {
-        this.cdao = cdao;
+    public CategoryServiceImpl(CategoryRepository categoryRepository, ProductRepository productRepository) {
+        this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
     public List<Category> findAll() {
-        return cdao.findAll();
+        return categoryRepository.findAll();
     }
 
     @Override
     public Category findById(String id) {
-        return cdao.findById(id).orElse(null);
+        return categoryRepository.findById(id).orElse(null);
     }
 
     @Override
     public Category save(Category category) {
-        return cdao.save(category);
+        return categoryRepository.save(category);
     }
 
     @Override
     public void delete(String id) {
-        cdao.deleteById(id);
+        categoryRepository.deleteById(id);
     }
 
     @Override
     public boolean existsById(String id) {
-        return cdao.existsById(id);
+        return categoryRepository.existsById(id);
     }
 
     @Override
     public long countProductsByCategory(String categoryId) {
-        Category category = findById(categoryId);
-        return category != null && category.getProducts() != null ? category.getProducts().size() : 0;
+        return productRepository.countByCategoryId(categoryId);
     }
 
     @Override
-    public java.util.Map<String, String> getCategoryIcons() {
-        java.util.Map<String, String> icons = new java.util.HashMap<>();
+    public Map<String, String> getCategoryIcons() {
+        Map<String, String> icons = new java.util.HashMap<>();
         icons.put("CF_AN_VAT", "ca_phe_do_an.webp");
         icons.put("DUNG_CU", "dung_cu_pha_che.webp");
         icons.put("HANG_CU", "may_pha_may_xay_cu.webp");

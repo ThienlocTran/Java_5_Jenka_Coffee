@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Getter
@@ -14,35 +14,45 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
-public class OrderDetail implements Serializable {
+@Table(name = "ServiceBookings")
+public class ServiceBooking implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
-    private BigDecimal price;
+    @Column(name = "username", length = 50)
+    private String username;
 
-    @Column(name = "Quantity", nullable = false)
-    private Integer quantity;
+    @Column(name = "customerName", nullable = false, length = 100)
+    private String customerName;
 
-    // --- QUAN HỆ ---
+    @Column(name = "phone", length = 15, nullable = false)
+    private String phone;
 
-    // N-1 với Order
+    @Column(name = "description", nullable = false, columnDefinition = "NVARCHAR(MAX)")
+    private String description;
+
+    @Column(name = "bookingDate", nullable = false)
+    private LocalDateTime bookingDate;
+
+    @Column(name = "preferredTime", length = 50)
+    private String preferredTime; // Sáng/Chiều
+
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING, CONFIRMED, COMPLETED, CANCELLED
+
+    // --- RELATIONSHIPS ---
+
+    // N-1 with Account (nullable for guest bookings)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @JoinColumn(name = "username", insertable = false, updatable = false)
     @ToString.Exclude
-    private Order order;
+    private Account account;
 
-    // N-1 với Product
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
-    @ToString.Exclude
-    private Product product;
+    // --- HIBERNATE PROXY LOGIC ---
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
         if (this == o)
@@ -57,7 +67,7 @@ public class OrderDetail implements Serializable {
                 : this.getClass();
         if (thisEffectiveClass != oEffectiveClass)
             return false;
-        OrderDetail that = (OrderDetail) o;
+        ServiceBooking that = (ServiceBooking) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }
 
