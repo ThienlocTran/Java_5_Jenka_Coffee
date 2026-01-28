@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/admin-layout :: admin_layout(~{:: .admin-report-wrapper})}">
+<head>
+    <title>Báo cáo Doanh thu</title>
+</head>
+<body>
+
+<div class="admin-report-wrapper">
+
+    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
+        <div>
+            <h3 class="fw-bold text-dark mb-2">Báo cáo Doanh thu</h3>
+
+            <div class="small">
+                <a href="/admin" class="text-decoration-none text-danger fw-bold">
+                    <i class="fas fa-home me-1"></i> Dashboard
+                </a>
+                <span class="mx-1 text-muted">/</span>
+                <span class="text-muted">Báo cáo</span>
+                <span class="mx-1 text-muted">/</span>
+
+                <span class="text-muted">Doanh thu</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm">Tháng này</button>
+            <button class="btn btn-outline-secondary btn-sm active">6 tháng</button>
+            <button class="btn btn-outline-secondary btn-sm">Năm nay</button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-chart-bar me-2 text-success"></i>Biểu đồ tăng trưởng</h6>
+        </div>
+        <div class="card-body">
+            <canvas id="revenueChart" style="max-height: 400px;"></canvas>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-table me-2 text-primary"></i>Chi tiết số liệu</h6>
+            <div class="h5 mb-0 text-success fw-bold">
+                Tổng: <span th:text="${#numbers.formatDecimal(totalRevenue, 0, 'COMMA', 0, 'POINT')}">0</span> ₫
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="bg-light text-secondary small text-uppercase fw-bold">
+                    <tr>
+                        <th class="py-3">Thời gian</th>
+                        <th>Tổng đơn hàng</th>
+                        <th>Doanh thu</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${tableData}">
+                        <td class="fw-bold text-muted">[[${row[0]}]]</td> <td>[[${row[1]}]] đơn</td> <td class="fw-bold text-success">
+                        [[${#numbers.formatDecimal(row[2], 0, 'COMMA', 0, 'POINT')}]] ₫
+                    </td>
+                        <td>
+                            <span th:if="${row[2] >= 20000000}" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Đạt chỉ tiêu</span>
+                            <span th:if="${row[2] < 20000000}" class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">Cần cố gắng</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script th:inline="javascript">
+        // Lấy dữ liệu từ Controller truyền sang
+        var labels = /*[[${chartLabels}]]*/ [];
+        var data = /*[[${chartData}]]*/ [];
+
+        // Cấu hình vẽ biểu đồ
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar', // Loại biểu đồ: bar (cột), line (đường), pie (tròn)
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: data,
+                    backgroundColor: 'rgba(25, 135, 84, 0.6)', // Màu xanh lá
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            // Format tiền tệ trục Y
+                            callback: function(value) {
+                                return value.toLocaleString('vi-VN') + ' ₫';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+</div>
+</body>
+</html>

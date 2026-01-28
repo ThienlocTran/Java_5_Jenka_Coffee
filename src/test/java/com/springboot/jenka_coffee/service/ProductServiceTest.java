@@ -1,7 +1,7 @@
 package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.entity.Product;
-import com.springboot.jenka_coffee.repository.ProductDAO;
+import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ import static org.mockito.Mockito.*;
 class ProductServiceTest {
 
     @Mock
-    private ProductDAO productDAO;
+    private ProductRepository productRepository;
 
     @Mock
     private UploadService uploadService;
@@ -38,13 +38,13 @@ class ProductServiceTest {
         Integer productId = 1;
         List<Product> expectedProducts = Arrays.asList(new Product(), new Product());
 
-        when(productDAO.findTop4ByCategoryIdAndIdNot(categoryId, productId)).thenReturn(expectedProducts);
+        when(productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId)).thenReturn(expectedProducts);
 
         // Act
         List<Product> result = productService.getRelatedProducts(categoryId, productId);
 
         // Assert
         assertEquals(expectedProducts, result);
-        verify(productDAO, times(1)).findTop4ByCategoryIdAndIdNot(categoryId, productId);
+        verify(productRepository, times(1)).findTop4ByCategoryIdAndIdNot(categoryId, productId);
     }
 }

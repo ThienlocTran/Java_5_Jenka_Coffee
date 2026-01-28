@@ -1,4 +1,4 @@
-package com.springboot.jenka_coffee.controller;
+package com.springboot.jenka_coffee.controller.admin;
 
 import com.springboot.jenka_coffee.entity.Order; //
 import org.springframework.stereotype.Controller;

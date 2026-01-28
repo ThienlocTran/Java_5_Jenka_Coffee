@@ -6,6 +6,8 @@ import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @Getter
@@ -14,35 +16,40 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
-public class OrderDetail implements Serializable {
+@Table(name = "Vouchers")
+public class Voucher implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
-    private Long id;
+    @Column(name = "code", length = 20)
+    private String code;
 
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
-    private BigDecimal price;
+    @Column(name = "discountAmount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal discountAmount;
 
-    @Column(name = "Quantity", nullable = false)
-    private Integer quantity;
+    @Column(name = "discountType", length = 10)
+    private String discountType = "FIXED"; // FIXED or PERCENT
 
-    // --- QUAN HỆ ---
+    @Column(name = "minOrderAmount", precision = 18, scale = 2)
+    private BigDecimal minOrderAmount;
 
-    // N-1 với Order
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @Column(name = "expirationDate", nullable = false)
+    private LocalDateTime expirationDate;
+
+    @Column(name = "quantity")
+    private Integer quantity = 0;
+
+    @Column(name = "active")
+    private Boolean active = true;
+
+    // --- RELATIONSHIPS ---
+
+    // 1-N with Order
+    @OneToMany(mappedBy = "voucher", fetch = FetchType.LAZY)
     @ToString.Exclude
-    private Order order;
+    private List<Order> orders;
 
-    // N-1 với Product
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
-    @ToString.Exclude
-    private Product product;
+    // --- HIBERNATE PROXY LOGIC ---
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
         if (this == o)
@@ -57,8 +64,8 @@ public class OrderDetail implements Serializable {
                 : this.getClass();
         if (thisEffectiveClass != oEffectiveClass)
             return false;
-        OrderDetail that = (OrderDetail) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
+        Voucher voucher = (Voucher) o;
+        return getCode() != null && Objects.equals(getCode(), voucher.getCode());
     }
 
     @Override

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title" th:text="${item.id == null ? 'Thêm loại hàng mới' : 'Chỉnh sửa loại hàng'}">Thêm loại hàng mới</h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / 
+            <a href="/admin/category/list">Loại hàng</a> / 
+            <span th:text="${item.id == null ? 'Thêm mới' : 'Chỉnh sửa'}">Thêm mới</span>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <span th:text="${success}">Thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <span th:text="${error}">Có lỗi xảy ra!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Form Card -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-edit me-2"></i>
+                <span th:text="${item.id == null ? 'Thông tin loại hàng mới' : 'Cập nhật thông tin loại hàng'}">Thông tin loại hàng mới</span>
+            </h5>
+        </div>
+
+        <form th:action="@{/admin/category/save}" 
+              th:object="${item}" 
+              method="post" 
+              class="needs-validation" 
+              novalidate>
+            
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-md-12">
+                    <!-- Category ID (only for new categories) -->
+                    <div class="mb-3" th:if="${item.id == null}">
+                        <label for="id" class="form-label">
+                            Mã loại hàng <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="id" 
+                               th:field="*{id}"
+                               th:classappend="${#fields.hasErrors('id')} ? 'is-invalid' : ''"
+                               placeholder="VD: MAY_PHA, CF_AN_VAT (viết hoa, dùng dấu gạch dưới)"
+                               maxlength="50"
+                               pattern="[A-Z_]+"
+                               style="text-transform: uppercase;"
+                               required>
+                        <div class="form-text">
+                            Chỉ được sử dụng chữ cái in hoa và dấu gạch dưới. VD: MAY_PHA, CF_AN_VAT
+                        </div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('id')}" th:errors="*{id}">
+                            Vui lòng nhập mã loại hàng hợp lệ
+                        </div>
+                    </div>
+
+                    <!-- Category ID (readonly for existing categories) -->
+                    <div class="mb-3" th:if="${item.id != null}">
+                        <label class="form-label">
+                            Mã loại hàng
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               th:value="${item.id}"
+                               readonly
+                               style="background-color: #f8f9fa;">
+                        <div class="form-text text-muted">Mã loại hàng không thể thay đổi</div>
+                        <!-- Hidden field to preserve ID -->
+                        <input type="hidden" th:field="*{id}">
+                    </div>
+
+                    <!-- Category Name -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            Tên loại hàng <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="name" 
+                               th:field="*{name}"
+                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                               placeholder="Nhập tên loại hàng (VD: Máy Pha Cà Phê)"
+                               maxlength="100"
+                               required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
+                            Vui lòng nhập tên loại hàng
+                        </div>
+                    </div>
+
+                    <!-- Additional Info for Existing Category -->
+                    <div th:if="${item.id != null}" class="alert alert-info" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Thông tin bổ sung
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small>
+                                    <strong>Mã loại hàng:</strong><br>
+                                    <span class="badge bg-secondary" th:text="${item.id}">MAY_PHA</span>
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small>
+                                    <strong>Số sản phẩm:</strong><br>
+                                    <span class="badge bg-info">
+                                        <span th:text="${item.products != null ? item.products.size() : 0}">0</span> sản phẩm
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                <a href="/admin/category/list" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Quay lại
+                </a>
+                <div>
+                    <button type="reset" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-redo me-2"></i>Làm mới
+                    </button>
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="fas fa-save me-2"></i>Lưu loại hàng
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+    // Form validation
+    (function() {
+        'use strict';
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+
+    // Category ID validation and formatting
+    const idInput = document.getElementById('id');
+    if (idInput) {
+        idInput.addEventListener('input', function() {
+            // Convert to uppercase and remove invalid characters
+            let value = this.value.toUpperCase().replace(/[^A-Z_]/g, '');
+            this.value = value;
+        });
+    }
+
+    // Auto-generate category ID from name (for new categories)
+    if (document.getElementById('id') && !document.getElementById('id').value) {
+        const nameInput = document.getElementById('name');
+        if (nameInput) {
+            nameInput.addEventListener('blur', function() {
+                const idInput = document.getElementById('id');
+                if (!idInput.value && this.value) {
+                    // Generate ID from name
+                    let generatedId = this.value
+                        .toUpperCase()
+                        .replace(/[ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴ]/g, 'A')
+                        .replace(/[ÈÉẸẺẼÊỀẾỆỂỄ]/g, 'E')
+                        .replace(/[ÌÍỊỈĨ]/g, 'I')
+                        .replace(/[ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ]/g, 'O')
+                        .replace(/[ÙÚỤỦŨƯỪỨỰỬỮ]/g, 'U')
+                        .replace(/[ỲÝỴỶỸ]/g, 'Y')
+                        .replace(/Đ/g, 'D')
+                        .replace(/[^A-Z0-9]/g, '_')
+                        .replace(/_+/g, '_')
+                        .replace(/^_|_$/g, '');
+                    
+                    idInput.value = generatedId;
+                }
+            });
+        }
+    }
+</script>
+</body>
+</html>

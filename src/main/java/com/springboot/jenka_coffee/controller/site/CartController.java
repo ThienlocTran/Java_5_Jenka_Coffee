@@ -1,4 +1,4 @@
-package com.springboot.jenka_coffee.controller;
+package com.springboot.jenka_coffee.controller.site;
 
 
 import org.springframework.http.ResponseEntity;
