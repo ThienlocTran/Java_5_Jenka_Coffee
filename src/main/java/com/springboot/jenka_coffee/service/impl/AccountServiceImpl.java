@@ -63,15 +63,16 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account authenticate(String username, String password) {
+    public Account authenticate(String identifier, String password) {
         System.out.println("=== DEBUG: Authenticate called ===");
-        System.out.println("Username: " + username);
+        System.out.println("Identifier: " + identifier);
         System.out.println("Password: " + password);
 
-        Account account = dao.findById(username).orElse(null);
+        // Try to find account by username, email, or phone
+        Account account = findByUsernameOrEmailOrPhone(identifier);
 
         if (account == null) {
-            System.out.println("DEBUG: Account not found!");
+            System.out.println("DEBUG: Account not found with identifier: " + identifier);
             return null; // User not found
         }
 
@@ -96,6 +97,40 @@ public class AccountServiceImpl implements AccountService {
 
         System.out.println("DEBUG: Authentication FAILED - wrong password");
         return null; // Wrong password
+    }
+
+    /**
+     * Tìm account theo username, email, hoặc phone
+     * Hỗ trợ đăng nhập linh hoạt
+     */
+    private Account findByUsernameOrEmailOrPhone(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return null;
+        }
+
+        String cleanIdentifier = identifier.trim();
+
+        // Thử tìm theo username trước
+        Account account = dao.findById(cleanIdentifier).orElse(null);
+        if (account != null) {
+            return account;
+        }
+
+        // Nếu không tìm thấy, thử tìm theo email hoặc phone
+        return dao.findAll().stream()
+                .filter(acc -> {
+                    // Kiểm tra email (case-insensitive)
+                    if (acc.getEmail() != null && acc.getEmail().equalsIgnoreCase(cleanIdentifier)) {
+                        return true;
+                    }
+                    // Kiểm tra phone
+                    if (acc.getPhone() != null && acc.getPhone().equals(cleanIdentifier)) {
+                        return true;
+                    }
+                    return false;
+                })
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

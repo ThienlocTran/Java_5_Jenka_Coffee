@@ -131,9 +131,11 @@ public class AuthController {
             newAccount.setFullname(fullname.trim());
             newAccount.setPhone(phone.trim());
 
-            // Email is optional
+            // Email is optional - set to empty string if not provided
             if (email != null && !email.trim().isEmpty()) {
                 newAccount.setEmail(email.trim());
+            } else {
+                newAccount.setEmail(""); // Set empty string instead of null
             }
 
             newAccount.setPasswordHash(password); // Will be hashed in service layer
