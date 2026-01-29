@@ -24,62 +24,47 @@
     <p class="text-center text-muted mb-4">Nhanh chóng và dễ dàng.</p>
 
     <form th:action="@{/auth/signup}" method="POST">
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label for="firstName" class="form-label small fw-bold">Họ</label>
-          <input type="text" name="firstName" class="form-control" id="firstName" placeholder="Nguyễn" required>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label for="lastName" class="form-label small fw-bold">Tên</label>
-          <input type="text" name="lastName" class="form-control" id="lastName" placeholder="Văn A" required>
-        </div>
+      <!-- Error message -->
+      <div th:if="${error}" class="alert alert-danger">
+        [[${error}]]
       </div>
 
       <div class="mb-3">
-        <label for="email" class="form-label small fw-bold">Email</label>
-        <input type="email" name="email" class="form-control" id="email" placeholder="example@gmail.com" required>
+        <label for="username" class="form-label small fw-bold">Tên đăng nhập</label>
+        <input type="text" name="username" class="form-control" id="username" 
+               placeholder="username" required autofocus>
+        <small class="text-muted">Dùng để đăng nhập vào hệ thống</small>
       </div>
 
       <div class="mb-3">
-        <label for="password" class="form-label small fw-bold">Mật khẩu mới</label>
-        <input type="password" name="password" class="form-control" id="password" placeholder="Tối thiểu 8 ký tự" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="confirmPassword" class="form-label small fw-bold">Xác nhận mật khẩu</label>
-        <input type="password" name="confirmPassword" class="form-control" id="confirmPassword" placeholder="Nhập lại mật khẩu" required>
+        <label for="fullname" class="form-label small fw-bold">Họ và tên</label>
+        <input type="text" name="fullname" class="form-control" id="fullname" 
+               placeholder="Nguyễn Văn A" required>
       </div>
 
       <div class="mb-3">
         <label for="phone" class="form-label small fw-bold">Số điện thoại</label>
-        <input type="text" name="phone" class="form-control" id="phone" placeholder="0912345678" required>
+        <input type="tel" name="phone" class="form-control" id="phone" 
+               placeholder="0912345678" pattern="[0-9]{10,11}" required>
+        <small class="text-muted">Dùng để liên hệ và xác minh đơn hàng</small>
       </div>
 
       <div class="mb-3">
-        <label for="address" class="form-label small fw-bold">Địa chỉ</label>
-        <textarea name="address" class="form-control" id="address" rows="2" placeholder="Số nhà, tên đường..." required></textarea>
+        <label for="email" class="form-label small fw-bold">Email (tùy chọn)</label>
+        <input type="email" name="email" class="form-control" id="email" 
+               placeholder="example@gmail.com">
       </div>
 
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label for="gender" class="form-label small fw-bold">Giới tính</label>
-          <select name="gender" class="form-select" id="gender" required>
-            <option value="">-- Chọn --</option>
-            <option value="Nam">Nam</option>
-            <option value="Nữ">Nữ</option>
-            <option value="Khác">Khác</option>
-          </select>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label for="dob" class="form-label small fw-bold">Ngày sinh</label>
-          <input type="date" name="dob" class="form-control" id="dob" required>
-        </div>
+      <div class="mb-3">
+        <label for="password" class="form-label small fw-bold">Mật khẩu</label>
+        <input type="password" name="password" class="form-control" id="password" 
+               placeholder="Tối thiểu 6 ký tự" minlength="6" required>
       </div>
 
       <div class="mb-4 form-check">
         <input type="checkbox" class="form-check-input" id="terms" required>
         <label class="form-check-label small" for="terms">
-          Tôi đồng ý với các điều khoản.
+          Tôi đồng ý với các điều khoản sử dụng.
         </label>
       </div>
 

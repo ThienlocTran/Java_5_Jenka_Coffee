@@ -105,9 +105,11 @@ public class AccountServiceImpl implements AccountService {
             throw new ValidationException("username", "Tên đăng nhập đã tồn tại!");
         }
 
-        // Validation - check email exists
-        if (existsByEmail(account.getEmail())) {
-            throw new ValidationException("email", "Email đã được sử dụng!");
+        // Validation - check email exists (only if email is provided)
+        if (account.getEmail() != null && !account.getEmail().trim().isEmpty()) {
+            if (existsByEmail(account.getEmail())) {
+                throw new ValidationException("email", "Email đã được sử dụng!");
+            }
         }
 
         // Handle photo upload

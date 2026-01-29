@@ -27,7 +27,7 @@ public class Account implements Serializable {
     @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
     private String fullname;
 
-    @Column(name = "Email", nullable = false, length = 100, unique = true)
+    @Column(name = "Email", length = 100)
     private String email;
 
     @Column(name = "phone", length = 15, unique = true)

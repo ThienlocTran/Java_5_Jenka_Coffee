@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.controller.site;
 
 import com.springboot.jenka_coffee.entity.Account;
+import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.service.AccountService;
 import com.springboot.jenka_coffee.service.CookieService;
 import jakarta.servlet.http.Cookie;
@@ -110,5 +111,54 @@ public class AuthController {
     @GetMapping("/unauthorized")
     public String unauthorized() {
         return "site/auth/unauthorized";
+    }
+
+    /**
+     * Xử lý đăng ký tài khoản mới
+     */
+    @PostMapping("/signup")
+    public String signup(@RequestParam String username,
+            @RequestParam String fullname,
+            @RequestParam String phone,
+            @RequestParam(required = false) String email,
+            @RequestParam String password,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            // Create new account object
+            Account newAccount = new Account();
+            newAccount.setUsername(username.trim());
+            newAccount.setFullname(fullname.trim());
+            newAccount.setPhone(phone.trim());
+
+            // Email is optional
+            if (email != null && !email.trim().isEmpty()) {
+                newAccount.setEmail(email.trim());
+            }
+
+            newAccount.setPasswordHash(password); // Will be hashed in service layer
+            newAccount.setActivated(true);
+            newAccount.setAdmin(false);
+            newAccount.setPoints(0);
+            newAccount.setCustomerRank("MEMBER");
+
+            // Call service layer to create account (handles validation, hashing, etc.)
+            accountService.createAccount(newAccount, null);
+
+            // Success - redirect to login
+            redirectAttributes.addFlashAttribute("success",
+                    "Đăng ký thành công! Vui lòng đăng nhập.");
+            return "redirect:/auth/login";
+
+        } catch (ValidationException e) {
+            // Validation error from service layer
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/auth/signup";
+        } catch (Exception e) {
+            // Unexpected error
+            redirectAttributes.addFlashAttribute("error",
+                    "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại!");
+            return "redirect:/auth/signup";
+        }
     }
 }
