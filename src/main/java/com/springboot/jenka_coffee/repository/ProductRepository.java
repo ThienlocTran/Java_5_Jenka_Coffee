@@ -58,11 +58,4 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      * AND ?
      */
     List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
-
-    /**
-     * Find best-selling products with pagination
-     * DSL method with ordering - Spring generates: SELECT * FROM products ORDER BY
-     * sold_count DESC
-     */
-    List<Product> findAllByOrderBySoldCountDesc(Pageable pageable);
 }
