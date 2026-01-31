@@ -36,20 +36,10 @@ public class CheckoutController {
             return "redirect:/cart/view";
         }
 
-        // Auto-fill form for logged-in users, empty form for guests
+        // Auto-fill form using service layer
         if (!model.containsAttribute("checkoutRequest")) {
-            CheckoutRequest request = new CheckoutRequest();
-
-            // Check if user is logged in
             Account user = (Account) session.getAttribute("user");
-            if (user != null) {
-                // Auto-fill with user data
-                request.setFullname(user.getFullname());
-                request.setEmail(user.getEmail());
-                request.setPhone(user.getPhone());
-            }
-            // For guests, request remains empty - they fill manually
-
+            CheckoutRequest request = orderService.prepareCheckoutRequest(user);
             model.addAttribute("checkoutRequest", request);
         }
 

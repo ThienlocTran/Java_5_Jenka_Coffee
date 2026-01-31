@@ -125,27 +125,8 @@ public class AuthController {
             RedirectAttributes redirectAttributes) {
 
         try {
-            // Create new account object
-            Account newAccount = new Account();
-            newAccount.setUsername(username.trim());
-            newAccount.setFullname(fullname.trim());
-            newAccount.setPhone(phone.trim());
-
-            // Email is optional - set to empty string if not provided
-            if (email != null && !email.trim().isEmpty()) {
-                newAccount.setEmail(email.trim());
-            } else {
-                newAccount.setEmail(""); // Set empty string instead of null
-            }
-
-            newAccount.setPasswordHash(password); // Will be hashed in service layer
-            newAccount.setActivated(true);
-            newAccount.setAdmin(false);
-            newAccount.setPoints(0);
-            newAccount.setCustomerRank("MEMBER");
-
-            // Call service layer to create account (handles validation, hashing, etc.)
-            accountService.createAccount(newAccount, null);
+            // Delegate all business logic to service layer
+            accountService.register(username, fullname, phone, email, password);
 
             // Success - redirect to login
             redirectAttributes.addFlashAttribute("success",

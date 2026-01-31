@@ -160,4 +160,13 @@ public class ProductServiceImpl implements ProductService {
         }
         return counts;
     }
+
+    @Override
+    public void toggleAvailable(Integer id) {
+        Product product = productRepository.findById(id).orElse(null);
+        if (product != null) {
+            product.setAvailable(!product.getAvailable());
+            productRepository.save(product);
+        }
+    }
 }

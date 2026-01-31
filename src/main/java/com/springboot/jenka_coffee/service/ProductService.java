@@ -72,4 +72,9 @@ public interface ProductService {
      * @return Map of categoryId -> product count
      */
     Map<String, Long> getCategoryCounts();
+
+    /**
+     * Toggle product availability (soft delete)
+     */
+    void toggleAvailable(Integer id);
 }

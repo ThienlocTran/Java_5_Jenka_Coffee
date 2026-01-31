@@ -59,11 +59,7 @@ public class AdminProductController {
     // 5. Toggle Available (Soft Delete)
     @GetMapping("/toggle/{id}")
     public String toggleAvailable(@PathVariable("id") Integer id) {
-        Product product = productService.findById(id);
-        if (product != null) {
-            product.setAvailable(!product.getAvailable());
-            productService.update(product);
-        }
+        productService.toggleAvailable(id);
         return "redirect:/admin/product/list";
     }
 }

@@ -134,6 +134,32 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public void register(String username, String fullname, String phone, String email, String password) {
+        // Create new account object
+        Account newAccount = new Account();
+        newAccount.setUsername(username.trim());
+        newAccount.setFullname(fullname.trim());
+        newAccount.setPhone(phone.trim());
+
+        // Email is optional - set to empty string if not provided
+        if (email != null && !email.trim().isEmpty()) {
+            newAccount.setEmail(email.trim());
+        } else {
+            newAccount.setEmail(""); // Set empty string instead of null
+        }
+
+        // Set defaults for new user registration
+        newAccount.setPasswordHash(password); // Will be hashed in createAccount
+        newAccount.setActivated(true);
+        newAccount.setAdmin(false);
+        newAccount.setPoints(0);
+        newAccount.setCustomerRank("MEMBER");
+
+        // Call createAccount which handles validation and hashing
+        createAccount(newAccount, null);
+    }
+
+    @Override
     public Account createAccount(Account account, MultipartFile photoFile) {
         // Validation - check username exists
         if (existsByUsername(account.getUsername())) {
