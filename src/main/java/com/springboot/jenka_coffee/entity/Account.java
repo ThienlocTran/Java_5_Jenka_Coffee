@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,7 +50,24 @@ public class Account implements Serializable {
     private Integer points = 0;
 
     @Column(name = "customer_rank", length = 20)
-    private String customerRank = "MEMBER"; // MEMBER, SILVER, GOLD, DIAMOND
+    private String customerRank = "MEMBER";
+
+    // ===== ACTIVATION & PASSWORD RESET FIELDS =====
+
+    @Column(name = "ActivationToken", length = 100)
+    private String activationToken;
+
+    @Column(name = "ActivationTokenExpiry")
+    private LocalDateTime activationTokenExpiry;
+
+    @Column(name = "ResetToken", length = 100)
+    private String resetToken;
+
+    @Column(name = "ResetTokenExpiry")
+    private LocalDateTime resetTokenExpiry;
+
+    @Column(name = "ActivationMethod", length = 10)
+    private String activationMethod; // EMAIL or PHONE // MEMBER, SILVER, GOLD, DIAMOND
 
     // Quan hệ 1-N với Order
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
