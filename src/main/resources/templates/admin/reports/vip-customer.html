@@ -40,59 +40,83 @@
                         <th class="text-end pe-4">Tổng chi tiêu</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    <tr th:if="${vipList == null || vipList.empty}">
-                        <td colspan="4" class="text-center py-5 text-muted">
-                            <i class="fas fa-users-slash fa-3x mb-3 opacity-25"></i>
-                            <p class="mb-0">Chưa có dữ liệu mua hàng.</p>
-                        </td>
-                    </tr>
-
-                    <tr th:each="row, stat : ${vipList}">
-
-                        <td class="ps-4 fw-bold">
-                                    <span th:if="${stat.index == 0}">
-                                        <i class="fas fa-trophy text-warning fa-lg me-1"></i> #1
-                                    </span>
-                            <span th:if="${stat.index == 1}">
-                                        <i class="fas fa-medal text-secondary fa-lg me-1"></i> #2
-                                    </span>
-                            <span th:if="${stat.index == 2}">
-                                        <i class="fas fa-medal text-danger fa-lg me-1" style="color: #cd7f32 !important;"></i> #3
-                                    </span>
-                            <span th:if="${stat.index > 2}" class="text-muted ps-2">
-                                        #[[${stat.index + 1}]]
-                                    </span>
-                        </td>
-
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center border me-3"
-                                     style="width: 40px; height: 40px; color: #666;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold">[[${row[0].fullname}]]</h6>
-                                    <small class="text-muted">@[[${row[0].username}]]</small>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td class="text-center">
-                                    <span class="badge bg-light text-dark border">
-                                        [[${row[2]}]] đơn
-                                    </span>
-                        </td>
-
-                        <td class="text-end pe-4 fw-bold text-success">
-                            [[${#numbers.formatDecimal(row[1], 0, 'COMMA', 0, 'POINT')}]] ₫
-                        </td>
-                    </tr>
+                    <tbody id="customersTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-3x mb-3"></i>
+                                <p class="mb-0">Đang tải dữ liệu...</p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+    
+    <script>
+        // ===== FETCH TOP CUSTOMERS FROM API =====
+        fetch('/admin/report/api/customers/top?limit=10')
+            .then(res => res.json())
+            .then(customers => {
+                const tbody = document.getElementById('customersTableBody');
+                
+                if (!customers || customers.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="fas fa-users-slash fa-3x mb-3 opacity-25"></i>
+                                <p class="mb-0">Chưa có dữ liệu mua hàng.</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = customers.map((customer, index) => {
+                    let rankBadge = '';
+                    if (index === 0) {
+                        rankBadge = '<i class="fas fa-trophy text-warning fa-lg me-1"></i> #1';
+                    } else if (index === 1) {
+                        rankBadge = '<i class="fas fa-medal text-secondary fa-lg me-1"></i> #2';
+                    } else if (index === 2) {
+                        rankBadge = '<i class="fas fa-medal text-danger fa-lg me-1" style="color: #cd7f32 !important;"></i> #3';
+                    } else {
+                        rankBadge = `<span class="text-muted ps-2">#${index + 1}</span>`;
+                    }
+                    
+                    return `
+                        <tr>
+                            <td class="ps-4 fw-bold">${rankBadge}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center border me-3"
+                                         style="width: 40px; height: 40px; color: #666;">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">${customer.fullname}</h6>
+                                        <small class="text-muted">@${customer.username}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">
+                                    ${customer.orderCount} đơn
+                                </span>
+                            </td>
+                            <td class="text-end pe-4 fw-bold text-success">
+                                ${customer.totalSpent.toLocaleString('vi-VN')} ₫
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                console.error('Error loading top customers:', err);
+                document.getElementById('customersTableBody').innerHTML = 
+                    '<tr><td colspan="4" class="text-center text-muted py-4">Không thể tải dữ liệu</td></tr>';
+            });
+    </script>
 
 </div>
 </body>

@@ -1,9 +1,12 @@
 package com.springboot.jenka_coffee.controller.site;
 
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
+import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
+import com.springboot.jenka_coffee.exception.InsufficientStockException;
 import com.springboot.jenka_coffee.service.CartService;
-import com.springboot.jenka_coffee.service.CheckoutService;
+import com.springboot.jenka_coffee.service.OrderService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,23 +22,25 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CheckoutController {
 
     private final CartService cartService;
-    private final CheckoutService checkoutService;
+    private final OrderService orderService;
 
-    public CheckoutController(CartService cartService, CheckoutService checkoutService) {
+    public CheckoutController(CartService cartService, OrderService orderService) {
         this.cartService = cartService;
-        this.checkoutService = checkoutService;
+        this.orderService = orderService;
     }
 
     @GetMapping
-    public String showCheckoutForm(Model model) {
+    public String showCheckoutForm(HttpSession session, Model model) {
         // Kiểm tra giỏ hàng trống
-        if (checkoutService.isCartEmpty()) {
+        if (cartService.getItems().isEmpty()) {
             return "redirect:/cart/view";
         }
 
-        // Tạo form object mới nếu chưa có
+        // Auto-fill form using service layer
         if (!model.containsAttribute("checkoutRequest")) {
-            model.addAttribute("checkoutRequest", new CheckoutRequest());
+            Account user = (Account) session.getAttribute("user");
+            CheckoutRequest request = orderService.prepareCheckoutRequest(user);
+            model.addAttribute("checkoutRequest", request);
         }
 
         // Đưa dữ liệu giỏ hàng vào model
@@ -48,9 +53,9 @@ public class CheckoutController {
 
     @PostMapping
     public String processCheckout(@Valid @ModelAttribute("checkoutRequest") CheckoutRequest request,
-                                   BindingResult bindingResult,
-                                   Model model,
-                                   RedirectAttributes redirectAttributes) {
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
 
         // Kiểm tra validation errors
         if (bindingResult.hasErrors()) {
@@ -61,8 +66,9 @@ public class CheckoutController {
         }
 
         try {
-            // Xử lý checkout qua service
-            Order order = checkoutService.processCheckout(request);
+            // === TRANSACTIONAL CHECKOUT ===
+            // Steps: Validate → Create Order → Deduct Inventory → Clear Cart
+            Order order = orderService.checkout(request);
 
             // Thông báo thành công
             redirectAttributes.addFlashAttribute("success", "Đặt hàng thành công! Mã đơn hàng: #" + order.getId());
@@ -70,14 +76,21 @@ public class CheckoutController {
 
             return "redirect:/checkout/success";
 
+        } catch (InsufficientStockException e) {
+            // Lỗi thiếu hàng trong kho - hiển thị thông báo chi tiết
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            redirectAttributes.addFlashAttribute("checkoutRequest", request);
+            return "redirect:/checkout";
+
         } catch (IllegalStateException e) {
-            // Lỗi nghiệp vụ (giỏ hàng trống, sản phẩm không tồn tại...)
+            // Lỗi nghiệp vụ khác (giỏ hàng trống, sản phẩm không tồn tại...)
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/cart/view";
 
         } catch (Exception e) {
             // Lỗi hệ thống
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại!");
+            redirectAttributes.addFlashAttribute("checkoutRequest", request);
             return "redirect:/checkout";
         }
     }

@@ -42,6 +42,9 @@ public class Product implements Serializable {
     @Column(name = "Available")
     private Boolean available = true;
 
+    @Column(name = "Quantity")
+    private Integer quantity = 0; // Số lượng tồn kho
+
     // --- CÁC MỐI QUAN HỆ ---
 
     @ManyToOne(fetch = FetchType.LAZY) // Mặc định EAGER, nên đổi sang LAZY cho nhẹ

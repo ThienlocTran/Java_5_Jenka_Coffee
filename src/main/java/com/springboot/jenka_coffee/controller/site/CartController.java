@@ -1,6 +1,6 @@
 package com.springboot.jenka_coffee.controller.site;
 
-
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,15 +17,21 @@ import com.springboot.jenka_coffee.service.CartService;
 @RequestMapping("/cart")
 public class CartController {
 
-
     final CartService cartService;
+
     public CartController(CartService cartService) {
         this.cartService = cartService;
     }
+
     @GetMapping("/view")
-    public String view(Model model) {
+    public String view(HttpSession session, Model model) {
         model.addAttribute("items", cartService.getItems());
         model.addAttribute("total", cartService.getAmount());
+
+        // Check if user is logged in for conditional checkout button
+        boolean isLoggedIn = session.getAttribute("user") != null;
+        model.addAttribute("isLoggedIn", isLoggedIn);
+
         return "site/cart";
     }
 

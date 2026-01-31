@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.controller.admin;
 
+import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
 import org.springframework.stereotype.Controller;
@@ -37,7 +38,7 @@ public class AdminAccountController {
      */
     @GetMapping("/add")
     public String showAddForm(Model model) {
-        model.addAttribute("item", new Account());
+        model.addAttribute("item", new AccountRequest());
         return "admin/accounts/account-form";
     }
 
@@ -45,13 +46,9 @@ public class AdminAccountController {
      * Hiển thị form chỉnh sửa tài khoản
      */
     @GetMapping("/edit/{username}")
-    public String showEditForm(@PathVariable String username, Model model, RedirectAttributes redirectAttributes) {
-        Account account = accountService.findById(username);
-        if (account == null) {
-            redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
-            return "redirect:/admin/account/list";
-        }
-        model.addAttribute("item", account);
+    public String showEditForm(@PathVariable String username, Model model) {
+        Account account = accountService.findByIdOrThrow(username);
+        model.addAttribute("item", AccountRequest.fromEntity(account));
         return "admin/accounts/account-form";
     }
 
@@ -59,44 +56,30 @@ public class AdminAccountController {
      * Lưu tài khoản (thêm mới hoặc cập nhật)
      */
     @PostMapping("/save")
-    public String saveAccount(@Valid @ModelAttribute("item") Account account,
+    public String saveAccount(
+            @Valid @ModelAttribute("item") AccountRequest request,
             BindingResult result,
             @RequestParam(value = "photoFile", required = false) MultipartFile photoFile,
             RedirectAttributes redirectAttributes) {
 
-        // Check validation errors from form
+        // Check validation errors from @Valid
         if (result.hasErrors()) {
             return "admin/accounts/account-form";
         }
 
-        try {
-            boolean isNewAccount = (account.getUsername() == null || account.getUsername().trim().isEmpty());
+        boolean isNewAccount = (request.getUsername() == null || request.getUsername().trim().isEmpty());
 
-            // Delegate to service layer
-            if (isNewAccount) {
-                accountService.createAccount(account, photoFile);
-            } else {
-                accountService.updateAccount(account.getUsername(), account, photoFile);
-            }
-
-            String message = isNewAccount ? "Thêm tài khoản thành công!" : "Cập nhật tài khoản thành công!";
-            redirectAttributes.addFlashAttribute("success", message);
-
-            return "redirect:/admin/account/list";
-
-        } catch (com.springboot.jenka_coffee.exception.ValidationException e) {
-            // Handle validation errors from service
-            if (e.getField() != null) {
-                result.rejectValue(e.getField(), "error.account", e.getMessage());
-            } else {
-                redirectAttributes.addFlashAttribute("error", e.getMessage());
-                return "redirect:/admin/account/list";
-            }
-            return "admin/accounts/account-form";
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
-            return "admin/accounts/account-form";
+        // Delegate to service - exceptions handled by GlobalExceptionHandler
+        if (isNewAccount) {
+            accountService.createAccount(request.toEntity(), photoFile);
+        } else {
+            accountService.updateAccount(request.getUsername(), request.toEntity(), photoFile);
         }
+
+        String message = isNewAccount ? "Thêm tài khoản thành công!" : "Cập nhật tài khoản thành công!";
+        redirectAttributes.addFlashAttribute("success", message);
+
+        return "redirect:/admin/account/list";
     }
 
     /**
@@ -104,27 +87,9 @@ public class AdminAccountController {
      */
     @PostMapping("/delete/{username}")
     public String deleteAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
-        try {
-            // Check if can delete (business logic in service)
-            if (!accountService.canDeleteAccount(username)) {
-                Account account = accountService.findById(username);
-                if (account == null) {
-                    redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
-                } else if (account.getAdmin() != null && account.getAdmin()) {
-                    redirectAttributes.addFlashAttribute("error", "Không thể xóa tài khoản admin cuối cùng!");
-                } else {
-                    redirectAttributes.addFlashAttribute("error", "Không thể xóa tài khoản này!");
-                }
-                return "redirect:/admin/account/list";
-            }
-
-            accountService.delete(username);
-            redirectAttributes.addFlashAttribute("success", "Xóa tài khoản thành công!");
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Không thể xóa tài khoản: " + e.getMessage());
-        }
-
+        // Service throws BusinessRuleException if cannot delete
+        accountService.deleteOrThrow(username);
+        redirectAttributes.addFlashAttribute("success", "Xóa tài khoản thành công!");
         return "redirect:/admin/account/list";
     }
 
@@ -133,24 +98,9 @@ public class AdminAccountController {
      */
     @PostMapping("/toggle-status/{username}")
     public String toggleAccountStatus(@PathVariable String username, RedirectAttributes redirectAttributes) {
-        try {
-            Account account = accountService.findById(username);
-            if (account == null) {
-                redirectAttributes.addFlashAttribute("error", "Không tìm thấy tài khoản!");
-                return "redirect:/admin/account/list";
-            }
-
-            // Toggle trạng thái
-            account.setActivated(!account.getActivated());
-            accountService.save(account);
-
-            String status = account.getActivated() ? "kích hoạt" : "vô hiệu hóa";
-            redirectAttributes.addFlashAttribute("success", "Đã " + status + " tài khoản thành công!");
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
-        }
-
+        Account account = accountService.toggleActivation(username);
+        String status = account.getActivated() ? "kích hoạt" : "vô hiệu hóa";
+        redirectAttributes.addFlashAttribute("success", "Đã " + status + " tài khoản thành công!");
         return "redirect:/admin/account/list";
     }
 
@@ -168,7 +118,10 @@ public class AdminAccountController {
      */
     @GetMapping("/check-email")
     @ResponseBody
-    public boolean checkEmail(@RequestParam String email, @RequestParam(required = false) String currentUsername) {
+    public boolean checkEmail(
+            @RequestParam String email,
+            @RequestParam(required = false) String currentUsername) {
+
         if (currentUsername != null && !currentUsername.isEmpty()) {
             Account currentAccount = accountService.findById(currentUsername);
             if (currentAccount != null && currentAccount.getEmail().equals(email)) {

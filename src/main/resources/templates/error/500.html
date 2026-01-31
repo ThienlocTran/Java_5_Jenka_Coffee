@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>500 - Server Error | Jenka Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/error.css}">
+</head>
+<body>
+    <div class="error-container">
+        <span class="coffee-cup">🔧</span>
+        <div class="error-code">500</div>
+        <h1 class="error-title">Máy pha cà phê đang gặp sự cố</h1>
+        <p class="error-message" th:text="${errorMessage}">Đã có lỗi xảy ra phía máy chủ.</p>
+        
+        <!-- Only show detailed error in dev mode or admin -->
+        <p th:if="${debugMessage}" style="font-size: 12px; color: #aaa; margin-top: -20px; font-family: monospace;" 
+           th:text="${debugMessage}"></p>
+
+        <a href="/home" class="btn-home">Quay lại Trang Chủ</a>
+    </div>
+</body>
+</html>

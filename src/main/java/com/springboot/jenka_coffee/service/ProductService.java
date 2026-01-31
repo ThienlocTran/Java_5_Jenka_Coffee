@@ -1,6 +1,9 @@
 package com.springboot.jenka_coffee.service;
 
+import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Product;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -27,4 +30,51 @@ public interface ProductService {
     List<Product> filterProducts(String categoryId);
 
     Map<String, Object> getProductDetail(Integer productId);
+
+    /**
+     * Get stock status based on quantity
+     * 
+     * @param quantity Product quantity
+     * @return StockStatus enum (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)
+     */
+    StockStatus getStockStatus(Integer quantity);
+
+    /**
+     * Get human-readable stock message
+     * 
+     * @param quantity Product quantity
+     * @return Display message for UI
+     */
+    String getStockMessage(Integer quantity);
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Find all products with pagination
+     * 
+     * @param pageable Pagination parameters
+     * @return Page of products
+     */
+    Page<Product> findAllPaginated(Pageable pageable);
+
+    /**
+     * Filter products by category with pagination
+     * 
+     * @param categoryId Category ID (nullable)
+     * @param pageable   Pagination parameters
+     * @return Page of filtered products
+     */
+    Page<Product> filterProductsPaginated(String categoryId, Pageable pageable);
+
+    /**
+     * Get product count for each category
+     * 
+     * @return Map of categoryId -> product count
+     */
+    Map<String, Long> getCategoryCounts();
+
+    /**
+     * Toggle product availability (soft delete)
+     */
+    void toggleAvailable(Integer id);
 }

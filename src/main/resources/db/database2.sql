@@ -19,8 +19,12 @@ IF OBJECT_ID('dbo.Categories', 'U') IS NOT NULL DROP TABLE dbo.Categories;
 IF OBJECT_ID('dbo.Accounts', 'U') IS NOT NULL DROP TABLE dbo.Accounts;
 GO
 
-/* --- PHẦN 1: TẠO BẢNG --- */
-
+/* --- PHẦN 1: TẠO BẢNG --- */UPDATE Accounts
+                              SET password_hash = '$2a$12$1Dc2pPqXS8CWzpBSnNxKq.0/ybyidjzVt705o7K.pUK..SQrSOx9y'
+                              WHERE username = 'admin';
+SELECT username, LEN(password_hash) as length, LEFT(password_hash, 20) as preview
+FROM Accounts WHERE username = 'admin';
+-- Kết quả: length phải = 60
 -- 1. ACCOUNTS
 CREATE TABLE Accounts (
                           username VARCHAR(50) NOT NULL,
