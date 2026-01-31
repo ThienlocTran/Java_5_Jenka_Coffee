@@ -62,4 +62,49 @@ public class CategoryServiceImpl implements CategoryService {
         icons.put("XAY_EP", "may_xay_sinh_to_may_ep.webp");
         return icons;
     }
+
+    @Override
+    public Category findByIdOrThrow(String id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                        "Category", "id", id));
+    }
+
+    @Override
+    public void deleteOrThrow(String id) {
+        Category category = findByIdOrThrow(id);
+
+        long productCount = countProductsByCategory(id);
+        if (productCount > 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Không thể xóa loại hàng này vì còn " + productCount + " sản phẩm thuộc loại này!");
+        }
+
+        categoryRepository.deleteById(id);
+    }
+
+    @Override
+    public Category createCategory(com.springboot.jenka_coffee.dto.request.CategoryRequest request) {
+        // Check duplicate
+        if (categoryRepository.existsById(request.getId())) {
+            throw new com.springboot.jenka_coffee.exception.DuplicateResourceException(
+                    "Category", "id", request.getId());
+        }
+
+        Category category = request.toEntity();
+        return categoryRepository.save(category);
+    }
+
+    @Override
+    public Category updateCategory(String id, com.springboot.jenka_coffee.dto.request.CategoryRequest request) {
+        Category existing = findByIdOrThrow(id);
+
+        // Update fields
+        existing.setName(request.getName());
+        if (request.getIcon() != null && !request.getIcon().isEmpty()) {
+            existing.setIcon(request.getIcon());
+        }
+
+        return categoryRepository.save(existing);
+    }
 }

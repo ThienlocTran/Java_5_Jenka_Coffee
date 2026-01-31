@@ -231,4 +231,34 @@ public class AccountServiceImpl implements AccountService {
 
         return true;
     }
+
+    @Override
+    public Account findByIdOrThrow(String username) {
+        return dao.findById(username)
+                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                        "Account", "username", username));
+    }
+
+    @Override
+    public void deleteOrThrow(String username) {
+        Account account = findByIdOrThrow(username);
+
+        if (!canDeleteAccount(username)) {
+            if (account.getAdmin() != null && account.getAdmin()) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Không thể xóa admin cuối cùng trong hệ thống!");
+            }
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Không thể xóa tài khoản này!");
+        }
+
+        dao.deleteById(username);
+    }
+
+    @Override
+    public Account toggleActivation(String username) {
+        Account account = findByIdOrThrow(username);
+        account.setActivated(!account.getActivated());
+        return dao.save(account);
+    }
 }

@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.controller.admin;
 
+import com.springboot.jenka_coffee.dto.request.CategoryRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.service.CategoryService;
 import org.springframework.stereotype.Controller;
@@ -41,7 +42,7 @@ public class AdminCategoryController {
      */
     @GetMapping("/add")
     public String showAddForm(Model model) {
-        model.addAttribute("item", new Category());
+        model.addAttribute("item", new CategoryRequest());
         return "admin/categories/category-form";
     }
 
@@ -49,13 +50,9 @@ public class AdminCategoryController {
      * Hiển thị form chỉnh sửa loại hàng
      */
     @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
-        Category category = categoryService.findById(id);
-        if (category == null) {
-            redirectAttributes.addFlashAttribute("error", "Không tìm thấy loại hàng!");
-            return "redirect:/admin/category/list";
-        }
-        model.addAttribute("item", category);
+    public String showEditForm(@PathVariable String id, Model model) {
+        Category category = categoryService.findByIdOrThrow(id);
+        model.addAttribute("item", CategoryRequest.fromEntity(category));
         return "admin/categories/category-form";
     }
 
@@ -63,51 +60,29 @@ public class AdminCategoryController {
      * Lưu loại hàng (thêm mới hoặc cập nhật)
      */
     @PostMapping("/save")
-    public String saveCategory(@Valid @ModelAttribute("item") Category category,
+    public String saveCategory(
+            @Valid @ModelAttribute("item") CategoryRequest request,
             BindingResult result,
-            RedirectAttributes redirectAttributes
-            ) {
+            RedirectAttributes redirectAttributes) {
 
-        try {
-            // Kiểm tra validation errors
-            if (result.hasErrors()) {
-                return "admin/categories/category-form";
-            }
-
-            // Kiểm tra loại hàng mới
-            boolean isNewCategory = (category.getId() == null || category.getId().trim().isEmpty());
-
-            if (isNewCategory) {
-                // Kiểm tra ID đã tồn tại
-                if (categoryService.existsById(category.getId())) {
-                    result.rejectValue("id", "error.category", "Mã loại hàng đã tồn tại!");
-                    return "admin/categories/category-form";
-                }
-            } else {
-                // Loại hàng cũ - kiểm tra tồn tại
-                Category existingCategory = categoryService.findById(category.getId());
-                if (existingCategory == null) {
-                    redirectAttributes.addFlashAttribute("error", "Không tìm thấy loại hàng!");
-                    return "redirect:/admin/category/list";
-                }
-            }
-
-            // Chuẩn hóa dữ liệu
-            category.setId(category.getId().toUpperCase().trim());
-            category.setName(category.getName().trim());
-
-            // Lưu loại hàng
-            categoryService.save(category);
-
-            String message = isNewCategory ? "Thêm loại hàng thành công!" : "Cập nhật loại hàng thành công!";
-            redirectAttributes.addFlashAttribute("success", message);
-
-            return "redirect:/admin/category/list";
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
+        // Check validation errors from @Valid
+        if (result.hasErrors()) {
             return "admin/categories/category-form";
         }
+
+        boolean isNewCategory = (request.getId() == null || request.getId().trim().isEmpty());
+
+        // Delegate to service - exceptions handled by GlobalExceptionHandler
+        if (isNewCategory) {
+            categoryService.createCategory(request);
+        } else {
+            categoryService.updateCategory(request.getId(), request);
+        }
+
+        String message = isNewCategory ? "Thêm loại hàng thành công!" : "Cập nhật loại hàng thành công!";
+        redirectAttributes.addFlashAttribute("success", message);
+
+        return "redirect:/admin/category/list";
     }
 
     /**
@@ -115,28 +90,9 @@ public class AdminCategoryController {
      */
     @PostMapping("/delete/{id}")
     public String deleteCategory(@PathVariable String id, RedirectAttributes redirectAttributes) {
-        try {
-            Category category = categoryService.findById(id);
-            if (category == null) {
-                redirectAttributes.addFlashAttribute("error", "Không tìm thấy loại hàng!");
-                return "redirect:/admin/category/list";
-            }
-
-            // Kiểm tra có sản phẩm thuộc loại này không
-            long productCount = categoryService.countProductsByCategory(id);
-            if (productCount > 0) {
-                redirectAttributes.addFlashAttribute("error",
-                        "Không thể xóa loại hàng này vì còn " + productCount + " sản phẩm thuộc loại này!");
-                return "redirect:/admin/category/list";
-            }
-
-            categoryService.delete(id);
-            redirectAttributes.addFlashAttribute("success", "Xóa loại hàng thành công!");
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Không thể xóa loại hàng: " + e.getMessage());
-        }
-
+        // Service throws BusinessRuleException if category has products
+        categoryService.deleteOrThrow(id);
+        redirectAttributes.addFlashAttribute("success", "Xóa loại hàng thành công!");
         return "redirect:/admin/category/list";
     }
 

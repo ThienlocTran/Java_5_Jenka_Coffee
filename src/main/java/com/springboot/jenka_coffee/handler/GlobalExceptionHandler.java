@@ -4,9 +4,11 @@ import com.springboot.jenka_coffee.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Global exception handler for all controllers
@@ -81,6 +83,41 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle validation errors from @Valid annotation
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public String handleMethodArgumentNotValid(
+            org.springframework.web.bind.MethodArgumentNotValidException ex,
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
+
+        logger.warn("Validation error in request");
+
+        // Extract first error message
+        String errorMessage = ex.getBindingResult().getAllErrors().stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("Dữ liệu không hợp lệ");
+
+        redirectAttributes.addFlashAttribute("error", errorMessage);
+        return getRedirectUrl(request);
+    }
+
+    /**
+     * Handle IllegalStateException (from business logic)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public String handleIllegalState(
+            IllegalStateException ex,
+            RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
+
+        logger.warn("Illegal state: {}", ex.getMessage());
+        redirectAttributes.addFlashAttribute("error", ex.getMessage());
+        return getRedirectUrl(request);
+    }
+
+    /**
      * Handle generic exceptions
      */
     @ExceptionHandler(Exception.class)
@@ -89,7 +126,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         // Ignore favicon.ico errors (browser requests this automatically)
-        if (ex instanceof org.springframework.web.servlet.resource.NoResourceFoundException) {
+        if (ex instanceof NoResourceFoundException) {
             String requestUri = request.getRequestURI();
             if (requestUri != null && (requestUri.contains("favicon") || requestUri.contains("/product/"))) {
                 return null; // Silently ignore - images are on cloud storage
