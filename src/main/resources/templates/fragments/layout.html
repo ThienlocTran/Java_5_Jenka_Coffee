@@ -97,10 +97,38 @@
                     </div>
                 </div>
 
-                <!-- Auth Links -->
+                <!-- Auth Links - Check session -->
                 <div class="d-none d-md-flex gap-2">
-                     <a href="/auth/login" class="btn btn-outline-dark btn-sm rounded-pill px-3">Đăng nhập</a>
-                     <a href="/auth/signup" class="btn btn-danger btn-sm rounded-pill px-3">Đăng ký</a>
+                    <!-- Not logged in: Show Login/Signup buttons -->
+                    <div th:if="${session.user == null}">
+                        <a href="/auth/login" class="btn btn-outline-dark btn-sm rounded-pill px-3">Đăng nhập</a>
+                        <a href="/auth/signup" class="btn btn-danger btn-sm rounded-pill px-3">Đăng ký</a>
+                    </div>
+                    
+                    <!-- Logged in: Show user dropdown -->
+                    <div th:if="${session.user != null}" class="dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 text-dark" 
+                           href="#" role="button" id="userDropdown"
+                           data-bs-toggle="dropdown" aria-expanded="false" 
+                           style="cursor: pointer; white-space: nowrap;">
+                            <i class="fas fa-user-circle fa-lg"></i>
+                            <span th:text="${session.user.fullname}">User Name</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <!-- Admin link if user is admin -->
+                            <li th:if="${session.user.admin}">
+                                <a class="dropdown-item" href="/admin/product/list">
+                                    <i class="fas fa-cog me-2"></i>Quản trị
+                                </a>
+                            </li>
+                            <li th:if="${session.user.admin}"><hr class="dropdown-divider"></li>
+                            
+                            <li><a class="dropdown-item" href="/user/profile"><i class="fas fa-user me-2"></i>Thông tin tài khoản</a></li>
+                            <li><a class="dropdown-item" href="/user/orders"><i class="fas fa-shopping-bag me-2"></i>Đơn hàng của tôi</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
