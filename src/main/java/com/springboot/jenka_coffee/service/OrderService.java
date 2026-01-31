@@ -23,4 +23,10 @@ public interface OrderService {
      *                                                                          unavailable
      */
     Order checkout(CheckoutRequest request);
+
+    /**
+     * Prepare checkout request with auto-filled data for logged-in user
+     * Returns empty request for guests
+     */
+    CheckoutRequest prepareCheckoutRequest(Account user);
 }

@@ -169,4 +169,20 @@ public class OrderServiceImpl implements OrderService {
             productRepository.save(product);
         }
     }
+
+    
+    @Override
+    public CheckoutRequest prepareCheckoutRequest(Account user) {
+        CheckoutRequest request = new CheckoutRequest();
+        
+        if (user != null) {
+            // Auto-fill with user data for logged-in users
+            request.setFullname(user.getFullname());
+            request.setEmail(user.getEmail());
+            request.setPhone(user.getPhone());
+        }
+        // For guests, return empty request
+        
+        return request;
+    }
 }
