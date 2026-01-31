@@ -29,4 +29,21 @@ public interface AccountService {
     Account updateAccount(String username, Account updatedAccount, MultipartFile photoFile);
 
     boolean canDeleteAccount(String username);
+
+    // New methods for clean controller pattern
+    /**
+     * Find account by username, throws ResourceNotFoundException if not found
+     */
+    Account findByIdOrThrow(String username);
+
+    /**
+     * Delete account with business rule validation, throws BusinessRuleException if
+     * cannot delete
+     */
+    void deleteOrThrow(String username);
+
+    /**
+     * Toggle account activation status
+     */
+    Account toggleActivation(String username);
 }
