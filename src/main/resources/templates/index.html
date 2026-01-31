@@ -95,17 +95,49 @@
             
             <!-- Dynamic Product List -->
             <div class="col" th:each="item : ${items}">
-                <div class="card h-100 product-card">
-                    <div class="position-relative">
-                        <img th:src="@{${item.image}}" class="card-img-top p-2" th:alt="${item.name}" 
-                             onerror="this.src='/images/logo/logo.png'"> <!-- Fallback image if needed, assuming one exists or just empty -->
-                    </div>
-                    <div class="card-body p-2">
-                        <h6 class="card-title text-truncate" th:text="${item.name}">Product Name</h6>
-                        <span class="current-price" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                <div class="card h-100 product-card border-0 shadow-sm">
+                    <div class="position-relative overflow-hidden">
+                        <!-- Discount Badge (Optional - can be dynamic) -->
+                        <!-- <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-2">-10%</span> -->
                         
-                        <!-- STOCK STATUS BADGE -->
-                        <div th:with="stockStatus=${@productServiceImpl.getStockStatus(item.quantity)}">
+                        <img th:src="@{${item.image}}" class="card-img-top p-3 product-img" th:alt="${item.name}" 
+                             onerror="this.src='/images/logo/logo.png'">
+                        
+                        <!-- Hover Actions Overlay -->
+                        <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
+                             <!-- Add to Cart Button - Disabled if out of stock -->
+                             <a href="#" 
+                                th:class="${item.quantity > 0} ? 'btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart' : 'btn btn-light rounded-circle shadow-sm p-2 btn-disabled'"
+                                th:data-id="${item.id}" 
+                                th:attr="onclick=${item.quantity > 0 ? null : 'return false;'}" 
+                                title="Thêm vào giỏ">
+                                 <i th:class="${item.quantity > 0} ? 'fas fa-shopping-cart' : 'fas fa-ban'"></i>
+                             </a>
+                             <!-- View Details Button -->
+                             <a th:href="@{/product/detail/{id}(id=${item.id})}" 
+                                class="btn btn-light rounded-circle shadow-sm p-2" 
+                                title="Xem chi tiết">
+                                 <i class="fas fa-eye"></i>
+                             </a>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body text-center p-3">
+                        <!-- Category Label -->
+                        <div class="text-muted small mb-1 text-uppercase" 
+                             th:text="${item.category != null ? item.category.name : 'SẢN PHẨM'}">CATEGORY</div>
+                        
+                        <!-- Product Name -->
+                        <h6 class="card-title fw-bold mb-2">
+                            <a th:href="@{/product/detail/{id}(id=${item.id})}" 
+                               class="text-decoration-none text-dark stretched-link" 
+                               th:text="${item.name}">
+                                Product Name
+                            </a>
+                        </h6>
+                        
+                        <!-- Stock Badge -->
+                        <div th:with="stockStatus=${@productServiceImpl.getStockStatus(item.quantity)}" class="mb-2">
                             <span class="stock-badge"
                                   th:classappend="${stockStatus.name() == 'IN_STOCK'} ? 'in-stock' : (${stockStatus.name() == 'LOW_STOCK'} ? 'low-stock' : 'out-of-stock')"
                                   th:text="${@productServiceImpl.getStockMessage(item.quantity)}">
@@ -113,19 +145,12 @@
                             </span>
                         </div>
                         
-                        <div class="product-rating">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                            <span class="sold-count">Đã bán 0</span>
-                        </div>
-                        <div class="product-btn-group">
-                             <!-- Disable add to cart if out of stock -->
-                             <a href="#" 
-                                th:class="${item.quantity > 0} ? 'btn-cart-icon btn-add-to-cart' : 'btn-cart-icon btn-disabled'"
-                                th:data-id="${item.id}"
-                                th:attr="onclick=${item.quantity > 0 ? null : 'return false;'}">
-                                 <i th:class="${item.quantity > 0} ? 'fas fa-shopping-cart' : 'fas fa-ban'"></i>
-                             </a>
-                             <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn-buy-now">Xem ngay</a>
+                        <!-- Price with old price strike-through -->
+                        <div class="d-flex justify-content-center gap-2 align-items-baseline">
+                            <span class="text-muted text-decoration-line-through small" 
+                                  th:text="${#numbers.formatDecimal(item.price * 1.1, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                            <span class="text-danger fw-bold" 
+                                  th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
                         </div>
                     </div>
                 </div>
