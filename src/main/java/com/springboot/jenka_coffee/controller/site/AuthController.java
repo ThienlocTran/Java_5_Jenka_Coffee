@@ -81,14 +81,14 @@ public class AuthController {
         }
 
         if (account.getAdmin() != null && account.getAdmin()) {
-            return "redirect:/admin/product/list";
+            return "redirect:/admin";
         }
 
         return "redirect:/home";
     }
 
     /**
-     * Xử lý đăng xuất
+     * Logout - Clear session and cookies
      */
     @GetMapping("/logout")
     public String logout(HttpSession session,
