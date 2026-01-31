@@ -7,6 +7,7 @@ import com.springboot.jenka_coffee.service.AccountService;
 import com.springboot.jenka_coffee.service.EmailService;
 import com.springboot.jenka_coffee.service.OTPService;
 import com.springboot.jenka_coffee.service.UploadService;
+import com.springboot.jenka_coffee.util.ImageUtils;
 import com.springboot.jenka_coffee.util.PasswordSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -186,7 +187,9 @@ public class AccountServiceImpl implements AccountService {
         // Handle photo upload
         if (photoFile != null && !photoFile.isEmpty()) {
             try {
-                String fileName = uploadService.saveImage(photoFile);
+                String fileName = uploadService.saveImageWithCompression(photoFile, 
+                        ImageUtils.ImagePresets.AVATAR_WIDTH, 
+                        ImageUtils.ImagePresets.AVATAR_QUALITY);
                 account.setPhoto(fileName);
             } catch (Exception e) {
                 throw new ValidationException("photo", "Lỗi khi upload ảnh: " + e.getMessage());
@@ -238,7 +241,9 @@ public class AccountServiceImpl implements AccountService {
         // Handle photo upload or keep old photo
         if (photoFile != null && !photoFile.isEmpty()) {
             try {
-                String fileName = uploadService.saveImage(photoFile);
+                String fileName = uploadService.saveImageWithCompression(photoFile, 
+                        ImageUtils.ImagePresets.AVATAR_WIDTH, 
+                        ImageUtils.ImagePresets.AVATAR_QUALITY);
                 updatedAccount.setPhoto(fileName);
             } catch (Exception e) {
                 throw new ValidationException("photo", "Lỗi khi upload ảnh: " + e.getMessage());

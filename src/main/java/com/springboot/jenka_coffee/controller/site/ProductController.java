@@ -46,7 +46,8 @@ public class ProductController {
     public String detail(@PathVariable("id") Integer id, Model model) {
         Map<String, Object> details = productService.getProductDetail(id);
         if (details == null) {
-            return "redirect:/home";
+            throw new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                    "Không tìm thấy sản phẩm với ID: " + id);
         }
         model.addAllAttributes(details);
         return "site/products/product-detail";

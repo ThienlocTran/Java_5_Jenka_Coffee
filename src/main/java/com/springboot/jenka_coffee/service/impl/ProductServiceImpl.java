@@ -40,9 +40,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Product saveProduct(Product product, org.springframework.web.multipart.MultipartFile file) {
         // --- XỬ LÝ ẢNH ---
-        // Nếu người dùng có chọn ảnh mới -> Upload lên Cloudinary
+        // Nếu người dùng có chọn ảnh mới -> Upload lên Cloudinary với nén ảnh
         if (file != null && !file.isEmpty()) {
-            String url = uploadService.saveImage(file);
+            String url = uploadService.saveProductImage(file); // Sử dụng method nén ảnh cho sản phẩm
             if (url != null) {
                 product.setImage(url);
             }
