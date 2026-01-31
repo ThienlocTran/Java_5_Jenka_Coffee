@@ -65,8 +65,8 @@ public class AdminCategoryController {
     @PostMapping("/save")
     public String saveCategory(@Valid @ModelAttribute("item") Category category,
             BindingResult result,
-            RedirectAttributes redirectAttributes,
-            Model model) {
+            RedirectAttributes redirectAttributes
+            ) {
 
         try {
             // Kiểm tra validation errors
