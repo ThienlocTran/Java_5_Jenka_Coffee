@@ -1,0 +1,223 @@
+/* OTP Verification Page - Swiss Minimalist Design */
+
+.otp-page-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #FAFAFA;
+    color: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.otp-card {
+    width: 100%;
+    max-width: 450px;
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+}
+
+.otp-card-header {
+    text-align: center;
+    padding: 40px 40px 30px;
+    border-bottom: 1px solid #E0E0E0;
+}
+
+.otp-card-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+}
+
+.otp-card-header p {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 400;
+}
+
+.otp-phone-display {
+    font-weight: 600;
+    color: #212529;
+    font-size: 15px;
+    margin-top: 4px;
+}
+
+.otp-card-body {
+    padding: 40px;
+}
+
+.otp-timer-display {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.otp-timer-value {
+    font-weight: 600;
+    color: #212529;
+    font-size: 16px;
+}
+
+.otp-timer-value.expired {
+    color: #D32F2F;
+}
+
+/* OTP Input Fields */
+.otp-inputs-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.otp-input-field {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    font-family: 'Inter', monospace;
+    border: 2px solid #E0E0E0;
+    background: #FAFAFA;
+    color: #212529;
+    transition: all 0.2s ease;
+}
+
+.otp-input-field:focus {
+    outline: none;
+    border-color: #212529;
+    background: #FFFFFF;
+}
+
+.otp-input-field:disabled {
+    background: #F5F5F5;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Buttons */
+.otp-btn-primary {
+    width: 100%;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    background: #212529;
+    color: #FAFAFA;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+}
+
+.otp-btn-primary:hover:not(:disabled) {
+    background: #000000;
+}
+
+.otp-btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.otp-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.otp-btn-link {
+    background: none;
+    border: none;
+    color: #212529;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.otp-btn-link:hover:not(:disabled) {
+    color: #D32F2F;
+}
+
+.otp-btn-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Resend Section */
+.otp-resend-section {
+    text-align: center;
+    margin-top: 16px;
+}
+
+.otp-resend-text {
+    color: #6c757d;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.otp-resend-timer {
+    font-weight: 600;
+    color: #D32F2F;
+}
+
+/* Footer */
+.otp-card-footer {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #E0E0E0;
+    text-align: center;
+}
+
+.otp-card-footer a {
+    color: #212529;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.otp-card-footer a:hover {
+    color: #D32F2F;
+}
+
+/* Alerts */
+.otp-alert {
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    border-left: 3px solid;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.otp-alert-success {
+    background: #F0FDF4;
+    border-left-color: #16A34A;
+    color: #16A34A;
+}
+
+.otp-alert-danger {
+    background: #FEF2F2;
+    border-left-color: #D32F2F;
+    color: #D32F2F;
+}
+
+.otp-alert-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0;
+    font-size: 16px;
+}
+
+.otp-alert-close:hover {
+    opacity: 1;
+}
