@@ -84,8 +84,11 @@
                                 <!-- Badge -->
                                 <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-2">-10%</span>
                                 
-                                <img th:src="@{${item.image}}" class="card-img-top p-3 product-img" alt="Product"
-                                     onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                                <!-- Clickable Image to Detail Page -->
+                                <a th:href="@{/product/detail/{id}(id=${item.id})}">
+                                    <img th:src="@{${item.image}}" class="card-img-top p-3 product-img" alt="Product"
+                                         onerror="this.src='https://via.placeholder.com/300x300?text=No+Image'">
+                                </a>
                                 
                                 <!-- Hover Actions -->
                                 <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
@@ -97,7 +100,11 @@
                                         title="Thêm vào giỏ">
                                         <i th:class="${item.quantity > 0} ? 'fas fa-shopping-cart' : 'fas fa-ban'"></i>
                                     </a>
-                                    <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
+                                    <!-- Quick View Button -->
+                                    <a href="#" 
+                                       class="btn btn-light rounded-circle shadow-sm p-2 btn-quick-view" 
+                                       th:data-id="${item.id}"
+                                       title="Xem nhanh">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </div>
@@ -105,8 +112,11 @@
                             
                             <div class="card-body text-center p-3">
                                 <div class="text-muted small mb-1 text-uppercase" th:text="${item.category != null ? item.category.name : 'Unknown'}">CATEGORY</div>
+                                <!-- Product Name - Clickable to detail page -->
                                 <h6 class="card-title fw-bold mb-2">
-                                    <a th:href="@{/product/detail/{id}(id=${item.id})}" class="text-decoration-none text-dark stretched-link" th:text="${item.name}">
+                                    <a th:href="@{/product/detail/{id}(id=${item.id})}" 
+                                       class="text-decoration-none text-dark" 
+                                       th:text="${item.name}">
                                         Product Name
                                     </a>
                                 </h6>
@@ -120,7 +130,8 @@
                                     </span>
                                 </div>
                                 
-                                <div class="d-flex justify-content-center gap-2 align-items-baseline">
+                                <!-- Price - NO WRAP -->
+                                <div class="d-flex justify-content-center gap-2 align-items-baseline text-nowrap">
                                     <span class="text-muted text-decoration-line-through small" th:text="${#numbers.formatDecimal(item.price * 1.1, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
                                     <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
                                 </div>
