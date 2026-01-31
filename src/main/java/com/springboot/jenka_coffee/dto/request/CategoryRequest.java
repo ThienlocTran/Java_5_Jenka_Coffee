@@ -44,7 +44,6 @@ public class CategoryRequest {
         category.setId(id);
         category.setName(name);
 
-
         return category;
     }
 
@@ -55,7 +54,7 @@ public class CategoryRequest {
         CategoryRequest dto = new CategoryRequest();
         dto.setId(category.getId());
         dto.setName(category.getName());
-
+        dto.setIcon(category.getIcon());
         return dto;
     }
 }

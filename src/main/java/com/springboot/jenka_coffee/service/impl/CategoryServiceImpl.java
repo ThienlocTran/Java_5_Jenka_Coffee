@@ -100,8 +100,11 @@ public class CategoryServiceImpl implements CategoryService {
     public Category updateCategory(String id, com.springboot.jenka_coffee.dto.request.CategoryRequest request) {
         Category existing = findByIdOrThrow(id);
 
-        // Update name only (icon is managed separately)
+        // Update fields from request
         existing.setName(request.getName());
+        if (request.getIcon() != null && !request.getIcon().isEmpty()) {
+            existing.setIcon(request.getIcon());
+        }
 
         return categoryRepository.save(existing);
     }
