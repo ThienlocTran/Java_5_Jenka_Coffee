@@ -35,7 +35,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     /**
      * Find products by category with pagination
      */
-    Page<Product> findByCategoryId(String categoryId, Pageable pageable);
+
 
     /**
      * Find available products only (available = true)
