@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.service.ImageService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.IIOImage;
@@ -16,8 +17,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 
+@Slf4j
 @Service
 public class ImageServiceImpl implements ImageService {
+
+    // Default settings for different use cases
+    private static final int DEFAULT_PRODUCT_WIDTH = 800;
+    private static final int DEFAULT_NEWS_WIDTH = 1200;
+    private static final float DEFAULT_QUALITY = 0.85f;
 
     @Override
     public void processImage(String filePath, int targetWidth, float quality) throws IOException {
@@ -30,60 +37,87 @@ public class ImageServiceImpl implements ImageService {
             throw new IOException("File not found: " + file.getAbsolutePath());
         }
 
+        log.info("Processing image: {} with target width: {}, quality: {}", 
+                file.getName(), targetWidth, quality);
+
         // 1. Read image
         BufferedImage originalImage = ImageIO.read(file);
         if (originalImage == null) {
-            throw new IOException("Failed to read image: " + file.getAbsolutePath());
+            throw new IOException("Failed to read image or unsupported format: " + file.getAbsolutePath());
         }
 
         // 2. Calculate new dimensions
         int originalWidth = originalImage.getWidth();
         int originalHeight = originalImage.getHeight();
+        
+        // Skip processing if image is already smaller than target
+        if (originalWidth <= targetWidth) {
+            log.info("Image {} is already smaller than target width, skipping resize", file.getName());
+            // Still compress if quality is less than 1.0
+            if (quality < 1.0f) {
+                compressImage(file, originalImage, quality);
+            }
+            return;
+        }
+        
         int targetHeight = (int) ((double) targetWidth / originalWidth * originalHeight);
 
-        // If original is smaller than target, keep original dimensions but still
-        // compress
-        if (originalWidth < targetWidth) {
-            targetWidth = originalWidth;
-            targetHeight = originalHeight;
-        }
+        // 3. Resize with high quality
+        BufferedImage resizedImage = resizeImage(originalImage, targetWidth, targetHeight);
 
-        // 3. Resize
+        // 4. Compress & Save
+        saveCompressedImage(file, resizedImage, quality);
+        
+        log.info("Successfully processed image: {} ({}x{} -> {}x{})", 
+                file.getName(), originalWidth, originalHeight, targetWidth, targetHeight);
+    }
+
+    /**
+     * Resize image with high quality settings
+     */
+    private BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
         BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
 
-        // High quality hints
+        // High quality rendering hints
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 
-        // Draw resized (handle transparency check if PNG, but here enforcing RGB/JPG
-        // for consistency/compression)
-        // If need to support PNG transparency,TYPE_INT_ARGB should be used and
-        // different writer.
-        // Assuming Photo/News often JPG. If PNG passed, black background might appear
-        // with RGB.
-        // Let's stick to RGB for standard compression utility as requested (usually for
-        // photos).
-        g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, Color.WHITE, null);
+        // Fill with white background (for transparency handling)
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, targetWidth, targetHeight);
+        
+        // Draw resized image
+        g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
         g2d.dispose();
 
-        // 4. Compress & Overwrite
-        // We write to a temp file first, then replace original
-        File tempFile = new File(file.getParent(), "temp_" + file.getName());
+        return resizedImage;
+    }
 
-        String extension = getFileExtension(file.getName());
-        // Force JPG/JPEG writer for compression support (PNG usually generic
-        // compression)
-        // If extension is PNG, we might lose transparency if we don't handle it,
-        // but "Compress" quality param usually applies to JPEG writer.
+    /**
+     * Compress image without resizing
+     */
+    private void compressImage(File file, BufferedImage image, float quality) throws IOException {
+        saveCompressedImage(file, image, quality);
+    }
+
+    /**
+     * Save compressed image, overwriting original file
+     */
+    private void saveCompressedImage(File file, BufferedImage image, float quality) throws IOException {
+        // Create temp file in same directory
+        File tempFile = new File(file.getParent(), "temp_" + System.currentTimeMillis() + "_" + file.getName());
 
         try (OutputStream os = new FileOutputStream(tempFile);
-                ImageOutputStream ios = ImageIO.createImageOutputStream(os)) {
+             ImageOutputStream ios = ImageIO.createImageOutputStream(os)) {
 
+            // Use JPEG writer for compression
             Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
-            if (!writers.hasNext())
-                throw new IllegalStateException("No writers found");
+            if (!writers.hasNext()) {
+                throw new IllegalStateException("No JPEG writers found");
+            }
 
             ImageWriter writer = writers.next();
             writer.setOutput(ios);
@@ -91,27 +125,43 @@ public class ImageServiceImpl implements ImageService {
             ImageWriteParam param = writer.getDefaultWriteParam();
             if (param.canWriteCompressed()) {
                 param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                param.setCompressionQuality(quality); // 0.0 - 1.0
+                param.setCompressionQuality(Math.max(0.1f, Math.min(1.0f, quality))); // Clamp between 0.1-1.0
             }
 
-            writer.write(null, new IIOImage(resizedImage, null, null), param);
+            writer.write(null, new IIOImage(image, null, null), param);
             writer.dispose();
         }
 
-        // 5. Replace original
-        if (file.delete()) {
-            if (!tempFile.renameTo(file)) {
-                // Try copy if rename fails logic could go here, but usually rename works in
-                // same dir
-                throw new IOException("Failed to overwrite original file");
-            }
-        } else {
-            throw new IOException("Failed to delete original file");
+        // Replace original file
+        if (!file.delete()) {
+            tempFile.delete(); // Clean up temp file
+            throw new IOException("Failed to delete original file: " + file.getAbsolutePath());
+        }
+        
+        if (!tempFile.renameTo(file)) {
+            throw new IOException("Failed to overwrite original file: " + file.getAbsolutePath());
         }
     }
 
+    /**
+     * Get file extension from filename
+     */
     private String getFileExtension(String fileName) {
         int dotIndex = fileName.lastIndexOf('.');
         return (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1).toLowerCase();
+    }
+
+    /**
+     * Convenience method for processing product images with default settings
+     */
+    public void processProductImage(File file) throws IOException {
+        processImage(file, DEFAULT_PRODUCT_WIDTH, DEFAULT_QUALITY);
+    }
+
+    /**
+     * Convenience method for processing news images with default settings  
+     */
+    public void processNewsImage(File file) throws IOException {
+        processImage(file, DEFAULT_NEWS_WIDTH, DEFAULT_QUALITY);
     }
 }
