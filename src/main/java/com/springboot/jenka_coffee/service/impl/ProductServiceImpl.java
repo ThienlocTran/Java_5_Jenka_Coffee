@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.ProductService;

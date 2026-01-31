@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.service;
 
+import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Product;
 
 import java.util.List;
@@ -27,4 +28,20 @@ public interface ProductService {
     List<Product> filterProducts(String categoryId);
 
     Map<String, Object> getProductDetail(Integer productId);
+
+    /**
+     * Get stock status based on quantity
+     * 
+     * @param quantity Product quantity
+     * @return StockStatus enum (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)
+     */
+    StockStatus getStockStatus(Integer quantity);
+
+    /**
+     * Get human-readable stock message
+     * 
+     * @param quantity Product quantity
+     * @return Display message for UI
+     */
+    String getStockMessage(Integer quantity);
 }
