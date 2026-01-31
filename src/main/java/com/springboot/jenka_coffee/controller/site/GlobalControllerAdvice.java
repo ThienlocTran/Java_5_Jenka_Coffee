@@ -20,13 +20,16 @@ public class GlobalControllerAdvice {
     private final CategoryService categoryService;
     private final CartService cartService;
     private final ImageHelper imageHelper;
+    private final com.springboot.jenka_coffee.service.ProductService productService;
 
     public GlobalControllerAdvice(CategoryService categoryService,
             CartService cartService,
-            ImageHelper imageHelper) {
+            ImageHelper imageHelper,
+            com.springboot.jenka_coffee.service.ProductService productService) {
         this.categoryService = categoryService;
         this.cartService = cartService;
         this.imageHelper = imageHelper;
+        this.productService = productService;
     }
 
     @ModelAttribute("categories")
@@ -75,5 +78,11 @@ public class GlobalControllerAdvice {
     @ModelAttribute("imageHelper")
     public ImageHelper getImageHelper() {
         return imageHelper;
+    }
+
+    // Category product counts (for sidebar)
+    @ModelAttribute("categoryCounts")
+    public Map<String, Long> getCategoryCounts() {
+        return productService.getCategoryCounts();
     }
 }

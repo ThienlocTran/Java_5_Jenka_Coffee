@@ -23,6 +23,12 @@ public interface AccountService {
     // Authentication
     Account authenticate(String username, String password);
 
+    /**
+     * Register a new user account with all default values
+     * Handles validation, password hashing, and default setup
+     */
+    void register(String username, String fullname, String phone, String email, String password);
+
     // Business operations
     Account createAccount(Account account, MultipartFile photoFile);
 

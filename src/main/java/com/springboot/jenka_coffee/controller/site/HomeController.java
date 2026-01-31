@@ -3,9 +3,13 @@ package com.springboot.jenka_coffee.controller.site;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,17 +29,20 @@ public class HomeController {
     }
 
     @RequestMapping("/home")
-    public String home(Model model) {
-        List<Product> list = productService.findAll();
-        model.addAttribute("items", list);
+    public String home(Model model,
+            @RequestParam(value = "page", defaultValue = "0") int page) {
+        // Pagination: 20 products per page for home
+        Pageable pageable = PageRequest.of(page, 20);
+        Page<Product> productPage = productService.findAllPaginated(pageable);
+
+        model.addAttribute("items", productPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
         model.addAttribute("categories", categoryService.findAll());
 
-        // Create a copy for random selection to preserve original list order if needed
-        // (though here we just passed list directly above)
-        // If we want 'items' to be stable, we should pass 'list' before shuffling, or
-        // copy it.
-        // Assuming 'list' is mutable.
-        List<Product> randomList = new ArrayList<>(list);
+        // For promotions and related, use all products (not paginated)
+        List<Product> allProducts = productService.findAll();
+        List<Product> randomList = new ArrayList<>(allProducts);
 
         // Mocking promotions (3 items)
         Collections.shuffle(randomList);

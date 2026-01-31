@@ -20,9 +20,9 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      */
     List<Product> findByCategoryId(String cid);
 
-    /**
-     * Find related products (same category, exclude current product)
-     */
+    // Paginated version
+    Page<Product> findByCategoryId(String categoryId, Pageable pageable);
+
     List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
 
     /**
