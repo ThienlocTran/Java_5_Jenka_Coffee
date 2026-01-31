@@ -36,9 +36,8 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public List<Account> getAdministrators() {
-        return dao.findAll().stream()
-                .filter(acc -> acc.getAdmin() != null && acc.getAdmin())
-                .toList();
+        // ✅ Delegate to repository - database query instead of in-memory filter
+        return dao.findByAdminTrue();
     }
 
     @Override
@@ -58,8 +57,8 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public boolean existsByEmail(String email) {
-        return dao.findAll().stream()
-                .anyMatch(acc -> acc.getEmail().equalsIgnoreCase(email));
+        // ✅ Delegate to repository - efficient database query
+        return dao.existsByEmail(email);
     }
 
     @Override
@@ -68,8 +67,8 @@ public class AccountServiceImpl implements AccountService {
         System.out.println("Identifier: " + identifier);
         System.out.println("Password: " + password);
 
-        // Try to find account by username, email, or phone
-        Account account = findByUsernameOrEmailOrPhone(identifier);
+        // ✅ Use repository's flexible query - 1 query instead of 3
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
 
         if (account == null) {
             System.out.println("DEBUG: Account not found with identifier: " + identifier);
@@ -97,40 +96,6 @@ public class AccountServiceImpl implements AccountService {
 
         System.out.println("DEBUG: Authentication FAILED - wrong password");
         return null; // Wrong password
-    }
-
-    /**
-     * Tìm account theo username, email, hoặc phone
-     * Hỗ trợ đăng nhập linh hoạt
-     */
-    private Account findByUsernameOrEmailOrPhone(String identifier) {
-        if (identifier == null || identifier.trim().isEmpty()) {
-            return null;
-        }
-
-        String cleanIdentifier = identifier.trim();
-
-        // Thử tìm theo username trước
-        Account account = dao.findById(cleanIdentifier).orElse(null);
-        if (account != null) {
-            return account;
-        }
-
-        // Nếu không tìm thấy, thử tìm theo email hoặc phone
-        return dao.findAll().stream()
-                .filter(acc -> {
-                    // Kiểm tra email (case-insensitive)
-                    if (acc.getEmail() != null && acc.getEmail().equalsIgnoreCase(cleanIdentifier)) {
-                        return true;
-                    }
-                    // Kiểm tra phone
-                    if (acc.getPhone() != null && acc.getPhone().equals(cleanIdentifier)) {
-                        return true;
-                    }
-                    return false;
-                })
-                .findFirst()
-                .orElse(null);
     }
 
     @Override
@@ -249,12 +214,41 @@ public class AccountServiceImpl implements AccountService {
 
         // Cannot delete last admin
         if (account.getAdmin() != null && account.getAdmin()) {
-            List<Account> admins = getAdministrators();
-            if (admins.size() <= 1) {
-                return false;
-            }
+            // ✅ Use repository count query - efficient
+            long adminCount = dao.countByAdminTrue();
+            return adminCount > 1;
         }
 
         return true;
+    }
+
+    @Override
+    public Account findByIdOrThrow(String username) {
+        return dao.findById(username)
+                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                        "Account", "username", username));
+    }
+
+    @Override
+    public void deleteOrThrow(String username) {
+        Account account = findByIdOrThrow(username);
+
+        if (!canDeleteAccount(username)) {
+            if (account.getAdmin() != null && account.getAdmin()) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Không thể xóa admin cuối cùng trong hệ thống!");
+            }
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Không thể xóa tài khoản này!");
+        }
+
+        dao.deleteById(username);
+    }
+
+    @Override
+    public Account toggleActivation(String username) {
+        Account account = findByIdOrThrow(username);
+        account.setActivated(!account.getActivated());
+        return dao.save(account);
     }
 }
