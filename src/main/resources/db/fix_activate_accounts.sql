@@ -6,6 +6,8 @@ UPDATE Accounts
 SET Activated = 1 
 WHERE Activated IS NULL OR Activated = 0;
 
+UPDATE Accounts SET email = 'tranthienloc21102005@gmail.com' WHERE username = 'admin'
+
 -- Optional: Clear any old activation tokens
 UPDATE Accounts
 SET ActivationToken = NULL,

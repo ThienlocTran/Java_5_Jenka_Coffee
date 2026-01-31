@@ -75,9 +75,9 @@ public interface AccountService {
     /**
      * Request password reset
      * 
-     * @param identifier Username, email, or phone
+     * @return "EMAIL" or "PHONE" to indicate sending method
      */
-    void requestPasswordReset(String identifier);
+    String requestPasswordReset(String identifier);
 
     /**
      * Reset password using reset token

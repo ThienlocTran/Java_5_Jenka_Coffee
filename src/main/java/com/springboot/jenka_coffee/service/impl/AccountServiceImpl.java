@@ -73,15 +73,15 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account authenticate(String identifier, String password) {
-        System.out.println("=== DEBUG: Authenticate called ===");
+        System.out.println("DEBUG: Authenticating with identifier: " + identifier);
         System.out.println("Identifier: " + identifier);
         System.out.println("Password: " + password);
 
-        // ✅ Use repository's flexible query - 1 query instead of 3
+        // Find account by username, email, or phone
         Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
 
         if (account == null) {
-            System.out.println("DEBUG: Account not found with identifier: " + identifier);
+            System.out.println("DEBUG: Account not found!");
             return null; // User not found
         }
 
@@ -153,10 +153,19 @@ public class AccountServiceImpl implements AccountService {
 
         // 7. Send activation
         if ("EMAIL".equals(activationMethod)) {
-            emailService.sendActivationEmail(newAccount.getEmail(), token, fullname);
+            try {
+                emailService.sendActivationEmail(newAccount.getEmail(), token, fullname);
+            } catch (Exception e) {
+                System.out.println("WARNING: Activation email failed - " + e.getMessage());
+                System.out.println("Activation link: http://localhost:8080/auth/activate/" + token);
+            }
         } else {
             String otp = otpService.generateOTP(phone);
-            // SMS would be sent here (for now just console log)
+            System.out.println("=== ACTIVATION OTP ===");
+            System.out.println("Phone: " + phone);
+            System.out.println("OTP: " + otp);
+            System.out.println("Valid for 5 minutes");
+            System.out.println("======================");
         }
     }
 
@@ -321,30 +330,65 @@ public class AccountServiceImpl implements AccountService {
 
         // Send based on activation method
         if ("EMAIL".equals(account.getActivationMethod())) {
-            emailService.sendActivationEmail(account.getEmail(), token, account.getFullname());
+            try {
+                emailService.sendActivationEmail(account.getEmail(), token, account.getFullname());
+            } catch (Exception e) {
+                System.out.println("WARNING: Activation email sending failed - " + e.getMessage());
+                System.out.println("Activation link: http://localhost:8080/auth/activate/" + token);
+            }
         } else {
             String otp = otpService.generateOTP(account.getPhone());
-            // SMS would be sent here
+            System.out.println("=== RESEND ACTIVATION OTP ===");
+            System.out.println("Phone: " + account.getPhone());
+            System.out.println("OTP: " + otp);
+            System.out.println("============================");
         }
     }
 
     @Override
-    public void requestPasswordReset(String identifier) {
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier)
-                .orElseThrow(() -> new ValidationException("Tài khoản không tồn tại!"));
+    public String requestPasswordReset(String identifier) {
+        // Find account by username, email, or phone
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
 
-        // Generate reset token
-        String resetToken = UUID.randomUUID().toString();
-        account.setResetToken(resetToken);
-        account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
-        dao.save(account);
+        if (account == null) {
+            throw new ValidationException("Không tìm thấy tài khoản!");
+        }
 
-        // Send based on available contact method
-        if (account.getEmail() != null && !account.getEmail().isEmpty()) {
-            emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
-        } else {
+        // Check if account has email
+        boolean hasEmail = account.getEmail() != null && !account.getEmail().trim().isEmpty();
+        boolean hasPhone = account.getPhone() != null && !account.getPhone().trim().isEmpty();
+
+        if (hasEmail) {
+            try {
+                // Try to send reset email
+                String resetToken = UUID.randomUUID().toString();
+                account.setResetToken(resetToken);
+                account.setResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 1 hour validity
+                dao.save(account);
+
+                emailService.sendPasswordResetEmail(account.getEmail(), account.getFullname(), resetToken);
+                return "EMAIL"; // Success
+            } catch (Exception e) {
+                System.out.println("WARNING: Email sending failed - " + e.getMessage());
+                // If email fails and user has phone, fallback to OTP
+                if (!hasPhone) {
+                    throw new ValidationException("Không thể gửi email đặt lại mật khẩu. Vui lòng liên hệ admin!");
+                }
+                System.out.println("Falling back to OTP via phone...");
+            }
+        }
+
+        // Send OTP to phone (either no email or email sending failed)
+        if (hasPhone) {
             String otp = otpService.generateOTP(account.getPhone());
-            // SMS would be sent here
+            System.out.println("=== PASSWORD RESET OTP ===");
+            System.out.println("Phone: " + account.getPhone());
+            System.out.println("OTP: " + otp);
+            System.out.println("Valid for 5 minutes");
+            System.out.println("========================");
+            return "PHONE";
+        } else {
+            throw new ValidationException("Tài khoản không có email hoặc số điện thoại!");
         }
     }
 

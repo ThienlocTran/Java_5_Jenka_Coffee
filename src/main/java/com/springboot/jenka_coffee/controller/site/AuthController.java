@@ -177,9 +177,21 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public String processForgotPassword(@RequestParam String identifier, RedirectAttributes ra) {
         try {
-            accountService.requestPasswordReset(identifier);
-            ra.addFlashAttribute("success", "Link đặt lại mật khẩu đã được gửi đến email/số điện thoại của bạn!");
-            return "redirect:/auth/login";
+            String method = accountService.requestPasswordReset(identifier);
+
+            if ("PHONE".equals(method)) {
+                // If OTP sent, redirect to OTP verification page
+                // Ideally, we should find the phone number to prepopulate, but identifier might
+                // be username/email
+                // For simplified flow, we forward the identifier as phone if it looks like one,
+                // or ask user to re-enter
+                ra.addFlashAttribute("success",
+                        "OTP đã được gửi đến số điện thoại đăng ký. Vui lòng kiểm tra và nhập mã.");
+                return "redirect:/auth/verify-otp";
+            } else {
+                ra.addFlashAttribute("success", "Link đặt lại mật khẩu đã được gửi đến email của bạn!");
+                return "redirect:/auth/login";
+            }
         } catch (ValidationException e) {
             ra.addFlashAttribute("error", e.getMessage());
             return "redirect:/auth/forgot-password";
