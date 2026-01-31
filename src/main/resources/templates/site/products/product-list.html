@@ -57,11 +57,19 @@
 
             <!-- PRODUCT GRID -->
             <div class="col-lg-9">
+                <!-- Search Bar -->
+                <div class="mb-4">
+                    <input type="text" 
+                           id="searchInput" 
+                           class="form-control" 
+                           placeholder="Tìm kiếm sản phẩm...">
+                </div>
+
                 <!-- Sorting & View Options -->
                 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-                    <span class="text-muted small">Hiển thị <b class="text-dark">9</b> sản phẩm</span>
-                    <select class="form-select form-select-sm w-auto border-0 bg-light fw-bold" aria-label="Sort">
-                        <option selected>Mới nhất</option>
+                    <span class="text-muted small">Hiển thị <b class="text-dark" th:text="${#lists.size(items)}">9</b> sản phẩm</span>
+                    <select id="sortSelect" class="form-select form-select-sm w-auto border-0 bg-light fw-bold" aria-label="Sort">
+                        <option value="0" selected>Mới nhất</option>
                         <option value="1">Giá thấp đến cao</option>
                         <option value="2">Giá cao đến thấp</option>
                         <option value="3">Bán chạy nhất</option>
@@ -81,8 +89,13 @@
                                 
                                 <!-- Hover Actions -->
                                 <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
-                                     <a href="#" class="btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart" th:data-id="${item.id}" title="Thêm vào giỏ">
-                                        <i class="fas fa-shopping-cart"></i>
+                                     <!-- Disable if out of stock -->
+                                     <a href="#" 
+                                        th:class="${item.quantity > 0} ? 'btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart' : 'btn btn-light rounded-circle shadow-sm p-2 btn-disabled'"
+                                        th:data-id="${item.id}" 
+                                        th:attr="onclick=${item.quantity > 0 ? null : 'return false;'}" 
+                                        title="Thêm vào giỏ">
+                                        <i th:class="${item.quantity > 0} ? 'fas fa-shopping-cart' : 'fas fa-ban'"></i>
                                     </a>
                                     <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
@@ -97,6 +110,16 @@
                                         Product Name
                                     </a>
                                 </h6>
+                                
+                                <!-- STOCK BADGE -->
+                                <div th:with="stockStatus=${@productServiceImpl.getStockStatus(item.quantity)}" class="mb-2">
+                                    <span class="stock-badge"
+                                          th:classappend="${stockStatus.name() == 'IN_STOCK'} ? 'in-stock' : (${stockStatus.name() == 'LOW_STOCK'} ? 'low-stock' : 'out-of-stock')"
+                                          th:text="${@productServiceImpl.getStockMessage(item.quantity)}">
+                                        Còn hàng
+                                    </span>
+                                </div>
+                                
                                 <div class="d-flex justify-content-center gap-2 align-items-baseline">
                                     <span class="text-muted text-decoration-line-through small" th:text="${#numbers.formatDecimal(item.price * 1.1, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
                                     <span class="text-danger fw-bold" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
@@ -130,6 +153,9 @@
             </div>
         </div>
     </div>
+
+<!-- Product List Filter & Search Script -->
+<script th:src="@{/js/product-list.js}"></script>
 
 </body>
 </html>
