@@ -72,7 +72,8 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void deleteOrThrow(String id) {
-        Category category = findByIdOrThrow(id);
+        // Verify category exists (throws exception if not found)
+        findByIdOrThrow(id);
 
         long productCount = countProductsByCategory(id);
         if (productCount > 0) {
@@ -99,11 +100,8 @@ public class CategoryServiceImpl implements CategoryService {
     public Category updateCategory(String id, com.springboot.jenka_coffee.dto.request.CategoryRequest request) {
         Category existing = findByIdOrThrow(id);
 
-        // Update fields
+        // Update name only (icon is managed separately)
         existing.setName(request.getName());
-        if (request.getIcon() != null && !request.getIcon().isEmpty()) {
-            existing.setIcon(request.getIcon());
-        }
 
         return categoryRepository.save(existing);
     }
