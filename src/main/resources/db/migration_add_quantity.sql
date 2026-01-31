@@ -1,5 +1,6 @@
 -- ==========================================
 -- SQL MIGRATION: Add Quantity Column to Products
+-- UPDATED THRESHOLD: 10 products for LOW_STOCK
 -- ==========================================
 
 -- STEP 1: Add Quantity column (if not exists)
@@ -37,15 +38,10 @@ WHERE Quantity = 0;
 -- SET Quantity = 200 
 -- WHERE Categoryid = 'PHU_KIEN' AND Quantity = 0;
 
--- Option 3: Set specific quantities (example)
--- UPDATE Products SET Quantity = 150 WHERE Id = 1;
--- UPDATE Products SET Quantity = 80 WHERE Id = 2;
--- UPDATE Products SET Quantity = 30 WHERE Id = 3;
-
 GO
 
 -- ==========================================
--- STEP 3: Verify Changes
+-- STEP 3: Verify Changes (Updated Threshold)
 -- ==========================================
 
 SELECT 
@@ -55,7 +51,7 @@ SELECT
     c.Name as CategoryName,
     CASE 
         WHEN p.Quantity = 0 THEN 'OUT_OF_STOCK'
-        WHEN p.Quantity <= 5 THEN 'LOW_STOCK'
+        WHEN p.Quantity < 10 THEN 'LOW_STOCK'
         ELSE 'IN_STOCK'
     END as StockStatus
 FROM Products p
@@ -81,13 +77,13 @@ SELECT
     c.Name as CategoryName,
     CASE 
         WHEN p.Quantity = 0 THEN 'Hết hàng'
-        WHEN p.Quantity <= 5 THEN 'Sắp hết (' + CAST(p.Quantity AS VARCHAR) + ' sản phẩm)'
+        WHEN p.Quantity < 10 THEN 'Sắp hết (' + CAST(p.Quantity AS VARCHAR) + ' sản phẩm)'
         ELSE 'Còn đủ'
     END as StockStatusText
 FROM Products p
 LEFT JOIN Categories c ON p.Categoryid = c.Id
-WHERE p.Quantity <= 5  -- Only low stock items
-AND p.Available = 1;   -- Only active products
+WHERE p.Quantity < 10  -- Changed from 5 to 10
+AND p.Available = 1;
 GO
 
 -- Query to check low stock alerts for admin
@@ -104,3 +100,4 @@ ADD CONSTRAINT CK_Products_Quantity_NonNegative
 CHECK (Quantity >= 0);
 
 PRINT 'Migration completed successfully!';
+PRINT 'LOW_STOCK threshold set to: < 10 products';

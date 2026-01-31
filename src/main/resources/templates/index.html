@@ -103,12 +103,28 @@
                     <div class="card-body p-2">
                         <h6 class="card-title text-truncate" th:text="${item.name}">Product Name</h6>
                         <span class="current-price" th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</span>
+                        
+                        <!-- STOCK STATUS BADGE -->
+                        <div th:with="stockStatus=${@productServiceImpl.getStockStatus(item.quantity)}">
+                            <span class="stock-badge"
+                                  th:classappend="${stockStatus.name() == 'IN_STOCK'} ? 'in-stock' : (${stockStatus.name() == 'LOW_STOCK'} ? 'low-stock' : 'out-of-stock')"
+                                  th:text="${@productServiceImpl.getStockMessage(item.quantity)}">
+                                Còn hàng
+                            </span>
+                        </div>
+                        
                         <div class="product-rating">
                             <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                             <span class="sold-count">Đã bán 0</span>
                         </div>
                         <div class="product-btn-group">
-                             <a href="#" class="btn-cart-icon btn-add-to-cart" th:data-id="${item.id}"><i class="fas fa-shopping-cart"></i></a>
+                             <!-- Disable add to cart if out of stock -->
+                             <a href="#" 
+                                th:class="${item.quantity > 0} ? 'btn-cart-icon btn-add-to-cart' : 'btn-cart-icon btn-disabled'"
+                                th:data-id="${item.id}"
+                                th:attr="onclick=${item.quantity > 0 ? null : 'return false;'}">
+                                 <i th:class="${item.quantity > 0} ? 'fas fa-shopping-cart' : 'fas fa-ban'"></i>
+                             </a>
                              <a th:href="@{/product/detail/{id}(id=${item.id})}" class="btn-buy-now">Xem ngay</a>
                         </div>
                     </div>

@@ -104,4 +104,26 @@ public class ProductServiceImpl implements ProductService {
     public void delete(Integer id) {
         pdao.deleteById(id);
     }
+
+    @Override
+    public StockStatus getStockStatus(Integer quantity) {
+        if (quantity == null || quantity == 0) {
+            return StockStatus.OUT_OF_STOCK;
+        } else if (quantity < 10) {
+            return StockStatus.LOW_STOCK;
+        } else {
+            return StockStatus.IN_STOCK;
+        }
+    }
+
+    @Override
+    public String getStockMessage(Integer quantity) {
+        if (quantity == null || quantity == 0) {
+            return "Hết hàng";
+        } else if (quantity < 10) {
+            return "Chỉ còn lại " + quantity + " sản phẩm!";
+        } else {
+            return "Còn hàng";
+        }
+    }
 }
