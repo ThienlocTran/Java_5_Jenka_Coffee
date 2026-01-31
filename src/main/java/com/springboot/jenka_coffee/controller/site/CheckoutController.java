@@ -1,10 +1,12 @@
 package com.springboot.jenka_coffee.controller.site;
 
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
+import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.exception.InsufficientStockException;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.OrderService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,15 +30,27 @@ public class CheckoutController {
     }
 
     @GetMapping
-    public String showCheckoutForm(Model model) {
+    public String showCheckoutForm(HttpSession session, Model model) {
+        // Kiểm tra đăng nhập
+        Account user = (Account) session.getAttribute("user");
+        if (user == null) {
+            // Guest user - redirect to login with return URL
+            return "redirect:/auth/login?redirect=/checkout";
+        }
+
         // Kiểm tra giỏ hàng trống
         if (cartService.getItems().isEmpty()) {
             return "redirect:/cart/view";
         }
 
-        // Tạo form object mới nếu chưa có
+        // Auto-fill form with user data or create new if redirected with errors
         if (!model.containsAttribute("checkoutRequest")) {
-            model.addAttribute("checkoutRequest", new CheckoutRequest());
+            CheckoutRequest request = new CheckoutRequest();
+            request.setFullname(user.getFullname());
+            request.setEmail(user.getEmail());
+            request.setPhone(user.getPhone());
+            // Address field would need to be added to Account entity if needed
+            model.addAttribute("checkoutRequest", request);
         }
 
         // Đưa dữ liệu giỏ hàng vào model
