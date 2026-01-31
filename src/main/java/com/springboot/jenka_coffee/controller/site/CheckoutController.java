@@ -31,25 +31,25 @@ public class CheckoutController {
 
     @GetMapping
     public String showCheckoutForm(HttpSession session, Model model) {
-        // Kiểm tra đăng nhập
-        Account user = (Account) session.getAttribute("user");
-        if (user == null) {
-            // Guest user - redirect to login with return URL
-            return "redirect:/auth/login?redirect=/checkout";
-        }
-
         // Kiểm tra giỏ hàng trống
         if (cartService.getItems().isEmpty()) {
             return "redirect:/cart/view";
         }
 
-        // Auto-fill form with user data or create new if redirected with errors
+        // Auto-fill form for logged-in users, empty form for guests
         if (!model.containsAttribute("checkoutRequest")) {
             CheckoutRequest request = new CheckoutRequest();
-            request.setFullname(user.getFullname());
-            request.setEmail(user.getEmail());
-            request.setPhone(user.getPhone());
-            // Address field would need to be added to Account entity if needed
+
+            // Check if user is logged in
+            Account user = (Account) session.getAttribute("user");
+            if (user != null) {
+                // Auto-fill with user data
+                request.setFullname(user.getFullname());
+                request.setEmail(user.getEmail());
+                request.setPhone(user.getPhone());
+            }
+            // For guests, request remains empty - they fill manually
+
             model.addAttribute("checkoutRequest", request);
         }
 
