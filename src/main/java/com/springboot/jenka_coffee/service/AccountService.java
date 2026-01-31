@@ -50,6 +50,48 @@ public interface AccountService {
 
     /**
      * Toggle account activation status
+     * 
+     * @param username Account username
+     * @return Updated account
      */
     Account toggleActivation(String username);
+
+    // ===== ACCOUNT ACTIVATION & PASSWORD RESET =====
+
+    /**
+     * Activate account using activation token
+     * 
+     * @param token Activation token
+     */
+    void activateAccount(String token);
+
+    /**
+     * Resend activation email/SMS
+     * 
+     * @param username Account username
+     */
+    void resendActivation(String username);
+
+    /**
+     * Request password reset
+     * 
+     * @return "EMAIL" or "PHONE" to indicate sending method
+     */
+    String requestPasswordReset(String identifier);
+
+    /**
+     * Reset password using reset token
+     * 
+     * @param token       Reset token
+     * @param newPassword New password
+     */
+    void resetPassword(String token, String newPassword);
+
+    /**
+     * Verify OTP for phone activation
+     * 
+     * @param phone Phone number
+     * @param otp   OTP code
+     */
+    void verifyPhoneOTP(String phone, String otp);
 }

@@ -4,12 +4,16 @@ import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.service.EmailService;
+import com.springboot.jenka_coffee.service.OTPService;
 import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.util.PasswordSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -17,11 +21,17 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository dao;
     private final UploadService uploadService;
     private final PasswordSecurity passwordSecurity;
+    private final EmailService emailService;
+    private final OTPService otpService;
 
-    public AccountServiceImpl(AccountRepository dao, UploadService uploadService, PasswordSecurity passwordSecurity) {
+    public AccountServiceImpl(AccountRepository dao, UploadService uploadService,
+            PasswordSecurity passwordSecurity, EmailService emailService,
+            OTPService otpService) {
         this.dao = dao;
         this.uploadService = uploadService;
         this.passwordSecurity = passwordSecurity;
+        this.emailService = emailService;
+        this.otpService = otpService;
     }
 
     @Override
@@ -63,15 +73,15 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account authenticate(String identifier, String password) {
-        System.out.println("=== DEBUG: Authenticate called ===");
+        System.out.println("DEBUG: Authenticating with identifier: " + identifier);
         System.out.println("Identifier: " + identifier);
         System.out.println("Password: " + password);
 
-        // ✅ Use repository's flexible query - 1 query instead of 3
+        // Find account by username, email, or phone
         Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
 
         if (account == null) {
-            System.out.println("DEBUG: Account not found with identifier: " + identifier);
+            System.out.println("DEBUG: Account not found!");
             return null; // User not found
         }
 
@@ -100,7 +110,14 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void register(String username, String fullname, String phone, String email, String password) {
-        // Create new account object
+        // 1. Validate duplicate email
+        if (email != null && !email.trim().isEmpty()) {
+            if (dao.existsByEmail(email.trim())) {
+                throw new ValidationException("Email đã được sử dụng!");
+            }
+        }
+
+        // 2. Create new account object
         Account newAccount = new Account();
         newAccount.setUsername(username.trim());
         newAccount.setFullname(fullname.trim());
@@ -113,15 +130,43 @@ public class AccountServiceImpl implements AccountService {
             newAccount.setEmail(""); // Set empty string instead of null
         }
 
-        // Set defaults for new user registration
+        // 3. Set defaults for new user registration
         newAccount.setPasswordHash(password); // Will be hashed in createAccount
-        newAccount.setActivated(true);
+        newAccount.setActivated(false); // ✅ Changed: Start as inactive
         newAccount.setAdmin(false);
         newAccount.setPoints(0);
         newAccount.setCustomerRank("MEMBER");
 
-        // Call createAccount which handles validation and hashing
+        // 4. Determine activation method
+        String activationMethod = (email != null && !email.trim().isEmpty())
+                ? "EMAIL"
+                : "PHONE";
+        newAccount.setActivationMethod(activationMethod);
+
+        // 5. Generate activation token
+        String token = UUID.randomUUID().toString();
+        newAccount.setActivationToken(token);
+        newAccount.setActivationTokenExpiry(LocalDateTime.now().plusHours(24));
+
+        // 6. Call createAccount which handles validation and hashing
         createAccount(newAccount, null);
+
+        // 7. Send activation
+        if ("EMAIL".equals(activationMethod)) {
+            try {
+                emailService.sendActivationEmail(newAccount.getEmail(), token, fullname);
+            } catch (Exception e) {
+                System.out.println("WARNING: Activation email failed - " + e.getMessage());
+                System.out.println("Activation link: http://localhost:8080/auth/activate/" + token);
+            }
+        } else {
+            String otp = otpService.generateOTP(phone);
+            System.out.println("=== ACTIVATION OTP ===");
+            System.out.println("Phone: " + phone);
+            System.out.println("OTP: " + otp);
+            System.out.println("Valid for 5 minutes");
+            System.out.println("======================");
+        }
     }
 
     @Override
@@ -250,5 +295,133 @@ public class AccountServiceImpl implements AccountService {
         Account account = findByIdOrThrow(username);
         account.setActivated(!account.getActivated());
         return dao.save(account);
+    }
+
+    // ===== ACCOUNT ACTIVATION & PASSWORD RESET IMPLEMENTATION =====
+
+    @Override
+    public void activateAccount(String token) {
+        Account account = dao.findByActivationToken(token)
+                .orElseThrow(() -> new ValidationException("Token kích hoạt không hợp lệ!"));
+
+        if (account.getActivationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new ValidationException("Token kích hoạt đã hết hạn. Vui lòng yêu cầu gửi lại!");
+        }
+
+        account.setActivated(true);
+        account.setActivationToken(null);
+        account.setActivationTokenExpiry(null);
+        dao.save(account);
+    }
+
+    @Override
+    public void resendActivation(String username) {
+        Account account = findByIdOrThrow(username);
+
+        if (account.getActivated()) {
+            throw new ValidationException("Tài khoản đã được kích hoạt!");
+        }
+
+        // Generate new token
+        String token = UUID.randomUUID().toString();
+        account.setActivationToken(token);
+        account.setActivationTokenExpiry(LocalDateTime.now().plusHours(24));
+        dao.save(account);
+
+        // Send based on activation method
+        if ("EMAIL".equals(account.getActivationMethod())) {
+            try {
+                emailService.sendActivationEmail(account.getEmail(), token, account.getFullname());
+            } catch (Exception e) {
+                System.out.println("WARNING: Activation email sending failed - " + e.getMessage());
+                System.out.println("Activation link: http://localhost:8080/auth/activate/" + token);
+            }
+        } else {
+            String otp = otpService.generateOTP(account.getPhone());
+            System.out.println("=== RESEND ACTIVATION OTP ===");
+            System.out.println("Phone: " + account.getPhone());
+            System.out.println("OTP: " + otp);
+            System.out.println("============================");
+        }
+    }
+
+    @Override
+    public String requestPasswordReset(String identifier) {
+        // Find account by username, email, or phone
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
+
+        if (account == null) {
+            throw new ValidationException("Không tìm thấy tài khoản!");
+        }
+
+        // Check if account has email
+        boolean hasEmail = account.getEmail() != null && !account.getEmail().trim().isEmpty();
+        boolean hasPhone = account.getPhone() != null && !account.getPhone().trim().isEmpty();
+
+        if (hasEmail) {
+            try {
+                // Try to send reset email
+                String resetToken = UUID.randomUUID().toString();
+                account.setResetToken(resetToken);
+                account.setResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 1 hour validity
+                dao.save(account);
+
+                emailService.sendPasswordResetEmail(account.getEmail(), account.getFullname(), resetToken);
+                return "EMAIL"; // Success
+            } catch (Exception e) {
+                System.out.println("WARNING: Email sending failed - " + e.getMessage());
+                // If email fails and user has phone, fallback to OTP
+                if (!hasPhone) {
+                    throw new ValidationException("Không thể gửi email đặt lại mật khẩu. Vui lòng liên hệ admin!");
+                }
+                System.out.println("Falling back to OTP via phone...");
+            }
+        }
+
+        // Send OTP to phone (either no email or email sending failed)
+        if (hasPhone) {
+            String otp = otpService.generateOTP(account.getPhone());
+            System.out.println("=== PASSWORD RESET OTP ===");
+            System.out.println("Phone: " + account.getPhone());
+            System.out.println("OTP: " + otp);
+            System.out.println("Valid for 5 minutes");
+            System.out.println("========================");
+            return "PHONE";
+        } else {
+            throw new ValidationException("Tài khoản không có email hoặc số điện thoại!");
+        }
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        Account account = dao.findByResetToken(token)
+                .orElseThrow(() -> new ValidationException("Token đặt lại mật khẩu không hợp lệ!"));
+
+        if (account.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new ValidationException("Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu lại!");
+        }
+
+        // Hash and save new password
+        account.setPasswordHash(passwordSecurity.hashPassword(newPassword));
+        account.setResetToken(null);
+        account.setResetTokenExpiry(null);
+        dao.save(account);
+    }
+
+    @Override
+    public void verifyPhoneOTP(String phone, String otp) {
+        if (!otpService.verifyOTP(phone, otp)) {
+            throw new ValidationException("Mã OTP không chính xác hoặc đã hết hạn!");
+        }
+
+        // Find account by phone and activate
+        Account account = dao.findByPhone(phone)
+                .orElseThrow(() -> new ValidationException("Không tìm thấy tài khoản với số điện thoại này!"));
+
+        account.setActivated(true);
+        account.setPhoneVerified(true);
+        account.setActivationToken(null);
+        account.setActivationTokenExpiry(null);
+        dao.save(account);
     }
 }

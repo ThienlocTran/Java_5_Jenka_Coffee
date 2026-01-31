@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực OTP | Jenka Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/otp.css}">
+</head>
+<body class="otp-page-container">
+
+<div class="otp-card">
+    <div class="otp-card-header">
+        <h2>Xác thực OTP</h2>
+        <p>Nhập mã đã được gửi đến số điện thoại</p>
+        <div class="otp-phone-display" th:text="${phone}"></div>
+    </div>
+    
+    <div class="otp-card-body">
+        <!-- Success/Error Messages -->
+        <div th:if="${success}" class="otp-alert otp-alert-success">
+            <span th:text="${success}"></span>
+        </div>
+        
+        <div th:if="${error}" class="otp-alert otp-alert-danger">
+            <span th:text="${error}"></span>
+        </div>
+        
+        <div class="otp-timer-display">
+            ⏱ Mã OTP có hiệu lực trong <span class="otp-timer-value" id="timer">5:00</span>
+        </div>
+        
+        <form th:action="@{/auth/verify-otp}" method="post" id="otpForm">
+            <input type="hidden" name="phone" th:value="${phone}">
+            <input type="hidden" name="otp" id="otpValue">
+            
+            <div class="otp-inputs-container">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="0">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="1">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="2">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="3">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="4">
+                <input type="text" class="otp-input-field" maxlength="1" data-index="5">
+            </div>
+            
+            <button type="submit" class="otp-btn-primary" id="submitBtn" disabled>
+                Xác nhận
+            </button>
+            
+            <div class="otp-resend-section">
+                <p class="otp-resend-text">Không nhận được mã?</p>
+                <button type="button" class="otp-btn-link" id="resendBtn" disabled>
+                    Gửi lại OTP (<span class="otp-resend-timer" id="resendTimer">60</span>s)
+                </button>
+            </div>
+        </form>
+        
+        <div class="otp-card-footer">
+            <a th:href="@{/auth/login}">← Quay lại đăng nhập</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const otpInputs = document.querySelectorAll('.otp-input-field');
+    const otpForm = document.getElementById('otpForm');
+    const otpValue = document.getElementById('otpValue');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // OTP Input handling
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            if (this.value && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+            
+            checkOTPComplete();
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+        
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pasteData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+            
+            pasteData.split('').forEach((char, i) => {
+                if (otpInputs[i]) {
+                    otpInputs[i].value = char;
+                }
+            });
+            
+            if (pasteData.length === 6) {
+                otpInputs[5].focus();
+                checkOTPComplete();
+            }
+        });
+    });
+    
+    function checkOTPComplete() {
+        const otp = Array.from(otpInputs).map(input => input.value).join('');
+        submitBtn.disabled = otp.length !== 6;
+    }
+    
+    // Form submission
+    otpForm.addEventListener('submit', function(e) {
+        const otp = Array.from(otpInputs).map(input => input.value).join('');
+        otpValue.value = otp;
+    });
+    
+    // Timer countdown (5 minutes)
+    let timeLeft = 300;
+    const timerElement = document.getElementById('timer');
+    
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerElement.textContent = 'Hết hạn';
+            timerElement.classList.add('expired');
+            submitBtn.disabled = true;
+            otpInputs.forEach(input => input.disabled = true);
+        }
+    }, 1000);
+    
+    // Resend timer (60 seconds)
+    let resendTimeLeft = 60;
+    const resendBtn = document.getElementById('resendBtn');
+    const resendTimerElement = document.getElementById('resendTimer');
+    
+    const resendInterval = setInterval(() => {
+        resendTimeLeft--;
+        resendTimerElement.textContent = resendTimeLeft;
+        
+        if (resendTimeLeft <= 0) {
+            clearInterval(resendInterval);
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = 'Gửi lại OTP';
+        }
+    }, 1000);
+    
+    // Resend OTP handler
+    resendBtn.addEventListener('click', function() {
+        alert('Đang gửi lại OTP...');
+        location.reload();
+    });
+    
+    // Auto-focus first input
+    otpInputs[0].focus();
+</script>
+</body>
+</html>
