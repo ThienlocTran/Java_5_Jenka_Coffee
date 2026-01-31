@@ -1,10 +1,14 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.dto.response.StockStatus;
+import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -16,17 +20,21 @@ import java.util.HashMap;
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    final ProductRepository pdao;
+    final ProductRepository productRepository;
     final UploadService uploadService;
+    final CategoryRepository categoryRepository;
 
-    public ProductServiceImpl(ProductRepository pdao, com.springboot.jenka_coffee.service.UploadService uploadService) {
-        this.pdao = pdao;
+    public ProductServiceImpl(ProductRepository productRepository,
+            UploadService uploadService,
+            CategoryRepository categoryRepository) {
+        this.productRepository = productRepository;
         this.uploadService = uploadService;
+        this.categoryRepository = categoryRepository;
     }
 
     @Override
     public List<Product> findAll() {
-        return pdao.findAll();
+        return productRepository.findAll();
     }
 
     @Override
@@ -42,24 +50,24 @@ public class ProductServiceImpl implements ProductService {
         // Nếu không chọn ảnh mới -> Giữ nguyên ảnh cũ (Do input hidden trong form lo)
 
         // --- LƯU VÀO DB ---
-        return pdao.save(product);
+        return productRepository.save(product);
     }
 
     @Override
     public Product findById(Integer id) {
         // .orElse(null) giúp tránh lỗi nếu ID không tồn tại
-        return pdao.findById(id).orElse(null);
+        return productRepository.findById(id).orElse(null);
     }
 
     @Override
     public List<Product> findByCategoryId(String cid) {
         // Cách 1: Viết method trong DAO (Khuyên dùng)
-        return pdao.findByCategoryId(cid);
+        return productRepository.findByCategoryId(cid);
     }
 
     @Override
     public List<Product> getRelatedProducts(String categoryId, Integer productId) {
-        return pdao.findTop4ByCategoryIdAndIdNot(categoryId, productId);
+        return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId);
     }
 
     @Override
@@ -92,17 +100,17 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product create(Product product) {
-        return pdao.save(product);
+        return productRepository.save(product);
     }
 
     @Override
     public Product update(Product product) {
-        return pdao.save(product);
+        return productRepository.save(product);
     }
 
     @Override
     public void delete(Integer id) {
-        pdao.deleteById(id);
+        productRepository.deleteById(id);
     }
 
     @Override
@@ -125,5 +133,31 @@ public class ProductServiceImpl implements ProductService {
         } else {
             return "Còn hàng";
         }
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    @Override
+    public Page<Product> findAllPaginated(Pageable pageable) {
+        return productRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Product> filterProductsPaginated(String categoryId, Pageable pageable) {
+        if (categoryId == null || categoryId.trim().isEmpty()) {
+            return productRepository.findAll(pageable);
+        }
+        return productRepository.findByCategoryId(categoryId, pageable);
+    }
+
+    @Override
+    public Map<String, Long> getCategoryCounts() {
+        Map<String, Long> counts = new HashMap<>();
+        List<Category> categories = categoryRepository.findAll();
+        for (Category category : categories) {
+            long count = productRepository.countByCategoryId(category.getId());
+            counts.put(category.getId(), count);
+        }
+        return counts;
     }
 }
