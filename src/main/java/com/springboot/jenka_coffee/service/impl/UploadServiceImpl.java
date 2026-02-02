@@ -85,10 +85,8 @@ public class UploadServiceImpl implements UploadService {
                     "folder", "jenka_coffee", // Organize uploads in folder
                     "use_filename", true,
                     "unique_filename", true,
-                    "transformation", ObjectUtils.asMap(
-                            "quality", "auto:good", // Cloudinary auto quality optimization
-                            "fetch_format", "auto"  // Auto format selection (WebP when supported)
-                    )
+                    "quality", "auto:good", // Cloudinary auto quality optimization
+                    "fetch_format", "auto"  // Auto format selection (WebP when supported)
             ));
 
             String secureUrl = (String) uploadResult.get("secure_url");

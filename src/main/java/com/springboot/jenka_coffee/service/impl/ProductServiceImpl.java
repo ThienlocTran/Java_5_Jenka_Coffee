@@ -3,26 +3,29 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.List;
-
 import java.util.Map;
 import java.util.HashMap;
 
+@Slf4j
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    final ProductRepository productRepository;
-    final UploadService uploadService;
-    final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final UploadService uploadService;
+    private final CategoryRepository categoryRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
             UploadService uploadService,
@@ -38,25 +41,38 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product saveProduct(Product product, org.springframework.web.multipart.MultipartFile file) {
-        // --- XỬ LÝ ẢNH ---
-        // Nếu người dùng có chọn ảnh mới -> Upload lên Cloudinary với nén ảnh
+    public Product saveProduct(Product product, MultipartFile file) {
+        log.info("Saving product: {} with image: {}", product.getName(), 
+                file != null ? file.getOriginalFilename() : "no image");
+        
+        // --- XỬ LÝ ẢNH VỚI NÉN ---
         if (file != null && !file.isEmpty()) {
-            String url = uploadService.saveProductImage(file); // Sử dụng method nén ảnh cho sản phẩm
-            if (url != null) {
-                product.setImage(url);
+            try {
+                // Sử dụng saveProductImage để tự động nén ảnh với preset cho sản phẩm
+                String imageUrl = uploadService.saveProductImage(file);
+                if (imageUrl != null) {
+                    product.setImage(imageUrl);
+                    log.info("Successfully uploaded and compressed product image: {}", imageUrl);
+                } else {
+                    log.warn("Failed to upload product image for: {}", product.getName());
+                }
+            } catch (Exception e) {
+                log.error("Error uploading product image: {}", e.getMessage(), e);
+                // Không throw exception, chỉ log lỗi để không block việc lưu product
             }
         }
-        // Nếu không chọn ảnh mới -> Giữ nguyên ảnh cũ (Do input hidden trong form lo)
+        // Nếu không có ảnh mới, giữ nguyên ảnh cũ (từ hidden input trong form)
 
-        // --- LƯU VÀO DB ---
-        return productRepository.save(product);
+        // --- LƯU VÀO DATABASE ---
+        Product savedProduct = productRepository.save(product);
+        log.info("Successfully saved product with ID: {}", savedProduct.getId());
+        return savedProduct;
     }
 
     @Override
     public Product findById(Integer id) {
-        // .orElse(null) giúp tránh lỗi nếu ID không tồn tại
-        return productRepository.findById(id).orElse(null);
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
     @Override
@@ -100,17 +116,36 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product create(Product product) {
-        return productRepository.save(product);
+        log.info("Creating new product: {}", product.getName());
+        Product savedProduct = productRepository.save(product);
+        log.info("Successfully created product with ID: {}", savedProduct.getId());
+        return savedProduct;
     }
 
     @Override
     public Product update(Product product) {
-        return productRepository.save(product);
+        log.info("Updating product with ID: {}", product.getId());
+        
+        // Kiểm tra product có tồn tại không
+        if (!productRepository.existsById(product.getId())) {
+            throw new ResourceNotFoundException("Product not found with id: " + product.getId());
+        }
+        
+        Product updatedProduct = productRepository.save(product);
+        log.info("Successfully updated product with ID: {}", updatedProduct.getId());
+        return updatedProduct;
     }
 
     @Override
     public void delete(Integer id) {
+        log.info("Deleting product with ID: {}", id);
+        
+        if (!productRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Product not found with id: " + id);
+        }
+        
         productRepository.deleteById(id);
+        log.info("Successfully deleted product with ID: {}", id);
     }
 
     @Override
@@ -163,10 +198,47 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void toggleAvailable(Integer id) {
-        Product product = productRepository.findById(id).orElse(null);
-        if (product != null) {
-            product.setAvailable(!product.getAvailable());
-            productRepository.save(product);
+        log.info("Toggling availability for product ID: {}", id);
+        
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        
+        boolean newStatus = !product.getAvailable();
+        product.setAvailable(newStatus);
+        productRepository.save(product);
+        
+        log.info("Successfully toggled product ID {} availability to: {}", id, newStatus);
+    }
+
+    @Override
+    public void deleteProduct(Integer id, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        log.info("Attempting to delete product with ID: {}", id);
+        
+        try {
+            // Lấy thông tin sản phẩm trước khi xóa để hiển thị thông báo
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+            
+            String productName = product.getName();
+            
+            // Thực hiện xóa
+            productRepository.deleteById(id);
+            
+            // Thông báo thành công
+            redirectAttributes.addFlashAttribute("successMessage", 
+                "Đã xóa sản phẩm \"" + productName + "\" thành công!");
+            
+            log.info("Successfully deleted product: {} (ID: {})", productName, id);
+            
+        } catch (ResourceNotFoundException e) {
+            log.error("Product not found for deletion: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", 
+                "Không tìm thấy sản phẩm cần xóa!");
+                
+        } catch (Exception e) {
+            log.error("Error deleting product with ID {}: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", 
+                "Không thể xóa sản phẩm. Vui lòng thử lại!");
         }
     }
 }
