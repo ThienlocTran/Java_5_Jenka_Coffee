@@ -131,6 +131,16 @@
                     <i class="fas fa-arrow-left me-2"></i>Quay lại
                 </a>
                 <div>
+                    <!-- Delete Button (only for existing categories) -->
+                    <button th:if="${item.id != null}" 
+                            type="button" 
+                            class="btn btn-danger me-2" 
+                            onclick="confirmDeleteCategory()"
+                            title="Xóa loại hàng này"
+                            id="deleteBtn">
+                        <i class="fas fa-trash me-2"></i>Xóa loại hàng
+                    </button>
+                    
                     <button type="reset" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-redo me-2"></i>Làm mới
                     </button>
@@ -142,6 +152,45 @@
         </form>
     </div>
 </main>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade modal-delete" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Xác nhận xóa loại hàng
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="delete-message">
+                    Bạn có chắc chắn muốn xóa loại hàng <strong th:text="${item.name}">này</strong>?
+                </div>
+                <div class="delete-warning" id="deleteWarning">
+                    Hành động này không thể hoàn tác!
+                </div>
+                <div class="alert alert-danger mt-3" id="productWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Cảnh báo:</strong> Loại hàng này có <span id="productCount">0</span> sản phẩm. 
+                    Bạn cần xóa tất cả sản phẩm trước khi xóa loại hàng.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy
+                </button>
+                <button type="button" class="btn btn-danger btn-delete" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Xóa loại hàng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     // Form validation
@@ -195,6 +244,97 @@
             });
         }
     }
+
+    // Delete category function
+    function confirmDeleteCategory() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        const categoryName = document.querySelector('input[name="name"]')?.value || 'này';
+        
+        if (!categoryId) {
+            alert('Không thể xóa loại hàng chưa được lưu!');
+            return;
+        }
+
+        // Check product count via AJAX
+        fetch('/admin/category/product-count/' + categoryId)
+            .then(response => response.json())
+            .then(productCount => {
+                document.getElementById('productCount').textContent = productCount;
+                
+                const productWarning = document.getElementById('productWarning');
+                const confirmBtn = document.getElementById('confirmDeleteBtn');
+                
+                if (productCount > 0) {
+                    productWarning.style.display = 'block';
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Không thể xóa';
+                    confirmBtn.classList.remove('btn-danger');
+                    confirmBtn.classList.add('btn-secondary');
+                } else {
+                    productWarning.style.display = 'none';
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng';
+                    confirmBtn.classList.remove('btn-secondary');
+                    confirmBtn.classList.add('btn-danger');
+                }
+                
+                // Show modal
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+                deleteModal.show();
+            })
+            .catch(error => {
+                console.error('Error checking product count:', error);
+                // Show modal anyway with warning
+                document.getElementById('productWarning').style.display = 'none';
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+                deleteModal.show();
+            });
+    }
+
+    // Load product count for delete button on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        const deleteBtn = document.getElementById('deleteBtn');
+        
+        if (categoryId && deleteBtn) {
+            // Load product count and update button text
+            fetch('/admin/category/product-count/' + categoryId)
+                .then(response => response.json())
+                .then(productCount => {
+                    if (productCount > 0) {
+                        deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng (' + productCount + ' sản phẩm)';
+                        deleteBtn.classList.remove('btn-danger');
+                        deleteBtn.classList.add('btn-warning');
+                        deleteBtn.title = 'Loại hàng này có ' + productCount + ' sản phẩm. Cần xóa sản phẩm trước.';
+                    } else {
+                        deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng (0 sản phẩm)';
+                        deleteBtn.title = 'Xóa loại hàng này (không có sản phẩm nào)';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading product count:', error);
+                });
+        }
+    });
+
+    // Handle delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        
+        if (categoryId && !this.disabled) {
+            // Add loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
+            this.disabled = true;
+            
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/category/delete/' + categoryId;
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
 </script>
 </body>
 </html>

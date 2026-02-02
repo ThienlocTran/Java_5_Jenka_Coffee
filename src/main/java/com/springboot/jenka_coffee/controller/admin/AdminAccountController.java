@@ -105,6 +105,50 @@ public class AdminAccountController {
     }
 
     /**
+     * Khóa tài khoản
+     */
+    @PostMapping("/lock/{username}")
+    public String lockAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
+        accountService.lockAccount(username);
+        redirectAttributes.addFlashAttribute("success", "Đã khóa tài khoản thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Mở khóa tài khoản
+     */
+    @PostMapping("/unlock/{username}")
+    public String unlockAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
+        accountService.unlockAccount(username);
+        redirectAttributes.addFlashAttribute("success", "Đã mở khóa tài khoản thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Admin reset mật khẩu cho user
+     */
+    @PostMapping("/reset-password/{username}")
+    public String adminResetPassword(
+            @PathVariable String username,
+            @RequestParam String newPassword,
+            RedirectAttributes redirectAttributes) {
+        
+        accountService.adminResetPassword(username, newPassword);
+        redirectAttributes.addFlashAttribute("success", "Đã reset mật khẩu thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Hiển thị form reset mật khẩu
+     */
+    @GetMapping("/reset-password/{username}")
+    public String showResetPasswordForm(@PathVariable String username, Model model) {
+        Account account = accountService.findByIdOrThrow(username);
+        model.addAttribute("account", account);
+        return "admin/accounts/reset-password-form";
+    }
+
+    /**
      * API endpoint để kiểm tra username có tồn tại không (AJAX)
      */
     @GetMapping("/check-username")
