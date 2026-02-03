@@ -39,4 +39,12 @@ public interface ImageService {
      * @throws IOException if processing fails
      */
     void processNewsImage(File file) throws IOException;
+    
+    /**
+     * Process avatar image with default settings (300px width, 0.8 quality)
+     * 
+     * @param file Avatar image file
+     * @throws IOException if processing fails
+     */
+    void processAvatarImage(File file) throws IOException;
 }
