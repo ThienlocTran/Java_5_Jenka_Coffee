@@ -153,10 +153,18 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                <a href="/admin/products" class="btn btn-secondary">
+                <a href="/admin/product/list" class="btn btn-secondary">
                     <i class="fas fa-arrow-left me-2"></i>Quay lại
                 </a>
                 <div>
+                    <!-- Delete Button (only show for existing products) -->
+                    <button th:if="${item.id != null}" 
+                            type="button" 
+                            class="btn btn-danger me-2"
+                            onclick="confirmDelete()">
+                        <i class="fas fa-trash me-2"></i>Xóa sản phẩm
+                    </button>
+                    
                     <button type="reset" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-redo me-2"></i>Làm mới
                     </button>
@@ -221,6 +229,61 @@
             }
         });
     }
+
+    // Confirm delete function
+    function confirmDelete() {
+        const productName = document.getElementById('name').value || 'sản phẩm này';
+        const productId = document.querySelector('input[name="id"]').value;
+        
+        // Set product name in modal
+        document.getElementById('productNameToDelete').textContent = productName;
+        
+        // Set up confirm button click handler
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            // Redirect to delete URL
+            window.location.href = `/admin/product/delete/${productId}`;
+        };
+        
+        // Show modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
 </script>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa sản phẩm
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                    <h6>Bạn có chắc chắn muốn xóa sản phẩm này?</h6>
+                    <p class="text-muted mb-0">
+                        <strong id="productNameToDelete"></strong>
+                    </p>
+                    <small class="text-danger">
+                        <i class="fas fa-warning me-1"></i>
+                        Hành động này không thể hoàn tác!
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Xóa sản phẩm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

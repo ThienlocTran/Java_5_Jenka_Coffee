@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -60,6 +61,13 @@ public class AdminProductController {
     @GetMapping("/toggle/{id}")
     public String toggleAvailable(@PathVariable("id") Integer id) {
         productService.toggleAvailable(id);
+        return "redirect:/admin/product/list";
+    }
+
+    // 6. Delete Product (Hard Delete)
+    @GetMapping("/delete/{id}")
+    public String delete(@PathVariable("id") Integer id, RedirectAttributes redirectAttributes) {
+        productService.deleteProduct(id, redirectAttributes);
         return "redirect:/admin/product/list";
     }
 }

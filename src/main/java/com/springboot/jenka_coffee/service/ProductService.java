@@ -77,4 +77,12 @@ public interface ProductService {
      * Toggle product availability (soft delete)
      */
     void toggleAvailable(Integer id);
+
+    /**
+     * Delete product with flash message handling
+     * 
+     * @param id Product ID to delete
+     * @param redirectAttributes For flash messages
+     */
+    void deleteProduct(Integer id, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes);
 }
