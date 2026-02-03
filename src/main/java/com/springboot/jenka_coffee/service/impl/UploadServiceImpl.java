@@ -24,10 +24,17 @@ public class UploadServiceImpl implements UploadService {
 
     private final Cloudinary cloudinary;
     private final ImageService imageService;
+    private final String uploadDir = "uploads";
 
     public UploadServiceImpl(Cloudinary cloudinary, ImageService imageService) {
         this.cloudinary = cloudinary;
         this.imageService = imageService;
+        
+        // Create upload directory if not exists
+        File uploadDirectory = new File(uploadDir);
+        if (!uploadDirectory.exists()) {
+            uploadDirectory.mkdirs();
+        }
     }
 
     @Override
@@ -85,10 +92,8 @@ public class UploadServiceImpl implements UploadService {
                     "folder", "jenka_coffee", // Organize uploads in folder
                     "use_filename", true,
                     "unique_filename", true,
-                    "transformation", ObjectUtils.asMap(
-                            "quality", "auto:good", // Cloudinary auto quality optimization
-                            "fetch_format", "auto"  // Auto format selection (WebP when supported)
-                    )
+                    "quality", "auto:good", // Cloudinary auto quality optimization
+                    "fetch_format", "auto"  // Auto format selection (WebP when supported)
             ));
 
             String secureUrl = (String) uploadResult.get("secure_url");
@@ -137,5 +142,43 @@ public class UploadServiceImpl implements UploadService {
     private boolean isImageFile(MultipartFile file) {
         String contentType = file.getContentType();
         return contentType != null && contentType.startsWith("image/");
+    }
+    
+    @Override
+    public String uploadFile(MultipartFile file, String subfolder) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IOException("File is null or empty");
+        }
+        
+        // Create subfolder if not exists
+        File subfolderDir = new File(uploadDir, subfolder);
+        if (!subfolderDir.exists()) {
+            subfolderDir.mkdirs();
+        }
+        
+        // Generate unique filename
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        
+        String uniqueFilename = UUID.randomUUID().toString() + extension;
+        File targetFile = new File(subfolderDir, uniqueFilename);
+        
+        // Save file
+        try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+            fos.write(file.getBytes());
+        }
+        
+        // Return relative path
+        String relativePath = subfolder + "/" + uniqueFilename;
+        log.info("Uploaded file to local storage: {}", relativePath);
+        return relativePath;
+    }
+    
+    @Override
+    public String getUploadDir() {
+        return uploadDir;
     }
 }
