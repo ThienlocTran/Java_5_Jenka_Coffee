@@ -1,19 +1,23 @@
 package com.springboot.jenka_coffee.config;
 
 import com.springboot.jenka_coffee.interceptor.AuthInterceptor;
+import com.springboot.jenka_coffee.interceptor.GlobalInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
         private final AuthInterceptor authInterceptor;
+        private final GlobalInterceptor globalInterceptor;
 
-        public WebConfig(AuthInterceptor authInterceptor) {
+
+        public WebConfig(AuthInterceptor authInterceptor, GlobalInterceptor globalInterceptor) {
                 this.authInterceptor = authInterceptor;
+                this.globalInterceptor = globalInterceptor;
         }
-
         @Override
         public void addInterceptors(InterceptorRegistry registry) {
                 registry.addInterceptor(authInterceptor)
@@ -29,7 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
 
         @Override
         public void addResourceHandlers(
-                        org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+                        ResourceHandlerRegistry registry) {
                 // Static resources from classpath
                 registry.addResourceHandler("/css/**")
                                 .addResourceLocations("classpath:/static/css/");
