@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: html_content(~{::body})}">
+<head>
+    <title>Đặt Lịch Sửa Chữa - Jenka Coffee</title>
+</head>
+<body>
+<div class="container py-5">
+    <h2 class="text-center fw-bold mb-4">ĐẶT LỊCH SỬA CHỮA MÁY PHA CÀ PHÊ</h2>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 p-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-tools me-2 text-danger"></i>THÔNG TIN ĐẶT LỊCH</h5>
+
+                <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Đặt lịch thành công!</strong> Chúng tôi sẽ liên hệ với bạn trong giây lát.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <form th:action="@{/booking/submit}" th:object="${booking}" method="post">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                            <input type="text" th:field="*{customerName}" class="form-control" placeholder="Nhập họ tên" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="text" th:field="*{phone}" class="form-control" placeholder="Số điện thoại liên hệ" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" th:field="*{email}" class="form-control" placeholder="Địa chỉ email nhận thông báo">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mẫu máy pha cà phê <span class="text-danger">*</span></label>
+                        <input type="text" th:field="*{machineModel}" class="form-control" placeholder="" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ngày giờ mong muốn <span class="text-danger">*</span></label>
+                        <input type="datetime-local" th:field="*{bookingDate}" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả tình trạng lỗi</label>
+                        <textarea th:field="*{description}" class="form-control" rows="4" placeholder="Ví dụ: Máy không lên nguồn, áp suất yếu..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-3">
+                        <i class="fas fa-check-circle me-2"></i>XÁC NHẬN ĐẶT LỊCH
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 p-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2 text-danger"></i>QUY TRÌNH HỖ TRỢ</h5>
+                <hr>
+                <div class="d-flex mb-3">
+                    <div class="me-3 text-danger"><i class="fas fa-1 fa-lg"></i></div>
+                    <p class="small mb-0">Tiếp nhận thông tin và tình trạng máy từ khách hàng.</p>
+                </div>
+                <div class="d-flex mb-3">
+                    <div class="me-3 text-danger"><i class="fas fa-2 fa-lg"></i></div>
+                    <p class="small mb-0">Kỹ thuật viên gọi điện tư vấn và hẹn giờ đến kiểm tra.</p>
+                </div>
+                <div class="d-flex mb-3">
+                    <div class="me-3 text-danger"><i class="fas fa-3 fa-lg"></i></div>
+                    <p class="small mb-0">Báo giá linh kiện (nếu cần thay thế) và thực hiện sửa chữa.</p>
+                </div>
+
+                <div class="alert alert-light border-0 mt-3 small">
+                    <strong>Lưu ý:</strong> Phí kiểm tra tận nơi sẽ được thông báo trước khi kỹ thuật viên di chuyển.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
