@@ -47,7 +47,16 @@
 
                     <li class="nav-item"><a class="nav-link" href="/about-us">Về chúng tôi</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Tin tức</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/booking}">DỊCH VỤ</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="serviceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            DỊCH VỤ
+                        </a>
+
+                        <ul class="dropdown-menu" aria-labelledby="serviceDropdown">
+                            <li><a class="dropdown-item" th:href="@{/booking}">Sửa chữa </a></li>
+                            <li><a class="dropdown-item" th:href="@{/contact}">Liên hệ</a></li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
 
