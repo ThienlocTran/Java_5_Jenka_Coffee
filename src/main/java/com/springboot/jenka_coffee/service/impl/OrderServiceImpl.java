@@ -11,14 +11,17 @@ import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.OrderService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime; // Kiểm tra Entity của bạn dùng Date hay LocalDateTime nhé
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import java.util.stream.Collectors;
 
 @Service
@@ -29,8 +32,8 @@ public class OrderServiceImpl implements OrderService {
     private final CartService cartService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-            ProductRepository productRepository,
-            CartService cartService) {
+                            ProductRepository productRepository,
+                            CartService cartService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
@@ -47,24 +50,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<Order> findByUsername(String username) {
-        // Cách 1: Query trong DAO (List<Order> findByAccount_Username(String username))
-        // return orderRepository.findByAccount_Username(username);
-
-        // Cách 2: Stream lọc (Nếu DAO chưa viết hàm tìm kiếm)
-        return orderRepository.findAll().stream()
-                .filter(o -> o.getAccount().getUsername().equals(username))
-                .collect(Collectors.toList());
+    public Page<Order> findByUsername(String username, Pageable pageable) {
+        // SỬA: Thêm tham số "pageable" vào cuối
+        return orderRepository.findByAccount_Username(username, pageable);
     }
 
     /**
      * CHECKOUT TRANSACTION
-     * Steps: 1. Validate cart → 2. Create Order+Details → 3. Deduct inventory → 4.
-     * Clear cart
+     * Steps: 1. Validate cart → 2. Create Order+Details → 3. Deduct inventory → 4. Clear cart
      */
     @Override
     @Transactional
-    public Order checkout(CheckoutRequest request) {
+    // 1. Đã thêm tham số Account account
+    public Order checkout(CheckoutRequest request, Account account) {
         // STEP 1: Validate cart not empty
         Collection<CartItem> cartItems = cartService.getItems();
         if (cartItems.isEmpty()) {
@@ -72,7 +70,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // STEP 2: Create Order + OrderDetails
-        Order order = buildOrder(request);
+        // Truyền account vào hàm buildOrder
+        Order order = buildOrder(request, account);
         List<OrderDetail> orderDetails = buildOrderDetails(cartItems, order);
         order.setOrderDetails(orderDetails);
 
@@ -97,25 +96,27 @@ public class OrderServiceImpl implements OrderService {
     /**
      * Build Order from CheckoutRequest
      */
-    private Order buildOrder(CheckoutRequest request) {
+    private Order buildOrder(CheckoutRequest request, Account account) {
         Order order = new Order();
 
-        // TODO: Get authenticated user from SecurityContext
-        // For now, hardcode or use request data
-        Account account = new Account();
-        account.setUsername(request.getFullname()); // Temporary - should be from session
+        // 2. QUAN TRỌNG: Gán tài khoản thật vào đơn hàng (Thay vì tạo new Account rỗng như cũ)
         order.setAccount(account);
 
-        // Build full address
+        // Build full address (Ghép chuỗi địa chỉ đầy đủ)
         String fullAddress = String.format("%s, %s, %s, %s",
                 request.getAddress(),
                 request.getWard(),
                 request.getDistrict(),
                 request.getProvince());
+
         order.setAddress(fullAddress);
         order.setPhone(request.getPhone());
+
+        // Lưu ý: Nếu Entity Order dùng java.util.Date thì sửa thành new Date()
+        // Nếu dùng LocalDateTime thì giữ nguyên dòng dưới
         order.setCreateDate(LocalDateTime.now());
-        order.setStatus(0); // Status: NEW
+
+        order.setStatus(0); // Status: NEW (Chờ xác nhận)
 
         return order;
     }
@@ -147,8 +148,6 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * Deduct inventory from products
-     * Validates stock availability before deducting
-     * Throws InsufficientStockException if stock unavailable
      */
     private void deductInventory(List<OrderDetail> orderDetails) {
         for (OrderDetail detail : orderDetails) {
@@ -170,19 +169,30 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    
     @Override
     public CheckoutRequest prepareCheckoutRequest(Account user) {
         CheckoutRequest request = new CheckoutRequest();
-        
+
         if (user != null) {
             // Auto-fill with user data for logged-in users
             request.setFullname(user.getFullname());
             request.setEmail(user.getEmail());
             request.setPhone(user.getPhone());
         }
-        // For guests, return empty request
-        
+
         return request;
+    }
+
+    @Override
+    public Order updateStatus(Long orderId, int status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng!"));
+        order.setStatus(status);
+        return orderRepository.save(order);
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<Order> findAll(org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findAll(pageable);
     }
 }
