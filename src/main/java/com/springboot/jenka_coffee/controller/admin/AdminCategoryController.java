@@ -29,11 +29,7 @@ public class AdminCategoryController {
     @GetMapping("/list")
     public String listCategories(Model model) {
         List<Category> categories = categoryService.findAll();
-        Map<String, String> categoryIcons = categoryService.getCategoryIcons();
-
         model.addAttribute("categories", categories);
-        model.addAttribute("categoryIcons", categoryIcons);
-
         return "admin/categories/category-index";
     }
 
