@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{admin/admin-layout :: admin_layout(~{::main})}">
+<body>
+<main>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Quản lý Tin tức</h1>
+        <div class="page-breadcrumb">
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / <span>Tin tức</span>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="admin-card">
+        <div class="card-header-custom">
+            <h5 class="card-title-custom">
+                <i class="fas fa-newspaper me-2"></i>
+                Danh sách tin tức
+            </h5>
+            <a href="/admin/news/create" class="btn btn-primary-custom">
+                <i class="fas fa-plus me-2"></i>Thêm tin tức
+            </a>
+        </div>
+
+        <!-- News Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Ảnh</th>
+                        <th>Tiêu đề</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(items)}">
+                        <td colspan="5" class="text-center py-5">
+                            <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Chưa có tin tức nào</p>
+                        </td>
+                    </tr>
+                    
+                    <tr th:each="item : ${items}">
+                        <td>
+                            <img th:src="@{${item.image}}" 
+                                 th:alt="${item.title}"
+                                 class="rounded"
+                                 style="width: 60px; height: 60px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/60x60?text=No+Image'">
+                        </td>
+                        <td>
+                            <strong th:text="${item.title}">News Title</strong>
+                        </td>
+                        <td>
+                            <small class="text-muted" th:text="${#temporals.format(item.createDate, 'dd/MM/yyyy HH:mm')}">01/01/2026</small>
+                        </td>
+                        <td>
+                            <span th:if="${item.available}" class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Hiển thị
+                            </span>
+                            <span th:unless="${item.available}" class="badge bg-secondary">
+                                <i class="fas fa-times-circle"></i> Ẩn
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a th:href="@{/admin/news/edit/{id}(id=${item.id})}" 
+                                   class="btn btn-sm btn-warning" 
+                                   title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm toggle-btn" 
+                                        th:classappend="${item.available} ? 'btn-secondary' : 'btn-success'"
+                                        th:data-toggle-url="@{/admin/news/toggle/{id}(id=${item.id})}"
+                                        th:data-item-name="${item.title}"
+                                        th:data-current-status="${item.available}"
+                                        th:title="${item.available} ? 'Ẩn tin tức' : 'Hiện tin tức'">
+                                    <i class="fas" th:classappend="${item.available} ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3" th:if="${totalPages > 1}">
+            <div class="text-muted small">
+                Trang <strong th:text="${currentPage + 1}">1</strong> / <strong th:text="${totalPages}">1</strong>
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/news/list(page=${currentPage - 1})}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item" 
+                        th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                        th:classappend="${i == currentPage} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/news/list(page=${i})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/news/list(page=${currentPage + 1})}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</main>
+</body>
+</html>
