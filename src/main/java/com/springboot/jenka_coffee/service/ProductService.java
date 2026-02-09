@@ -77,4 +77,38 @@ public interface ProductService {
      * Toggle product availability (soft delete)
      */
     void toggleAvailable(Integer id);
+
+    // ========== ADVANCED FILTER & PAGINATION METHODS ==========
+
+    /**
+     * Filter products by category and price range with pagination
+     * 
+     * @param categoryId Category ID (nullable)
+     * @param minPrice   Minimum price (nullable)
+     * @param maxPrice   Maximum price (nullable)
+     * @param pageable   Pagination parameters
+     * @return Page of filtered products
+     */
+    Page<Product> filterProductsAdvanced(String categoryId, Double minPrice, Double maxPrice, Pageable pageable);
+
+    /**
+     * Search products by keyword with pagination
+     * 
+     * @param keyword  Search keyword (nullable)
+     * @param pageable Pagination parameters
+     * @return Page of products matching keyword
+     */
+    Page<Product> searchProductsPaginated(String keyword, Pageable pageable);
+
+    /**
+     * Filter products by multiple criteria with pagination
+     * 
+     * @param categoryId Category ID (nullable)
+     * @param minPrice   Minimum price (nullable)
+     * @param maxPrice   Maximum price (nullable)
+     * @param keyword    Search keyword (nullable)
+     * @param pageable   Pagination parameters
+     * @return Page of filtered products
+     */
+    Page<Product> filterProductsWithAllCriteria(String categoryId, Double minPrice, Double maxPrice, String keyword, Pageable pageable);
 }
