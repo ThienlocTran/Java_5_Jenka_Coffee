@@ -37,8 +37,62 @@ public class ProductController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", productPage.getTotalPages());
         model.addAttribute("currentCategoryId", categoryId);
+        
+        // Add categories and counts for sidebar
+        model.addAttribute("categories", categoryService.findAll());
+        model.addAttribute("categoryCounts", productService.getCategoryCounts());
 
         return "site/products/product-list"; // Trả về file product-list.html mới
+    }
+
+    // 1.1. Lọc sản phẩm nâng cao (theo loại + giá)
+    @GetMapping("/product/filter")
+    public String filterProducts(Model model,
+            @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "minPrice", required = false) Double minPrice,
+            @RequestParam(value = "maxPrice", required = false) Double maxPrice,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page) {
+        
+        // Pagination: 12 products per page
+        Pageable pageable = PageRequest.of(page, 12);
+        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
+
+        model.addAttribute("items", productPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
+        model.addAttribute("currentCategoryId", categoryId);
+        model.addAttribute("currentMinPrice", minPrice);
+        model.addAttribute("currentMaxPrice", maxPrice);
+        model.addAttribute("currentKeyword", keyword);
+        
+        // Add categories and counts for sidebar
+        model.addAttribute("categories", categoryService.findAll());
+        model.addAttribute("categoryCounts", productService.getCategoryCounts());
+
+        return "site/products/product-list";
+    }
+
+    // 1.2. Tìm kiếm sản phẩm
+    @GetMapping("/product/search")
+    public String searchProducts(Model model,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page) {
+        
+        // Pagination: 12 products per page
+        Pageable pageable = PageRequest.of(page, 12);
+        Page<Product> productPage = productService.searchProductsPaginated(keyword, pageable);
+
+        model.addAttribute("items", productPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
+        model.addAttribute("currentKeyword", keyword);
+        
+        // Add categories and counts for sidebar
+        model.addAttribute("categories", categoryService.findAll());
+        model.addAttribute("categoryCounts", productService.getCategoryCounts());
+
+        return "site/products/product-list";
     }
 
     // 2. Chi tiết sản phẩm

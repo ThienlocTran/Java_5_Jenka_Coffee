@@ -3,7 +3,9 @@ package com.springboot.jenka_coffee.controller.admin;
 import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.util.MessageHelper;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,7 @@ public class AdminAccountController {
      * Hiển thị danh sách tài khoản
      */
     @GetMapping("/list")
+    @Transactional(readOnly = true)
     public String listAccounts(Model model) {
         List<Account> accounts = accountService.findAll();
         model.addAttribute("accounts", accounts);

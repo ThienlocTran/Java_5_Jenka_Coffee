@@ -4,11 +4,11 @@
 <main>
     <!-- Page Header -->
     <div class="page-header">
-        <h1 class="page-title" th:text="${item.id == null ? 'Thêm loại hàng mới' : 'Chỉnh sửa loại hàng'}">Thêm loại hàng mới</h1>
+        <h1 class="page-title" th:text="${item.id == null ? #{admin.category.form.add_title} : #{admin.category.form.edit_title}}">Thêm loại hàng mới</h1>
         <div class="page-breadcrumb">
-            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / 
-            <a href="/admin/category/list">Loại hàng</a> / 
-            <span th:text="${item.id == null ? 'Thêm mới' : 'Chỉnh sửa'}">Thêm mới</span>
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> <span th:text="#{admin.dashboard.breadcrumb}">Dashboard</span></a> / 
+            <a href="/admin/category/list" th:text="#{admin.category.breadcrumb}">Loại hàng</a> / 
+            <span th:text="${item.id == null ? #{admin.category.form.add_breadcrumb} : #{admin.category.form.edit_breadcrumb}}">Thêm mới</span>
         </div>
     </div>
 
@@ -30,7 +30,7 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom">
                 <i class="fas fa-edit me-2"></i>
-                <span th:text="${item.id == null ? 'Thông tin loại hàng mới' : 'Cập nhật thông tin loại hàng'}">Thông tin loại hàng mới</span>
+                <span th:text="${item.id == null ? #{admin.category.form.info_title} : #{admin.category.form.info_title}}">Thông tin loại hàng mới</span>
             </h5>
         </div>
 
@@ -84,14 +84,14 @@
                     <!-- Category Name -->
                     <div class="mb-3">
                         <label for="name" class="form-label">
-                            Tên loại hàng <span class="text-danger">*</span>
+                            <span th:text="#{admin.category.form.name_label}">Tên loại hàng</span> <span class="text-danger">*</span>
                         </label>
                         <input type="text" 
                                class="form-control" 
                                id="name" 
                                th:field="*{name}"
                                th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
-                               placeholder="Nhập tên loại hàng (VD: Máy Pha Cà Phê)"
+                               th:placeholder="#{admin.category.form.name_placeholder}"
                                maxlength="100"
                                required>
                         <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
@@ -128,7 +128,7 @@
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between mt-4 pt-3 border-top">
                 <a href="/admin/category/list" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại
+                    <i class="fas fa-arrow-left me-2"></i><span th:text="#{admin.category.form.back}">Quay lại</span>
                 </a>
                 <div>
                     <!-- Delete Button (only for existing categories) -->
@@ -142,10 +142,10 @@
                     </button>
                     
                     <button type="reset" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-redo me-2"></i>Làm mới
+                        <i class="fas fa-redo me-2"></i><span th:text="#{admin.product.form.reset}">Làm mới</span>
                     </button>
                     <button type="submit" class="btn btn-primary-custom">
-                        <i class="fas fa-save me-2"></i>Lưu loại hàng
+                        <i class="fas fa-save me-2"></i><span th:text="#{admin.category.form.save}">Lưu loại hàng</span>
                     </button>
                 </div>
             </div>
