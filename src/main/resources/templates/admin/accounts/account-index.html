@@ -138,30 +138,6 @@
                                    title="Chỉnh sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                
-                                <!-- Lock/Unlock Button -->
-                                <button th:if="${account.activated}" 
-                                        type="button" 
-                                        class="btn btn-sm btn-outline-warning" 
-                                        th:onclick="'confirmLock(\'' + ${account.username} + '\', \'' + ${account.fullname} + '\')'"
-                                        title="Khóa tài khoản">
-                                    <i class="fas fa-lock"></i>
-                                </button>
-                                <button th:unless="${account.activated}" 
-                                        type="button" 
-                                        class="btn btn-sm btn-outline-success" 
-                                        th:onclick="'confirmUnlock(\'' + ${account.username} + '\', \'' + ${account.fullname} + '\')'"
-                                        title="Mở khóa tài khoản">
-                                    <i class="fas fa-unlock"></i>
-                                </button>
-                                
-                                <!-- Reset Password Button -->
-                                <a th:href="@{'/admin/account/reset-password/' + ${account.username}}" 
-                                   class="btn btn-sm btn-outline-info" 
-                                   title="Reset mật khẩu">
-                                    <i class="fas fa-key"></i>
-                                </a>
-                                
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-danger" 
                                         th:onclick="'confirmDelete(\'' + ${account.username} + '\', \'' + ${account.fullname} + '\')'"
@@ -232,83 +208,11 @@
     </div>
 </div>
 
-<!-- Lock Account Modal -->
-<div class="modal fade" id="lockAccountModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title text-dark">
-                    <i class="fas fa-lock"></i>
-                    Xác nhận khóa tài khoản
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-lock text-warning" style="font-size: 3rem;"></i>
-                </div>
-                <p class="text-center">
-                    Bạn có chắc chắn muốn khóa tài khoản <strong id="lockAccountName"></strong>?
-                </p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Tài khoản sẽ không thể đăng nhập sau khi bị khóa.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Hủy
-                </button>
-                <button type="button" class="btn btn-warning" id="confirmLockBtn">
-                    <i class="fas fa-lock me-2"></i>Khóa tài khoản
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Unlock Account Modal -->
-<div class="modal fade" id="unlockAccountModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-unlock"></i>
-                    Xác nhận mở khóa tài khoản
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-unlock text-success" style="font-size: 3rem;"></i>
-                </div>
-                <p class="text-center">
-                    Bạn có chắc chắn muốn mở khóa tài khoản <strong id="unlockAccountName"></strong>?
-                </p>
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle me-2"></i>
-                    Tài khoản sẽ có thể đăng nhập trở lại sau khi được mở khóa.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Hủy
-                </button>
-                <button type="button" class="btn btn-success" id="confirmUnlockBtn">
-                    <i class="fas fa-unlock me-2"></i>Mở khóa tài khoản
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Add/Edit Account Modal - Removed since we use separate page -->
 
 <script>
 // JavaScript for Account Management
 let currentDeleteUsername = null;
-let currentLockUsername = null;
-let currentUnlockUsername = null;
 
 // Confirm delete function
 function confirmDelete(username, fullname) {
@@ -317,24 +221,6 @@ function confirmDelete(username, fullname) {
     
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
     deleteModal.show();
-}
-
-// Confirm lock function
-function confirmLock(username, fullname) {
-    currentLockUsername = username;
-    document.getElementById('lockAccountName').textContent = fullname;
-    
-    const lockModal = new bootstrap.Modal(document.getElementById('lockAccountModal'));
-    lockModal.show();
-}
-
-// Confirm unlock function
-function confirmUnlock(username, fullname) {
-    currentUnlockUsername = username;
-    document.getElementById('unlockAccountName').textContent = fullname;
-    
-    const unlockModal = new bootstrap.Modal(document.getElementById('unlockAccountModal'));
-    unlockModal.show();
 }
 
 // Handle delete confirmation
@@ -349,44 +235,25 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function()
         form.method = 'POST';
         form.action = '/admin/account/delete/' + currentDeleteUsername;
         
-        document.body.appendChild(form);
-        form.submit();
-    }
-});
-
-// Handle lock confirmation
-document.getElementById('confirmLockBtn').addEventListener('click', function() {
-    if (currentLockUsername) {
-        // Add loading state
-        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang khóa...';
-        this.disabled = true;
-        
-        // Create form and submit
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/admin/account/lock/' + currentLockUsername;
+        // Add CSRF token if needed
+        const csrfToken = document.querySelector('meta[name="_csrf"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
         
         document.body.appendChild(form);
         form.submit();
     }
 });
 
-// Handle unlock confirmation
-document.getElementById('confirmUnlockBtn').addEventListener('click', function() {
-    if (currentUnlockUsername) {
-        // Add loading state
-        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang mở khóa...';
-        this.disabled = true;
-        
-        // Create form and submit
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/admin/account/unlock/' + currentUnlockUsername;
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-});
+// Edit account function - redirect to edit page
+function editAccount(username) {
+    window.location.href = '/admin/account/edit/' + username;
+}
 
 // Search functionality
 document.getElementById('searchInput').addEventListener('input', function() {
@@ -419,22 +286,18 @@ function filterTable() {
         // Role filter
         if (roleFilter) {
             const roleBadge = row.querySelector('td:nth-child(5) .badge');
-            if (roleBadge) {
-                const isAdmin = roleBadge.classList.contains('bg-danger');
-                if ((roleFilter === 'admin' && !isAdmin) || (roleFilter === 'user' && isAdmin)) {
-                    showRow = false;
-                }
+            const isAdmin = roleBadge.classList.contains('bg-danger');
+            if ((roleFilter === 'admin' && !isAdmin) || (roleFilter === 'user' && isAdmin)) {
+                showRow = false;
             }
         }
         
         // Status filter
         if (statusFilter && showRow) {
             const statusBadge = row.querySelector('td:nth-child(6) .badge');
-            if (statusBadge) {
-                const isActive = statusBadge.classList.contains('bg-success');
-                if ((statusFilter === '1' && !isActive) || (statusFilter === '0' && isActive)) {
-                    showRow = false;
-                }
+            const isActive = statusBadge.classList.contains('bg-success');
+            if ((statusFilter === '1' && !isActive) || (statusFilter === '0' && isActive)) {
+                showRow = false;
             }
         }
         
