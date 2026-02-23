@@ -3,7 +3,9 @@ package com.springboot.jenka_coffee.controller.admin;
 import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.util.MessageHelper;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,7 @@ public class AdminAccountController {
      * Hiển thị danh sách tài khoản
      */
     @GetMapping("/list")
+    @Transactional(readOnly = true)
     public String listAccounts(Model model) {
         List<Account> accounts = accountService.findAll();
         model.addAttribute("accounts", accounts);
@@ -102,6 +105,50 @@ public class AdminAccountController {
         String status = account.getActivated() ? "kích hoạt" : "vô hiệu hóa";
         redirectAttributes.addFlashAttribute("success", "Đã " + status + " tài khoản thành công!");
         return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Khóa tài khoản
+     */
+    @PostMapping("/lock/{username}")
+    public String lockAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
+        accountService.lockAccount(username);
+        redirectAttributes.addFlashAttribute("success", "Đã khóa tài khoản thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Mở khóa tài khoản
+     */
+    @PostMapping("/unlock/{username}")
+    public String unlockAccount(@PathVariable String username, RedirectAttributes redirectAttributes) {
+        accountService.unlockAccount(username);
+        redirectAttributes.addFlashAttribute("success", "Đã mở khóa tài khoản thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Admin reset mật khẩu cho user
+     */
+    @PostMapping("/reset-password/{username}")
+    public String adminResetPassword(
+            @PathVariable String username,
+            @RequestParam String newPassword,
+            RedirectAttributes redirectAttributes) {
+        
+        accountService.adminResetPassword(username, newPassword);
+        redirectAttributes.addFlashAttribute("success", "Đã reset mật khẩu thành công!");
+        return "redirect:/admin/account/list";
+    }
+
+    /**
+     * Hiển thị form reset mật khẩu
+     */
+    @GetMapping("/reset-password/{username}")
+    public String showResetPasswordForm(@PathVariable String username, Model model) {
+        Account account = accountService.findByIdOrThrow(username);
+        model.addAttribute("account", account);
+        return "admin/accounts/reset-password-form";
     }
 
     /**

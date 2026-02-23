@@ -56,6 +56,31 @@ public interface AccountService {
      */
     Account toggleActivation(String username);
 
+    /**
+     * Lock account (admin function)
+     * 
+     * @param username Account username
+     * @return Updated account
+     */
+    Account lockAccount(String username);
+
+    /**
+     * Unlock account (admin function)
+     * 
+     * @param username Account username
+     * @return Updated account
+     */
+    Account unlockAccount(String username);
+
+    /**
+     * Admin reset password for user (admin function)
+     * 
+     * @param username Account username
+     * @param newPassword New password
+     * @return Updated account
+     */
+    Account adminResetPassword(String username, String newPassword);
+
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET =====
 
     /**

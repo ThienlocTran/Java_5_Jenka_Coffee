@@ -3,30 +3,29 @@ package com.springboot.jenka_coffee.service;
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 public interface OrderService {
-    Order create(Order order);
 
+    // Các hàm cơ bản
+    Order create(Order order);
     Order findById(Long id);
 
-    List<Order> findByUsername(String username); // Tìm đơn của 1 người
+    Page<Order> findByUsername(String username, Pageable pageable);
+    // Hàm Checkout (Quan trọng: Phải có tham số Account)
+    Order checkout(CheckoutRequest request, Account account);
 
-    /**
-     * Complete checkout transaction: create order, save details, deduct inventory,
-     * clear cart
-     * 
-     * @param request Checkout form data
-     * @return Saved order
-     * @throws com.springboot.jenka_coffee.exception.InsufficientStockException if
-     *                                                                          stock
-     *                                                                          unavailable
-     */
-    Order checkout(CheckoutRequest request);
-
-    /**
-     * Prepare checkout request with auto-filled data for logged-in user
-     * Returns empty request for guests
-     */
+    // Hàm hỗ trợ điền form
     CheckoutRequest prepareCheckoutRequest(Account user);
+
+    // --- CÁC HÀM MỚI CHO ADMIN (Nguyên nhân gây lỗi nếu thiếu) ---
+
+    // 1. Cập nhật trạng thái đơn hàng
+    Order updateStatus(Long orderId, int status);
+
+    // 2. Lấy danh sách phân trang (Cho Admin)
+    Page<Order> findAll(Pageable pageable);
 }

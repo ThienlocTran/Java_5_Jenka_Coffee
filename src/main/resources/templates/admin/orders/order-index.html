@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{/admin/admin-layout :: admin_layout(~{::content_body})}">
 <head>
     <meta charset="UTF-8">
     <title th:text="#{admin.order.title}">Quản lý Đơn hàng</title>
@@ -65,11 +66,84 @@
                 </tbody>
             </table>
         </div>
+        <button class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-file-export me-1"></i> Xuất Excel
+        </button>
     </div>
-</div>
 
-<div th:replace="~{fragments/layout :: footer}"></div>
+    <div class="card border-0 shadow-sm rounded-3">
 
+        <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold text-uppercase text-secondary">
+                <i class="fas fa-list me-2"></i> Danh sách đơn hàng
+            </h5>
+        </div>
+
+        <div class="card-body pt-0">
+            <form action="/admin/order/index" method="get" class="row g-3 mb-4 bg-light p-3 rounded-3 mx-0">
+
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" name="keyword"
+                               placeholder="Tìm kiếm theo mã đơn, tên khách, số điện thoại...">
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="0">Chờ xác nhận</option>
+                        <option value="1">Đã xác nhận</option>
+                        <option value="2">Đang giao hàng</option>
+                        <option value="3">Hoàn tất</option>
+                        <option value="4">Đã hủy</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">
+                        <i class="fas fa-filter me-1"></i> Lọc dữ liệu
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.95rem;">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="py-3 ps-3">Mã Đơn</th>
+                        <th class="py-3">Khách hàng</th>
+                        <th class="py-3">Ngày đặt</th>
+                        <th class="py-3">Tổng tiền</th>
+                        <th class="py-3 text-center">Trạng thái</th>
+                        <th class="py-3 text-center">Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr th:if="${page.content.isEmpty()}">
+                        <td colspan="6" class="text-center py-5">
+                            <img src="https://cdn-icons-png.flaticon.com/512/4076/4076432.png" width="60" class="opacity-50 mb-3">
+                            <p class="text-muted m-0">Không tìm thấy đơn hàng nào.</p>
+                        </td>
+                    </tr>
+
+                    <tr th:each="o : ${page.content}">
+                        <td class="ps-3 fw-bold text-danger" th:text="${'#' + o.id}">#1001</td>
+
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-initial rounded-circle bg-light text-danger fw-bold me-2 d-flex justify-content-center align-items-center"
+                                     style="width: 35px; height: 35px;">
+                                    <span th:text="${#strings.substring(o.account != null ? o.account.username : 'G', 0, 1)}">U</span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark" th:text="${o.account != null ? o.account.username : 'Khách lẻ'}">User</div>
+                                    <small class="text-muted" th:text="${o.phone}">090...</small>
+                                </div>
+                            </div>
+                        </td>
 
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -87,14 +161,16 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function openCancelModal(orderId) {
+            document.getElementById('modalOrderIdText').innerText = '#' + orderId;
+            document.getElementById('confirmCancelBtn').href = '/admin/order/update/' + orderId + '/4';
+            var myModal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            myModal.show();
+        }
+    </script>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    function showDeleteModal(id) {
-        document.getElementById('modalOrderId').innerText = '#' + id;
-        document.getElementById('confirmDeleteBtn').href = '/admin/order/delete/' + id;
-    }
-</script>
 </body>
 </html>

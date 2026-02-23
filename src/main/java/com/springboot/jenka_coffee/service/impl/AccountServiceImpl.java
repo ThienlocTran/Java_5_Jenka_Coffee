@@ -302,6 +302,51 @@ public class AccountServiceImpl implements AccountService {
         return dao.save(account);
     }
 
+    // ===== ADMIN USER MANAGEMENT METHODS =====
+
+    @Override
+    public Account lockAccount(String username) {
+        Account account = findByIdOrThrow(username);
+        
+        // Business rule: Cannot lock admin if they are the last admin
+        if (account.getAdmin() != null && account.getAdmin()) {
+            long adminCount = dao.countByAdminTrue();
+            if (adminCount <= 1) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Không thể khóa admin cuối cùng trong hệ thống!");
+            }
+        }
+        
+        account.setActivated(false);
+        return dao.save(account);
+    }
+
+    @Override
+    public Account unlockAccount(String username) {
+        Account account = findByIdOrThrow(username);
+        account.setActivated(true);
+        return dao.save(account);
+    }
+
+    @Override
+    public Account adminResetPassword(String username, String newPassword) {
+        Account account = findByIdOrThrow(username);
+        
+        // Validate new password
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new ValidationException("Mật khẩu mới phải có ít nhất 6 ký tự!");
+        }
+        
+        // Hash and save new password (reuse existing logic)
+        account.setPasswordHash(passwordSecurity.hashPassword(newPassword.trim()));
+        
+        // Clear any existing reset tokens
+        account.setResetToken(null);
+        account.setResetTokenExpiry(null);
+        
+        return dao.save(account);
+    }
+
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET IMPLEMENTATION =====
 
     @Override

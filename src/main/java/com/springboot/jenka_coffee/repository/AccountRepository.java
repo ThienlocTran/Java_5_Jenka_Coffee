@@ -22,6 +22,12 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         boolean existsByEmail(String email);
 
         /**
+         * Check if phone exists
+         * Generated query: SELECT COUNT(*) FROM accounts WHERE phone = ?
+         */
+        boolean existsByPhone(String phone);
+
+        /**
          * Find account by email
          */
         Optional<Account> findByEmail(String email);
