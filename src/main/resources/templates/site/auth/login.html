@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - Jenka Coffee</title>
+    <title th:text="#{auth.login.title} + ' - Jenka Coffee'">Đăng nhập - Jenka Coffee</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/login.css}">
 </head>
@@ -11,7 +11,7 @@
     <div class="login-container">
         <div class="login-header">
             <h1>Jenka Coffee</h1>
-            <p>Đăng nhập vào hệ thống</p>
+            <p th:text="#{auth.login.subtitle}">Đăng nhập vào hệ thống</p>
         </div>
         
         <div class="login-form">
@@ -29,32 +29,32 @@
                 <input type="hidden" name="redirect" th:value="${redirect}">
                 
                 <div class="form-group">
-                    <label class="form-label">Tên đăng nhập / Email / SĐT</label>
+                    <label class="form-label" th:text="#{auth.login.username_label}">Tên đăng nhập / Email / SĐT</label>
                     <input type="text" name="username" class="form-input" 
-                           placeholder="Username, Email hoặc Số điện thoại" required autofocus>
-                    <small style="color: #666; font-size: 0.85rem; margin-top: 4px; display: block;">
+                           th:placeholder="#{auth.login.username_placeholder}" required autofocus>
+                    <small style="color: #666; font-size: 0.85rem; margin-top: 4px; display: block;" th:text="#{auth.login.username_help}">
                         Bạn có thể đăng nhập bằng username, email hoặc số điện thoại
                     </small>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Mật khẩu</label>
+                    <label class="form-label" th:text="#{auth.login.password_label}">Mật khẩu</label>
                     <input type="password" name="password" class="form-input" 
-                           placeholder="Nhập mật khẩu" required>
+                           th:placeholder="#{auth.login.password_placeholder}" required>
                 </div>
                 
                 <div class="form-group d-flex align-items-center" style="margin-top: 0.5rem;">
                     <input type="checkbox" name="remember" id="remember" class="form-check-input me-2" style="cursor: pointer;">
-                    <label for="remember" class="form-check-label mb-0" style="cursor: pointer; font-size: 0.9rem;">Ghi nhớ đăng nhập</label>
+                    <label for="remember" class="form-check-label mb-0" style="cursor: pointer; font-size: 0.9rem;" th:text="#{auth.login.remember}">Ghi nhớ đăng nhập</label>
                 </div>
                 
-                <button type="submit" class="btn-login">Đăng nhập</button>
+                <button type="submit" class="btn-login" th:text="#{button.login}">Đăng nhập</button>
             </form>
             
             <div class="form-footer">
-                <a th:href="@{/auth/forgot-password}" style="color: #D32F2F; text-decoration: none; font-weight: 500;">Quên mật khẩu?</a>
+                <a th:href="@{/auth/forgot-password}" style="color: #D32F2F; text-decoration: none; font-weight: 500;" th:text="#{auth.login.forgot_password}">Quên mật khẩu?</a>
                 <span style="margin: 0 12px; color: #E0E0E0;">|</span>
-                <a th:href="@{/home}">← Quay lại trang chủ</a>
+                <a th:href="@{/home}">← <span th:text="#{auth.login.back_home}">Quay lại trang chủ</span></a>
             </div>
         </div>
     </div>

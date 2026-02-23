@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Quản lý Đơn hàng</title>
+    <title th:text="#{admin.order.title}">Quản lý Đơn hàng</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
@@ -14,7 +14,7 @@
 <div class="container mt-5 mb-5" style="min-height: 500px;">
 
     <h3 class="mb-4 text-uppercase fw-bold text-center" style="color: #4b3d33;">
-        <i class="#"></i> Quản lý Đơn hàng (Admin)
+        <i class="#"></i> <span th:text="#{admin.order.list_title}">Quản lý Đơn hàng (Admin)</span>
     </h3>
 
     <div class="card shadow-sm border-0">
@@ -22,18 +22,18 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light text-secondary">
                 <tr>
-                    <th class="ps-4">Mã Đơn</th>
-                    <th>Khách hàng</th>
-                    <th>Ngày đặt</th>
-                    <th>Tổng tiền</th>
-                    <th>Trạng thái</th>
-                    <th class="text-end pe-4">Thao tác</th>
+                    <th class="ps-4" th:text="#{admin.order.order_code}">Mã Đơn</th>
+                    <th th:text="#{admin.order.customer}">Khách hàng</th>
+                    <th th:text="#{admin.order.order_date}">Ngày đặt</th>
+                    <th th:text="#{admin.order.total_amount}">Tổng tiền</th>
+                    <th th:text="#{admin.order.status}">Trạng thái</th>
+                    <th class="text-end pe-4" th:text="#{admin.order.actions}">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${orders.isEmpty()}">
                     <td colspan="6" class="text-center py-5">
-                        <p class="text-muted">Chưa có đơn hàng nào.</p>
+                        <p class="text-muted" th:text="#{admin.order.empty}">Chưa có đơn hàng nào.</p>
                     </td>
                 </tr>
 
@@ -48,17 +48,17 @@
                     </td>
 
                     <td>
-                        <span th:if="${o.status == 0}" class="badge bg-warning text-dark">Mới</span>
-                        <span th:if="${o.status == 1}" class="badge bg-primary">Giao hàng</span>
-                        <span th:if="${o.status == 2}" class="badge bg-success">Hoàn thành</span>
-                        <span th:if="${o.status == 3}" class="badge bg-danger">Đã hủy</span>
+                        <span th:if="${o.status == 0}" class="badge bg-warning text-dark" th:text="#{admin.order.status_pending}">Mới</span>
+                        <span th:if="${o.status == 1}" class="badge bg-primary" th:text="#{admin.order.status_shipping}">Giao hàng</span>
+                        <span th:if="${o.status == 2}" class="badge bg-success" th:text="#{admin.order.status_completed}">Hoàn thành</span>
+                        <span th:if="${o.status == 3}" class="badge bg-danger" th:text="#{admin.order.status_cancelled}">Đã hủy</span>
                     </td>
 
                     <td class="text-end pe-4">
                         <button class="btn btn-sm btn-outline-danger"
                                 th:attr="onclick='showDeleteModal(' + ${o.id} + ')'"
                                 data-bs-toggle="modal" data-bs-target="#deleteModal">
-                            <i class="fas fa-trash-alt"></i> Hủy đơn
+                            <i class="fas fa-trash-alt"></i> <span th:text="#{admin.order.status_cancelled}">Hủy đơn</span>
                         </button>
                     </td>
                 </tr>
@@ -75,15 +75,15 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Xác nhận hủy</h5>
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> <span th:text="#{message.confirm.action}">Xác nhận hủy</span></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center py-4">
-                <p class="fs-5">Bạn có chắc muốn hủy đơn hàng <strong id="modalOrderId">...</strong>?</p>
+                <p class="fs-5"><span th:text="#{message.confirm.delete}">Bạn có chắc muốn hủy đơn hàng</span> <strong id="modalOrderId">...</strong>?</p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Không</button>
-                <a id="confirmDeleteBtn" href="#" class="btn btn-danger">Đồng ý hủy</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" th:text="#{common.no}">Không</button>
+                <a id="confirmDeleteBtn" href="#" class="btn btn-danger" th:text="#{admin.common.confirm}">Đồng ý hủy</a>
             </div>
         </div>
     </div>

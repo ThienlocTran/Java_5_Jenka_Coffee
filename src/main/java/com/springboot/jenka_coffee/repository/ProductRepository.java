@@ -58,4 +58,41 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      * AND ?
      */
     List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
+
+    // ========== ADVANCED FILTER METHODS WITH PAGINATION ==========
+
+    /**
+     * Find products by category and price range with pagination
+     */
+    @Query("SELECT p FROM Product p WHERE " +
+            "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
+                                              @Param("minPrice") Double minPrice,
+                                              @Param("maxPrice") Double maxPrice,
+                                              Pageable pageable);
+
+    /**
+     * Search products by keyword with pagination
+     */
+    @Query("SELECT p FROM Product p WHERE " +
+            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * Filter products by all criteria with pagination
+     */
+    @Query("SELECT p FROM Product p WHERE " +
+            "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
+            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                   @Param("minPrice") Double minPrice,
+                                   @Param("maxPrice") Double maxPrice,
+                                   @Param("keyword") String keyword,
+                                   Pageable pageable);
 }
