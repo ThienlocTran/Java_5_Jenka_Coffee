@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collections;
 import java.util.List;
@@ -42,9 +43,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product saveProduct(Product product, MultipartFile file) {
-        log.info("Saving product: {} with image: {}", product.getName(), 
+        log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
-        
+
         // --- XỬ LÝ ẢNH VỚI NÉN ---
         if (file != null && !file.isEmpty()) {
             try {
@@ -125,12 +126,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Product update(Product product) {
         log.info("Updating product with ID: {}", product.getId());
-        
+
         // Kiểm tra product có tồn tại không
         if (!productRepository.existsById(product.getId())) {
             throw new ResourceNotFoundException("Product not found with id: " + product.getId());
         }
-        
+
         Product updatedProduct = productRepository.save(product);
         log.info("Successfully updated product with ID: {}", updatedProduct.getId());
         return updatedProduct;
@@ -139,11 +140,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void delete(Integer id) {
         log.info("Deleting product with ID: {}", id);
-        
+
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product not found with id: " + id);
         }
-        
+
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
     }
@@ -199,46 +200,64 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void toggleAvailable(Integer id) {
         log.info("Toggling availability for product ID: {}", id);
-        
+
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
-        
+
         boolean newStatus = !product.getAvailable();
         product.setAvailable(newStatus);
         productRepository.save(product);
-        
+
         log.info("Successfully toggled product ID {} availability to: {}", id, newStatus);
     }
 
     @Override
-    public void deleteProduct(Integer id, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+    public Page<Product> filterProductsAdvanced(String categoryId, Double minPrice, Double maxPrice,
+            Pageable pageable) {
+        return productRepository.findByCategoryAndPriceRange(categoryId, minPrice, maxPrice, pageable);
+    }
+
+    @Override
+    public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
+        return productRepository.searchProductsPaginated(keyword, pageable);
+    }
+
+    @Override
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, Double minPrice, Double maxPrice,
+            String keyword, Pageable pageable) {
+        return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
+    }
+
+    @Override
+    public void deleteProduct(Integer id,
+            RedirectAttributes redirectAttributes) {
         log.info("Attempting to delete product with ID: {}", id);
-        
+
         try {
             // Lấy thông tin sản phẩm trước khi xóa để hiển thị thông báo
             Product product = productRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
-            
+
             String productName = product.getName();
-            
+
             // Thực hiện xóa
             productRepository.deleteById(id);
-            
+
             // Thông báo thành công
-            redirectAttributes.addFlashAttribute("successMessage", 
-                "Đã xóa sản phẩm \"" + productName + "\" thành công!");
-            
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã xóa sản phẩm \"" + productName + "\" thành công!");
+
             log.info("Successfully deleted product: {} (ID: {})", productName, id);
-            
+
         } catch (ResourceNotFoundException e) {
             log.error("Product not found for deletion: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("errorMessage", 
-                "Không tìm thấy sản phẩm cần xóa!");
-                
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Không tìm thấy sản phẩm cần xóa!");
+
         } catch (Exception e) {
             log.error("Error deleting product with ID {}: {}", id, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", 
-                "Không thể xóa sản phẩm. Vui lòng thử lại!");
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Không thể xóa sản phẩm. Vui lòng thử lại!");
         }
     }
 }

@@ -26,7 +26,7 @@ public class AdminBookingController {
     }
 
     @PostMapping("/update-status")
-    public String updateStatus(@RequestParam Long id, @RequestParam Integer status) {
+    public String updateStatus(@RequestParam Long id, @RequestParam String status) {
         bookingService.updateStatus(id, status);
         return "redirect:/admin/booking/list";
     }
