@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/admin-layout :: admin_layout(~{:: .admin-report-wrapper})}">
 <head>
-    <title>Báo cáo Doanh thu</title>
+    <title th:text="#{admin.report.revenue_title}">Báo cáo Doanh thu</title>
 </head>
 <body>
 
@@ -10,17 +10,17 @@
 
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
         <div>
-            <h3 class="fw-bold text-dark mb-2">Báo cáo Doanh thu</h3>
+            <h3 class="fw-bold text-dark mb-2" th:text="#{admin.report.revenue_title}">Báo cáo Doanh thu</h3>
 
             <div class="small">
                 <a href="/admin" class="text-decoration-none text-danger fw-bold">
-                    <i class="fas fa-home me-1"></i> Dashboard
+                    <i class="fas fa-home me-1"></i> <span th:text="#{admin.dashboard}">Dashboard</span>
                 </a>
                 <span class="mx-1 text-muted">/</span>
-                <span class="text-muted">Báo cáo</span>
+                <span class="text-muted" th:text="#{admin.reports}">Báo cáo</span>
                 <span class="mx-1 text-muted">/</span>
 
-                <span class="text-muted">Doanh thu</span>
+                <span class="text-muted" th:text="#{admin.report.revenue_title}">Doanh thu</span>
             </div>
         </div>
         <div class="btn-group">
@@ -43,7 +43,7 @@
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h6 class="mb-0 fw-bold"><i class="fas fa-table me-2 text-primary"></i>Chi tiết số liệu</h6>
             <div class="h5 mb-0 text-success fw-bold">
-                Tổng: <span id="totalRevenue">0</span> ₫
+                <span th:text="#{admin.report.total_revenue} + ':'">Tổng:</span> <span id="totalRevenue">0</span> <span th:text="${#locale.language == 'vi'} ? '₫' : 'VND'">₫</span>
             </div>
         </div>
         <div class="card-body p-0">
@@ -51,10 +51,10 @@
                 <table class="table table-hover align-middle mb-0 text-center">
                     <thead class="bg-light text-secondary small text-uppercase fw-bold">
                     <tr>
-                        <th class="py-3">Thời gian</th>
-                        <th>Tổng đơn hàng</th>
-                        <th>Doanh thu</th>
-                        <th>Trạng thái</th>
+                        <th class="py-3" th:text="#{table.date}">Thời gian</th>
+                        <th th:text="#{admin.report.total_orders}">Tổng đơn hàng</th>
+                        <th th:text="#{admin.report.total_revenue}">Doanh thu</th>
+                        <th th:text="#{table.status}">Trạng thái</th>
                     </tr>
                     </thead>
                     <tbody id="revenueTableBody">

@@ -30,7 +30,15 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<Category> findAll() {
-        return categoryRepository.findAll();
+        List<Category> categories = categoryRepository.findAll();
+        System.out.println("=== CategoryService.findAll() returned: " + categories.size() + " categories");
+        // Initialize products collection để tránh lazy loading exception
+        categories.forEach(cat -> {
+            if (cat.getProducts() != null) {
+                cat.getProducts().size(); // Trigger lazy load
+            }
+        });
+        return categories;
     }
 
     @Override

@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
 <head>
     <meta charset="UTF-8">
-    <title>Giỏ hàng</title>
+    <title th:text="#{cart.page.title}">Giỏ hàng</title>
 </head>
 <body>
 <section class="py-5 bg-light">
@@ -10,19 +10,21 @@
         <!-- Breadcrumb -->
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
-                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page">Giỏ hàng</li>
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted" th:text="#{breadcrumb.home}">Trang chủ</a></li>
+                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page" th:text="#{cart.breadcrumb}">Giỏ hàng</li>
             </ol>
         </nav>
 
         <div class="row">
             <div class="col-lg-12">
-                 <h2 class="text-center mb-4 text-uppercase fw-bold">GIỎ HÀNG CỦA BẠN</h2>
+                 <h2 class="text-center mb-4 text-uppercase fw-bold" th:text="#{cart.page.heading}">GIỎ HÀNG CỦA BẠN</h2>
                  
                  <div th:if="${#lists.isEmpty(items)}" class="text-center py-5">
                     <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
-                    <p class="fs-5 text-muted">Giỏ hàng đang trống.</p>
-                    <a href="/" class="btn btn-primary rounded-pill px-4">Tiếp tục mua sắm</a>
+                    <p class="fs-5 text-muted" th:text="#{cart.empty.message}">Giỏ hàng đang trống.</p>
+                    <a href="/" class="btn btn-primary rounded-pill px-4">
+                        <i class="fas fa-arrow-left me-2"></i> <span th:text="#{cart.continue_shopping}">Tiếp tục mua sắm</span>
+                    </a>
                 </div>
 
                 <div th:unless="${#lists.isEmpty(items)}">
@@ -32,10 +34,10 @@
                                 <table class="table align-middle">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Sản phẩm</th>
-                                            <th>Giá</th>
-                                            <th>Số lượng</th>
-                                            <th>Thành tiền</th>
+                                            <th th:text="#{cart.table.product}">Sản phẩm</th>
+                                            <th th:text="#{cart.table.price}">Giá</th>
+                                            <th th:text="#{cart.table.quantity}">Số lượng</th>
+                                            <th th:text="#{cart.table.subtotal}">Thành tiền</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -49,15 +51,15 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td class="fw-bold text-muted text-nowrap" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">100.000 đ</td>
+                                            <td class="fw-bold text-muted text-nowrap" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">100.000 đ</td>
                                             <td>
                                                 <input type="number" min="1" th:value="${item.quantity}" 
                                                        th:onchange="'updateCart(\'' + ${item.productId} + '\', this.value)'"
                                                        class="form-control text-center border-0 bg-light" style="width: 70px;">
                                             </td>
-                                            <td class="fw-bold text-danger text-nowrap" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' đ'">200.000 đ</td>
+                                            <td class="fw-bold text-danger text-nowrap" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">200.000 đ</td>
                                             <td class="text-end">
-                                                <a th:href="@{/cart/remove/{id}(id=${item.productId})}" class="btn btn-light rounded-circle text-danger p-2" title="Xóa">
+                                                <a th:href="@{/cart/remove/{id}(id=${item.productId})}" class="btn btn-light rounded-circle text-danger p-2" th:title="#{cart.remove}">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             </td>
@@ -71,18 +73,18 @@
                     <div class="row">
                         <div class="col-lg-6 mb-3">
                              <a href="/" class="btn btn-outline-secondary rounded-pill px-4">
-                                <i class="fas fa-arrow-left me-2"></i> Tiếp tục mua sắm
+                                <i class="fas fa-arrow-left me-2"></i> <span th:text="#{cart.continue_shopping}">Tiếp tục mua sắm</span>
                             </a>
                         </div>
                         <div class="col-lg-6 text-end">
                             <div class="card border-0 shadow-sm rounded-4 p-4">
                                 <h4 class="d-flex justify-content-between align-items-center mb-3">
-                                    <span>Tổng cộng:</span>
-                                    <span class="text-danger fw-bold" th:text="${#numbers.formatInteger(total, 0, 'POINT')} + ' đ'">0 đ</span>
+                                    <span th:text="#{cart.total_label} + ':'">Tổng cộng:</span>
+                                    <span class="text-danger fw-bold" th:text="${#numbers.formatInteger(total, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">0 đ</span>
                                 </h4>
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                     <a th:href="@{/cart/clear}" class="btn btn-outline-danger rounded-pill px-4">Xóa hết</a>
-                                     <a th:href="@{/checkout}" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Thanh toán</a>
+                                     <a th:href="@{/cart/clear}" class="btn btn-outline-danger rounded-pill px-4" th:text="#{cart.clear_all}">Xóa hết</a>
+                                     <a th:href="@{/checkout}" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm" th:text="#{cart.payment}">Thanh toán</a>
                                 </div>
                             </div>
                         </div>

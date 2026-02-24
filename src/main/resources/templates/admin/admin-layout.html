@@ -47,7 +47,12 @@
             <span>Danh mục</span>
         </a>
 
-        <a href="/admin/order/index" class="nav-link" data-menu="order">
+        <a href="/admin/news/list" class="nav-link" data-menu="news">
+            <i class="fas fa-newspaper"></i>
+            <span>Tin tức</span>
+        </a>
+
+        <a href="/admin/order/list" class="nav-link" data-menu="order">
             <i class="fas fa-shopping-cart"></i>
             <span>Đơn hàng</span>
             <span class="badge bg-danger">5</span>
@@ -108,6 +113,21 @@
     </div>
 
     <div class="navbar-right">
+        <!-- Language Switcher -->
+        <div class="language-switcher me-3">
+            <a th:href="@{''(lang='vi')}" 
+               th:class="${#locale.language == 'vi'} ? 'lang-btn active' : 'lang-btn'"
+               title="Tiếng Việt">
+                VI
+            </a>
+            <span class="lang-separator">|</span>
+            <a th:href="@{''(lang='en')}" 
+               th:class="${#locale.language == 'en'} ? 'lang-btn active' : 'lang-btn'"
+               title="English">
+                EN
+            </a>
+        </div>
+        
         <i class="fas fa-bell navbar-icon">
             <span class="badge bg-danger">3</span>
         </i>

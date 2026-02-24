@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác thực OTP | Jenka Coffee</title>
+    <title th:text="#{auth.otp.title} + ' | Jenka Coffee'">Xác thực OTP | Jenka Coffee</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/otp.css}">
 </head>
@@ -11,8 +11,8 @@
 
 <div class="otp-card">
     <div class="otp-card-header">
-        <h2>Xác thực OTP</h2>
-        <p>Nhập mã đã được gửi đến số điện thoại</p>
+        <h2 th:text="#{auth.otp.title}">Xác thực OTP</h2>
+        <p th:text="#{auth.otp.subtitle}">Nhập mã đã được gửi đến số điện thoại</p>
         <div class="otp-phone-display" th:text="${phone}"></div>
     </div>
     
@@ -27,7 +27,7 @@
         </div>
         
         <div class="otp-timer-display">
-            ⏱ Mã OTP có hiệu lực trong <span class="otp-timer-value" id="timer">5:00</span>
+            ⏱ <span th:text="#{auth.otp.timer_text}">Mã OTP có hiệu lực trong</span> <span class="otp-timer-value" id="timer">5:00</span>
         </div>
         
         <form th:action="@{/auth/verify-otp}" method="post" id="otpForm">
@@ -43,25 +43,33 @@
                 <input type="text" class="otp-input-field" maxlength="1" data-index="5">
             </div>
             
-            <button type="submit" class="otp-btn-primary" id="submitBtn" disabled>
+            <button type="submit" class="otp-btn-primary" id="submitBtn" disabled th:text="#{auth.otp.submit}">
                 Xác nhận
             </button>
             
             <div class="otp-resend-section">
-                <p class="otp-resend-text">Không nhận được mã?</p>
+                <p class="otp-resend-text" th:text="#{auth.otp.not_received}">Không nhận được mã?</p>
                 <button type="button" class="otp-btn-link" id="resendBtn" disabled>
-                    Gửi lại OTP (<span class="otp-resend-timer" id="resendTimer">60</span>s)
+                    <span th:text="#{auth.otp.resend}">Gửi lại OTP</span> (<span class="otp-resend-timer" id="resendTimer">60</span>s)
                 </button>
             </div>
         </form>
         
         <div class="otp-card-footer">
-            <a th:href="@{/auth/login}">← Quay lại đăng nhập</a>
+            <a th:href="@{/auth/login}">← <span th:text="#{auth.forgot.back_login}">Quay lại đăng nhập</span></a>
         </div>
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const messages = {
+        expired: /*[[#{auth.otp.expired}]]*/ 'Hết hạn',
+        resend: /*[[#{auth.otp.resend}]]*/ 'Gửi lại OTP',
+        resending: /*[[#{auth.otp.resending}]]*/ 'Đang gửi lại OTP...'
+    };
+    /*]]>*/
+    
     const otpInputs = document.querySelectorAll('.otp-input-field');
     const otpForm = document.getElementById('otpForm');
     const otpValue = document.getElementById('otpValue');
@@ -125,7 +133,7 @@
         
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            timerElement.textContent = 'Hết hạn';
+            timerElement.textContent = messages.expired;
             timerElement.classList.add('expired');
             submitBtn.disabled = true;
             otpInputs.forEach(input => input.disabled = true);
@@ -144,13 +152,13 @@
         if (resendTimeLeft <= 0) {
             clearInterval(resendInterval);
             resendBtn.disabled = false;
-            resendBtn.innerHTML = 'Gửi lại OTP';
+            resendBtn.innerHTML = messages.resend;
         }
     }, 1000);
     
     // Resend OTP handler
     resendBtn.addEventListener('click', function() {
-        alert('Đang gửi lại OTP...');
+        alert(messages.resending);
         location.reload();
     });
     

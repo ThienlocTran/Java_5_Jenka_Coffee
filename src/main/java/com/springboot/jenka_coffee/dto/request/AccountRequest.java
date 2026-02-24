@@ -11,22 +11,22 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AccountRequest {
 
-    @NotBlank(message = "Username không được để trống")
-    @Size(min = 3, max = 50, message = "Username phải từ 3-50 ký tự")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username chỉ chứa chữ, số và dấu gạch dưới")
+    @NotBlank(message = "{AccountRequest.username.NotBlank}")
+    @Size(min = 3, max = 50, message = "{AccountRequest.username.Size}")
+    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "{AccountRequest.username.Pattern}")
     private String username;
 
-    @NotBlank(message = "Họ tên không được để trống")
-    @Size(min = 3, max = 100, message = "Họ tên phải từ 3-100 ký tự")
+    @NotBlank(message = "{AccountRequest.fullname.NotBlank}")
+    @Size(min = 3, max = 100, message = "{AccountRequest.fullname.Size}")
     private String fullname;
 
-    @Email(message = "Email không hợp lệ")
+    @Email(message = "{AccountRequest.email.Email}")
     private String email;
 
-    @Pattern(regexp = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$", message = "Số điện thoại không hợp lệ (VD: 0912345678)")
+    @Pattern(regexp = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$", message = "{AccountRequest.phone.Pattern}")
     private String phone;
 
-    @Size(min = 6, message = "Mật khẩu phải ít nhất 6 ký tự")
+    @Size(min = 6, message = "{AccountRequest.password.Size}")
     private String password;
 
     private Boolean admin = false;
