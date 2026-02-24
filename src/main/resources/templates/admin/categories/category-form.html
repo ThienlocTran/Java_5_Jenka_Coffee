@@ -4,11 +4,11 @@
 <main>
     <!-- Page Header -->
     <div class="page-header">
-        <h1 class="page-title" th:text="${item.id == null ? 'Thêm loại hàng mới' : 'Chỉnh sửa loại hàng'}">Thêm loại hàng mới</h1>
+        <h1 class="page-title" th:text="${item.id == null ? #{admin.category.form.add_title} : #{admin.category.form.edit_title}}">Thêm loại hàng mới</h1>
         <div class="page-breadcrumb">
-            <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / 
-            <a href="/admin/category/list">Loại hàng</a> / 
-            <span th:text="${item.id == null ? 'Thêm mới' : 'Chỉnh sửa'}">Thêm mới</span>
+            <a href="/admin/dashboard"><i class="fas fa-home"></i> <span th:text="#{admin.dashboard.breadcrumb}">Dashboard</span></a> / 
+            <a href="/admin/category/list" th:text="#{admin.category.breadcrumb}">Loại hàng</a> / 
+            <span th:text="${item.id == null ? #{admin.category.form.add_breadcrumb} : #{admin.category.form.edit_breadcrumb}}">Thêm mới</span>
         </div>
     </div>
 
@@ -30,7 +30,7 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom">
                 <i class="fas fa-edit me-2"></i>
-                <span th:text="${item.id == null ? 'Thông tin loại hàng mới' : 'Cập nhật thông tin loại hàng'}">Thông tin loại hàng mới</span>
+                <span th:text="${item.id == null ? #{admin.category.form.info_title} : #{admin.category.form.info_title}}">Thông tin loại hàng mới</span>
             </h5>
         </div>
 
@@ -84,14 +84,14 @@
                     <!-- Category Name -->
                     <div class="mb-3">
                         <label for="name" class="form-label">
-                            Tên loại hàng <span class="text-danger">*</span>
+                            <span th:text="#{admin.category.form.name_label}">Tên loại hàng</span> <span class="text-danger">*</span>
                         </label>
                         <input type="text" 
                                class="form-control" 
                                id="name" 
                                th:field="*{name}"
                                th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
-                               placeholder="Nhập tên loại hàng (VD: Máy Pha Cà Phê)"
+                               th:placeholder="#{admin.category.form.name_placeholder}"
                                maxlength="100"
                                required>
                         <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
@@ -128,20 +128,69 @@
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between mt-4 pt-3 border-top">
                 <a href="/admin/category/list" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại
+                    <i class="fas fa-arrow-left me-2"></i><span th:text="#{admin.category.form.back}">Quay lại</span>
                 </a>
                 <div>
+                    <!-- Delete Button (only for existing categories) -->
+                    <button th:if="${item.id != null}" 
+                            type="button" 
+                            class="btn btn-danger me-2" 
+                            onclick="confirmDeleteCategory()"
+                            title="Xóa loại hàng này"
+                            id="deleteBtn">
+                        <i class="fas fa-trash me-2"></i>Xóa loại hàng
+                    </button>
+                    
                     <button type="reset" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-redo me-2"></i>Làm mới
+                        <i class="fas fa-redo me-2"></i><span th:text="#{admin.product.form.reset}">Làm mới</span>
                     </button>
                     <button type="submit" class="btn btn-primary-custom">
-                        <i class="fas fa-save me-2"></i>Lưu loại hàng
+                        <i class="fas fa-save me-2"></i><span th:text="#{admin.category.form.save}">Lưu loại hàng</span>
                     </button>
                 </div>
             </div>
         </form>
     </div>
 </main>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade modal-delete" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Xác nhận xóa loại hàng
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="delete-message">
+                    Bạn có chắc chắn muốn xóa loại hàng <strong th:text="${item.name}">này</strong>?
+                </div>
+                <div class="delete-warning" id="deleteWarning">
+                    Hành động này không thể hoàn tác!
+                </div>
+                <div class="alert alert-danger mt-3" id="productWarning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Cảnh báo:</strong> Loại hàng này có <span id="productCount">0</span> sản phẩm. 
+                    Bạn cần xóa tất cả sản phẩm trước khi xóa loại hàng.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Hủy
+                </button>
+                <button type="button" class="btn btn-danger btn-delete" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Xóa loại hàng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     // Form validation
@@ -195,6 +244,97 @@
             });
         }
     }
+
+    // Delete category function
+    function confirmDeleteCategory() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        const categoryName = document.querySelector('input[name="name"]')?.value || 'này';
+        
+        if (!categoryId) {
+            alert('Không thể xóa loại hàng chưa được lưu!');
+            return;
+        }
+
+        // Check product count via AJAX
+        fetch('/admin/category/product-count/' + categoryId)
+            .then(response => response.json())
+            .then(productCount => {
+                document.getElementById('productCount').textContent = productCount;
+                
+                const productWarning = document.getElementById('productWarning');
+                const confirmBtn = document.getElementById('confirmDeleteBtn');
+                
+                if (productCount > 0) {
+                    productWarning.style.display = 'block';
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Không thể xóa';
+                    confirmBtn.classList.remove('btn-danger');
+                    confirmBtn.classList.add('btn-secondary');
+                } else {
+                    productWarning.style.display = 'none';
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng';
+                    confirmBtn.classList.remove('btn-secondary');
+                    confirmBtn.classList.add('btn-danger');
+                }
+                
+                // Show modal
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+                deleteModal.show();
+            })
+            .catch(error => {
+                console.error('Error checking product count:', error);
+                // Show modal anyway with warning
+                document.getElementById('productWarning').style.display = 'none';
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+                deleteModal.show();
+            });
+    }
+
+    // Load product count for delete button on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        const deleteBtn = document.getElementById('deleteBtn');
+        
+        if (categoryId && deleteBtn) {
+            // Load product count and update button text
+            fetch('/admin/category/product-count/' + categoryId)
+                .then(response => response.json())
+                .then(productCount => {
+                    if (productCount > 0) {
+                        deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng (' + productCount + ' sản phẩm)';
+                        deleteBtn.classList.remove('btn-danger');
+                        deleteBtn.classList.add('btn-warning');
+                        deleteBtn.title = 'Loại hàng này có ' + productCount + ' sản phẩm. Cần xóa sản phẩm trước.';
+                    } else {
+                        deleteBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Xóa loại hàng (0 sản phẩm)';
+                        deleteBtn.title = 'Xóa loại hàng này (không có sản phẩm nào)';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading product count:', error);
+                });
+        }
+    });
+
+    // Handle delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const categoryId = document.querySelector('input[name="id"]')?.value;
+        
+        if (categoryId && !this.disabled) {
+            // Add loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xóa...';
+            this.disabled = true;
+            
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/admin/category/delete/' + categoryId;
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
 </script>
 </body>
 </html>

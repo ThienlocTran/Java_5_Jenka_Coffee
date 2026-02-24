@@ -24,7 +24,9 @@ public class ImageServiceImpl implements ImageService {
     // Default settings for different use cases
     private static final int DEFAULT_PRODUCT_WIDTH = 800;
     private static final int DEFAULT_NEWS_WIDTH = 1200;
+    private static final int DEFAULT_AVATAR_WIDTH = 300;
     private static final float DEFAULT_QUALITY = 0.85f;
+    private static final float DEFAULT_AVATAR_QUALITY = 0.8f;
 
     @Override
     public void processImage(String filePath, int targetWidth, float quality) throws IOException {
@@ -163,5 +165,12 @@ public class ImageServiceImpl implements ImageService {
      */
     public void processNewsImage(File file) throws IOException {
         processImage(file, DEFAULT_NEWS_WIDTH, DEFAULT_QUALITY);
+    }
+    
+    /**
+     * Convenience method for processing avatar images with default settings
+     */
+    public void processAvatarImage(File file) throws IOException {
+        processImage(file, DEFAULT_AVATAR_WIDTH, DEFAULT_AVATAR_QUALITY);
     }
 }

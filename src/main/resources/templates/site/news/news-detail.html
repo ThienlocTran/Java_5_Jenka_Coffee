@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
+<body>
+
+    <!-- BREADCRUMB -->
+    <div class="bg-light py-3 mb-4">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted" th:text="#{breadcrumb.home}">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="/news/list" class="text-decoration-none text-muted" th:text="#{breadcrumb.news}">Tin tức</a></li>
+                    <li class="breadcrumb-item active text-dark fw-bold" aria-current="page" th:text="${item.title}">Chi tiết</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container mb-5" th:object="${item}">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- News Header -->
+                <article>
+                    <h1 class="fw-bold mb-3" th:text="*{title}">News Title</h1>
+                    
+                    <div class="text-muted mb-4">
+                        <i class="far fa-calendar-alt me-2"></i>
+                        <span th:text="${#temporals.format(item.createDate, 'dd/MM/yyyy HH:mm')}">01/01/2026 10:00</span>
+                    </div>
+
+                    <!-- Featured Image -->
+                    <div class="mb-4">
+                        <img th:src="@{*{image}}" 
+                             class="img-fluid rounded w-100" 
+                             alt="News Image"
+                             style="max-height: 500px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/800x500?text=No+Image'">
+                    </div>
+
+                    <!-- News Content -->
+                    <div class="news-content" style="line-height: 1.8; font-size: 1.1rem;">
+                        <p th:text="*{content}" style="white-space: pre-wrap;">
+                            News content will be displayed here...
+                        </p>
+                    </div>
+                </article>
+
+                <!-- Back Button -->
+                <div class="mt-5 pt-4 border-top">
+                    <a href="/news/list" class="btn btn-outline-dark">
+                        <i class="fas fa-arrow-left me-2"></i><span th:text="#{news.detail.back_to_list}">Quay lại danh sách</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

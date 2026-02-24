@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.repository;
 import com.springboot.jenka_coffee.dto.response.RevenueReportDTO;
 import com.springboot.jenka_coffee.dto.response.TopCustomerDTO;
 import com.springboot.jenka_coffee.entity.Order;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -47,4 +48,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "GROUP BY a.username, a.fullname " +
             "ORDER BY SUM(o.totalAmount) DESC")
     List<TopCustomerDTO> getTopCustomers(Pageable pageable);
+
+
+    List<Order> findByAccount_Username(String username);
+    Page<Order> findByAccount_Username(String username, Pageable pageable);
 }

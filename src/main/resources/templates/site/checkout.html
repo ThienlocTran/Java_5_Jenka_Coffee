@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
 <head>
     <meta charset="UTF-8">
-    <title>Thanh toán - Jenka Coffee</title>
+    <title th:text="#{checkout.page.title} + ' - Jenka Coffee'">Thanh toán - Jenka Coffee</title>
 </head>
 <body>
 <section class="py-5 bg-light">
@@ -10,13 +10,13 @@
         <!-- Breadcrumb -->
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a href="/cart/view" class="text-decoration-none text-muted">Giỏ hàng</a></li>
-                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page">Thanh toán</li>
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted" th:text="#{breadcrumb.home}">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/cart/view" class="text-decoration-none text-muted" th:text="#{breadcrumb.cart}">Giỏ hàng</a></li>
+                <li class="breadcrumb-item active text-danger fw-bold" aria-current="page" th:text="#{checkout.breadcrumb}">Thanh toán</li>
             </ol>
         </nav>
 
-        <h2 class="text-center mb-4 text-uppercase fw-bold">THANH TOÁN ĐƠN HÀNG</h2>
+        <h2 class="text-center mb-4 text-uppercase fw-bold" th:text="#{checkout.page.heading}">THANH TOÁN ĐƠN HÀNG</h2>
 
         <!-- Alert Messages -->
         <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -33,13 +33,13 @@
                         <div class="card-body p-4">
                             <h5 class="fw-bold mb-4">
                                 <i class="fas fa-shipping-fast text-danger me-2"></i>
-                                THÔNG TIN GIAO HÀNG
+                                <span th:text="#{checkout.shipping_info.heading}">THÔNG TIN GIAO HÀNG</span>
                             </h5>
 
                             <!-- Fullname -->
                             <div class="mb-3">
                                 <label for="fullname" class="form-label fw-bold">
-                                    Họ và tên <span class="text-danger">*</span>
+                                    <span th:text="#{label.fullname}">Họ và tên</span> <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" 
                                        class="form-control" 
@@ -54,7 +54,7 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="email" class="form-label fw-bold">
-                                        Email <span class="text-danger">*</span>
+                                        <span th:text="#{label.email}">Email</span> <span class="text-danger">*</span>
                                     </label>
                                     <input type="email" 
                                            class="form-control"
@@ -66,7 +66,7 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="phone" class="form-label fw-bold">
-                                        Số điện thoại <span class="text-danger">*</span>
+                                        <span th:text="#{label.phone}">Số điện thoại</span> <span class="text-danger">*</span>
                                     </label>
                                     <input type="tel" 
                                            class="form-control"
@@ -82,7 +82,7 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="province" class="form-label fw-bold">
-                                        Tỉnh/Thành phố <span class="text-danger">*</span>
+                                        <span th:text="#{label.province}">Tỉnh/Thành phố</span> <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select"
                                             th:classappend="${#fields.hasErrors('province')} ? 'is-invalid' : ''"
@@ -157,7 +157,7 @@
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="district" class="form-label fw-bold">
-                                        Quận/Huyện <span class="text-danger">*</span>
+                                        <span th:text="#{label.district}">Quận/Huyện</span> <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select"
                                             th:classappend="${#fields.hasErrors('district')} ? 'is-invalid' : ''"
@@ -169,7 +169,7 @@
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="ward" class="form-label fw-bold">
-                                        Phường/Xã <span class="text-danger">*</span>
+                                        <span th:text="#{label.ward}">Phường/Xã</span> <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select"
                                             th:classappend="${#fields.hasErrors('ward')} ? 'is-invalid' : ''"
@@ -184,7 +184,7 @@
                             <!-- Address -->
                             <div class="mb-3">
                                 <label for="address" class="form-label fw-bold">
-                                    Địa chỉ cụ thể <span class="text-danger">*</span>
+                                    <span th:text="#{label.address}">Địa chỉ cụ thể</span> <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" 
                                        class="form-control"
@@ -197,7 +197,7 @@
 
                             <!-- Note -->
                             <div class="mb-3">
-                                <label for="note" class="form-label fw-bold">Ghi chú đơn hàng (Tùy chọn)</label>
+                                <label for="note" class="form-label fw-bold" th:text="#{label.note}">Ghi chú đơn hàng (Tùy chọn)</label>
                                 <textarea class="form-control"
                                           th:classappend="${#fields.hasErrors('note')} ? 'is-invalid' : ''"
                                           id="note" 
@@ -210,7 +210,7 @@
                             <!-- Payment Method -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold">
-                                    Phương thức thanh toán <span class="text-danger">*</span>
+                                    <span th:text="#{checkout.payment_info.heading}">Phương thức thanh toán</span> <span class="text-danger">*</span>
                                 </label>
                                 <div class="border rounded p-3">
                                     <div class="form-check mb-2">
@@ -221,7 +221,7 @@
                                                id="paymentCOD">
                                         <label class="form-check-label" for="paymentCOD">
                                             <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                            <strong>Thanh toán khi nhận hàng (COD)</strong>
+                                            <strong th:text="#{checkout.payment.cod}">Thanh toán khi nhận hàng (COD)</strong>
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
@@ -232,7 +232,7 @@
                                                id="paymentBank">
                                         <label class="form-check-label" for="paymentBank">
                                             <i class="fas fa-university text-primary me-2"></i>
-                                            <strong>Chuyển khoản ngân hàng</strong>
+                                            <strong th:text="#{checkout.payment.bank}">Chuyển khoản ngân hàng</strong>
                                         </label>
                                     </div>
                                     <div class="form-check">
@@ -243,7 +243,7 @@
                                                id="paymentMomo">
                                         <label class="form-check-label" for="paymentMomo">
                                             <i class="fas fa-mobile-alt text-danger me-2"></i>
-                                            <strong>Ví điện tử MoMo</strong>
+                                            <strong th:text="#{checkout.payment.momo}">Ví điện tử MoMo</strong>
                                         </label>
                                     </div>
                                 </div>
@@ -257,9 +257,9 @@
                                        th:field="*{agreeTerms}"
                                        id="agreeTerms">
                                 <label class="form-check-label" for="agreeTerms">
-                                    Tôi đã đọc và đồng ý với 
-                                    <a href="#" class="text-danger">Điều khoản và Điều kiện</a> 
-                                    của website <span class="text-danger">*</span>
+                                    <span th:text="#{checkout.agree_terms}">Tôi đã đọc và đồng ý với</span> 
+                                    <a href="#" class="text-danger" th:text="#{checkout.terms_link}">Điều khoản và Điều kiện</a> 
+                                    <span th:text="#{checkout.agree_terms_suffix}">của website</span> <span class="text-danger">*</span>
                                 </label>
                                 <div class="text-danger small mt-1" th:if="${#fields.hasErrors('agreeTerms')}" th:errors="*{agreeTerms}"></div>
                             </div>
@@ -273,7 +273,7 @@
                         <div class="card-body p-4">
                             <h5 class="fw-bold mb-4">
                                 <i class="fas fa-shopping-bag text-danger me-2"></i>
-                                ĐƠN HÀNG CỦA BẠN
+                                <span th:text="#{checkout.order_summary.heading}">ĐƠN HÀNG CỦA BẠN</span>
                             </h5>
 
                             <!-- Cart Items -->
@@ -289,10 +289,10 @@
                                     </div>
                                     <div class="ms-3 flex-grow-1">
                                         <h6 class="mb-1 small" th:text="${item.name}">Product Name</h6>
-                                        <small class="text-muted" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' đ'">0 đ</small>
+                                        <small class="text-muted" th:text="${#numbers.formatInteger(item.price, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">0 đ</small>
                                     </div>
                                     <div class="text-end">
-                                        <strong class="text-danger" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' đ'">0 đ</strong>
+                                        <strong class="text-danger" th:text="${#numbers.formatInteger(item.price * item.quantity, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">0 đ</strong>
                                     </div>
                                 </div>
                             </div>
@@ -300,31 +300,31 @@
                             <!-- Pricing Summary -->
                             <div class="border-top pt-3">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Tạm tính:</span>
-                                    <strong th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    <span th:text="#{checkout.subtotal} + ':'">Tạm tính:</span>
+                                    <strong th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">0 đ</strong>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Phí vận chuyển:</span>
-                                    <strong class="text-success">Miễn phí</strong>
+                                    <span th:text="#{checkout.shipping} + ':'">Phí vận chuyển:</span>
+                                    <strong class="text-success" th:text="#{checkout.free_shipping}">Miễn phí</strong>
                                 </div>
                                 <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
-                                    <span>Giảm giá:</span>
-                                    <strong class="text-muted">0 đ</strong>
+                                    <span th:text="#{checkout.discount} + ':'">Giảm giá:</span>
+                                    <strong class="text-muted">0 <span th:text="${#locale.language == 'vi'} ? 'đ' : 'VND'">đ</span></strong>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <h5 class="mb-0">Tổng cộng:</h5>
-                                    <h4 class="mb-0 text-danger fw-bold" th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' đ'">0 đ</h4>
+                                    <h5 class="mb-0" th:text="#{checkout.total} + ':'">Tổng cộng:</h5>
+                                    <h4 class="mb-0 text-danger fw-bold" th:text="${#numbers.formatInteger(cartTotal, 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">0 đ</h4>
                                 </div>
 
                                 <!-- Submit Button -->
                                 <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-danger btn-lg fw-bold text-uppercase shadow">
                                         <i class="fas fa-check-circle me-2"></i>
-                                        Đặt hàng
+                                        <span th:text="#{checkout.place_order}">Đặt hàng</span>
                                     </button>
                                     <a href="/cart/view" class="btn btn-outline-secondary">
                                         <i class="fas fa-arrow-left me-2"></i>
-                                        Quay lại giỏ hàng
+                                        <span th:text="#{checkout.back_to_cart}">Quay lại giỏ hàng</span>
                                     </a>
                                 </div>
                             </div>

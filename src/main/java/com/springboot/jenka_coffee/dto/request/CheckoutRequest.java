@@ -10,39 +10,39 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CheckoutRequest {
 
-    @NotBlank(message = "Họ và tên không được để trống")
-    @Size(min = 3, max = 100, message = "Họ và tên phải từ 3-100 ký tự")
-    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "Họ và tên chỉ chứa chữ cái và khoảng trắng")
+    @NotBlank(message = "{CheckoutRequest.fullname.NotBlank}")
+    @Size(min = 3, max = 100, message = "{CheckoutRequest.fullname.Size}")
+    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "{CheckoutRequest.fullname.Pattern}")
     private String fullname;
 
-    @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email không hợp lệ")
+    @NotBlank(message = "{CheckoutRequest.email.NotBlank}")
+    @Email(message = "{CheckoutRequest.email.Email}")
     private String email;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
+    @NotBlank(message = "{CheckoutRequest.phone.NotBlank}")
     @Pattern(regexp = "^(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$", 
-             message = "Số điện thoại không hợp lệ (VD: 0912345678)")
+             message = "{CheckoutRequest.phone.Pattern}")
     private String phone;
 
-    @NotBlank(message = "Địa chỉ không được để trống")
-    @Size(min = 10, max = 255, message = "Địa chỉ phải từ 10-255 ký tự")
+    @NotBlank(message = "{CheckoutRequest.address.NotBlank}")
+    @Size(min = 10, max = 255, message = "{CheckoutRequest.address.Size}")
     private String address;
 
-    @NotBlank(message = "Vui lòng chọn Tỉnh/Thành phố")
+    @NotBlank(message = "{CheckoutRequest.province.NotBlank}")
     private String province;
 
-    @NotBlank(message = "Vui lòng chọn Quận/Huyện")
+    @NotBlank(message = "{CheckoutRequest.district.NotBlank}")
     private String district;
 
-    @NotBlank(message = "Vui lòng chọn Phường/Xã")
+    @NotBlank(message = "{CheckoutRequest.ward.NotBlank}")
     private String ward;
 
-    @NotBlank(message = "Vui lòng chọn phương thức thanh toán")
+    @NotBlank(message = "{CheckoutRequest.paymentMethod.NotBlank}")
     private String paymentMethod;
 
-    @Size(max = 500, message = "Ghi chú không được quá 500 ký tự")
+    @Size(max = 500, message = "{CheckoutRequest.note.Size}")
     private String note;
 
-    @AssertTrue(message = "Bạn phải đồng ý với điều khoản và điều kiện")
+    @AssertTrue(message = "{CheckoutRequest.agreeTerms.AssertTrue}")
     private boolean agreeTerms;
 }

@@ -53,9 +53,10 @@ public class CheckoutController {
 
     @PostMapping
     public String processCheckout(@Valid @ModelAttribute("checkoutRequest") CheckoutRequest request,
-            BindingResult bindingResult,
-            Model model,
-            RedirectAttributes redirectAttributes) {
+                                  BindingResult bindingResult,
+                                  HttpSession session, // <--- 1. THÊM THAM SỐ SESSION
+                                  Model model,
+                                  RedirectAttributes redirectAttributes) {
 
         // Kiểm tra validation errors
         if (bindingResult.hasErrors()) {
@@ -65,10 +66,18 @@ public class CheckoutController {
             return "site/checkout";
         }
 
+        // <--- 2. LẤY USER TỪ SESSION (QUAN TRỌNG)
+        Account user = (Account) session.getAttribute("user");
+
+        // Kiểm tra nếu session hết hạn hoặc chưa đăng nhập
+        if (user == null) {
+            return "redirect:/auth/login?message=Vui_long_dang_nhap_lai";
+        }
+
         try {
             // === TRANSACTIONAL CHECKOUT ===
-            // Steps: Validate → Create Order → Deduct Inventory → Clear Cart
-            Order order = orderService.checkout(request);
+            // <--- 3. TRUYỀN USER VÀO HÀM CHECKOUT
+            Order order = orderService.checkout(request, user);
 
             // Thông báo thành công
             redirectAttributes.addFlashAttribute("success", "Đặt hàng thành công! Mã đơn hàng: #" + order.getId());
@@ -77,19 +86,22 @@ public class CheckoutController {
             return "redirect:/checkout/success";
 
         } catch (InsufficientStockException e) {
-            // Lỗi thiếu hàng trong kho - hiển thị thông báo chi tiết
+            // Lỗi thiếu hàng trong kho
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             redirectAttributes.addFlashAttribute("checkoutRequest", request);
             return "redirect:/checkout";
 
         } catch (IllegalStateException e) {
-            // Lỗi nghiệp vụ khác (giỏ hàng trống, sản phẩm không tồn tại...)
+            // Lỗi giỏ hàng trống...
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/cart/view";
 
         } catch (Exception e) {
+            // In lỗi ra console để dễ debug
+            e.printStackTrace();
+
             // Lỗi hệ thống
-            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại!");
+            redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra khi đặt hàng: " + e.getMessage());
             redirectAttributes.addFlashAttribute("checkoutRequest", request);
             return "redirect:/checkout";
         }
@@ -99,4 +111,5 @@ public class CheckoutController {
     public String checkoutSuccess() {
         return "site/checkout-success";
     }
+
 }
