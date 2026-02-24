@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CategoryRequest {
 
-    @NotBlank(message = "Mã loại hàng không được để trống")
-    @Size(max = 10, message = "Mã loại hàng tối đa 10 ký tự")
-    @Pattern(regexp = "^[A-Z0-9_]+$", message = "Mã loại hàng chỉ chứa chữ in hoa, số và dấu gạch dưới")
+    @NotBlank(message = "{CategoryRequest.id.NotBlank}")
+    @Size(max = 10, message = "{CategoryRequest.id.Size}")
+    @Pattern(regexp = "^[A-Z0-9_]+$", message = "{CategoryRequest.id.Pattern}")
     private String id;
 
-    @NotBlank(message = "Tên loại hàng không được để trống")
-    @Size(min = 3, max = 100, message = "Tên loại hàng phải từ 3-100 ký tự")
+    @NotBlank(message = "{CategoryRequest.name.NotBlank}")
+    @Size(min = 3, max = 100, message = "{CategoryRequest.name.Size}")
     private String name;
 
     private String icon;

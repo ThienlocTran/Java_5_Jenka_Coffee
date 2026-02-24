@@ -7,8 +7,8 @@
         <!-- Breadcrumb -->
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a href="/product/list" class="text-decoration-none text-muted">Sản phẩm</a></li>
+                <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-muted" th:text="#{breadcrumb.home}">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/product/list" class="text-decoration-none text-muted" th:text="#{breadcrumb.products}">Sản phẩm</a></li>
                 <li class="breadcrumb-item active text-danger fw-bold" aria-current="page" th:text="*{name}">Tên sản phẩm</li>
             </ol>
         </nav>
@@ -27,20 +27,20 @@
             <div class="col-lg-6">
                 <div class="h-100 d-flex flex-column justify-content-center">
                     <h5 class="text-uppercase text-muted fw-bold mb-2" th:if="*{category != null}" th:text="*{category.name}">Category</h5>
-                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:unless="*{category != null}">Chưa phân loại</h5>
+                    <h5 class="text-uppercase text-muted fw-bold mb-2" th:unless="*{category != null}" th:text="#{product.detail.uncategorized}">Chưa phân loại</h5>
                     
                     <h1 class="display-5 fw-bold mb-3" th:text="*{name}">Tên sản phẩm tại đây</h1>
                     
                     <div class="mb-4">
-                         <span class="fs-2 text-danger fw-bold me-2" th:if="*{price != null}" th:text="*{#numbers.formatDecimal(price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">1,500,000 ₫</span>
-                         <span class="fs-2 text-danger fw-bold me-2" th:unless="*{price != null}">Liên hệ</span>
+                         <span class="fs-2 text-danger fw-bold me-2" th:if="*{price != null}" th:text="*{#numbers.formatDecimal(price, 0, 'COMMA', 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? '₫' : 'VND')">1,500,000 ₫</span>
+                         <span class="fs-2 text-danger fw-bold me-2" th:unless="*{price != null}" th:text="#{product.detail.contact_price}">Liên hệ</span>
                          <!-- Fake original price/discount if needed 
                          <span class="text-decoration-line-through text-muted fs-5">2,000,000 ₫</span>
                          -->
                     </div>
 
                     <div class="mb-4">
-                        <p class="text-muted lh-lg">
+                        <p class="text-muted lh-lg" th:text="#{product.detail.description_placeholder}">
                             Mô tả ngắn về sản phẩm sẽ hiển thị ở đây. Đây là không gian để giới thiệu các tính năng nổi bật, chất lượng, và lý do tại sao khách hàng nên mua sản phẩm này. Hãy viết thật hấp dẫn!
                         </p>
                     </div>
@@ -48,18 +48,18 @@
                     <!-- Actions -->
                     <div class="d-flex gap-3 mb-5">
                         <a href="#" class="btn btn-outline-dark btn-lg px-4 rounded-pill flex-grow-1 fw-bold btn-add-to-cart" th:data-id="*{id}">
-                            <i class="fas fa-shopping-cart me-2"></i> Thêm giỏ hàng
+                            <i class="fas fa-shopping-cart me-2"></i> <span th:text="#{product.detail.add_to_cart}">Thêm giỏ hàng</span>
                         </a>
-                        <a th:href="@{|/checkout/now/${item.id}|}" class="btn btn-danger btn-lg px-4 rounded-pill flex-grow-1 fw-bold">
+                        <a th:href="@{|/checkout/now/${item.id}|}" class="btn btn-danger btn-lg px-4 rounded-pill flex-grow-1 fw-bold" th:text="#{product.detail.buy_now}">
                             Mua ngay
                         </a>
                     </div>
                     
                     <!-- Additional Info -->
                     <div class="d-flex gap-4 text-muted small">
-                        <div><i class="fas fa-check-circle text-success me-1"></i> Chính hãng 100%</div>
-                        <div><i class="fas fa-shipping-fast text-success me-1"></i> Miễn phí vận chuyển</div>
-                        <div><i class="fas fa-shield-alt text-success me-1"></i> Bảo hành 12 tháng</div>
+                        <div><i class="fas fa-check-circle text-success me-1"></i> <span th:text="#{product.detail.authentic}">Chính hãng 100%</span></div>
+                        <div><i class="fas fa-shipping-fast text-success me-1"></i> <span th:text="#{product.detail.free_shipping}">Miễn phí vận chuyển</span></div>
+                        <div><i class="fas fa-shield-alt text-success me-1"></i> <span th:text="#{product.detail.warranty}">Bảo hành 12 tháng</span></div>
                     </div>
                 </div>
             </div>
@@ -71,10 +71,10 @@
 <section class="py-5">
     <div class="container">
         <div class="d-flex align-items-center justify-content-between mb-4">
-            <h3 class="fw-bold m-0 position-relative link-hover-effect">
+            <h3 class="fw-bold m-0 position-relative link-hover-effect" th:text="#{product.detail.related}">
                 Hàng cùng loại
             </h3>
-            <a th:if="*{category != null}" th:href="@{|/product/list?cid=*{category.id}|}" class="btn btn-outline-danger rounded-pill px-4 btn-sm">Xem tất cả</a>
+            <a th:if="*{category != null}" th:href="@{|/product/list?cid=*{category.id}|}" class="btn btn-outline-danger rounded-pill px-4 btn-sm" th:text="#{product.detail.view_all}">Xem tất cả</a>
         </div>
         
         <div class="position-relative">
@@ -99,10 +99,10 @@
                             
                             <!-- Hover Actions -->
                             <div class="product-overlay d-flex justify-content-center align-items-center gap-2">
-                                 <a href="#" class="btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart" th:data-id="${p.id}" title="Thêm vào giỏ">
+                                 <a href="#" class="btn btn-light rounded-circle shadow-sm p-2 btn-add-to-cart" th:data-id="${p.id}" th:title="#{product.add_to_cart}">
                                     <i class="fas fa-shopping-cart"></i>
                                 </a>
-                                <a th:href="@{|/product/detail/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" title="Xem chi tiết">
+                                <a th:href="@{|/product/detail/${p.id}|}" class="btn btn-light rounded-circle shadow-sm p-2" th:title="#{product.detail.view_detail}">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </div>
@@ -116,7 +116,7 @@
                                 </a>
                             </h5>
                 <div class="d-flex justify-content-center gap-2 align-items-baseline">
-                                <span class="text-danger fw-bold fs-5" th:if="${p.price != null}" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">123,000 ₫</span>
+                                <span class="text-danger fw-bold fs-5" th:if="${p.price != null}" th:text="${#numbers.formatDecimal(p.price, 0, 'COMMA', 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? '₫' : 'VND')">123,000 ₫</span>
                             </div>
                         </div>
                     </div>

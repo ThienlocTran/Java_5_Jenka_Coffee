@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: html_content(~{::body})}">
 <head>
     <meta charset="UTF-8">
-    <title>Đặt hàng thành công - Jenka Coffee</title>
+    <title th:text="#{checkout.success.title} + ' - Jenka Coffee'">Đặt hàng thành công - Jenka Coffee</title>
 </head>
 <body>
 <section class="py-5 bg-light">
@@ -23,7 +23,7 @@
                     </div>
 
                     <!-- Success Message -->
-                    <h2 class="text-success fw-bold mb-3">ĐẶT HÀNG THÀNH CÔNG!</h2>
+                    <h2 class="text-success fw-bold mb-3" th:text="#{checkout.success.title}">ĐẶT HÀNG THÀNH CÔNG!</h2>
                     
                     <div th:if="${success}" class="alert alert-success border-0 mb-4">
                         <i class="fas fa-check-circle me-2"></i>
@@ -31,29 +31,29 @@
                     </div>
 
                     <p class="text-muted mb-4">
-                        Cảm ơn bạn đã đặt hàng tại <strong class="text-danger">Jenka Coffee</strong>.<br>
-                        Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất để xác nhận đơn hàng.
+                        <span th:text="#{checkout.success.message}">Cảm ơn bạn đã đặt hàng tại</span> <strong class="text-danger">Jenka Coffee</strong>.<br>
+                        <span th:text="#{checkout.success.contact_message}">Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất để xác nhận đơn hàng.</span>
                     </p>
 
                     <!-- Order Info -->
                     <div class="bg-light rounded p-4 mb-4 text-start">
                         <h5 class="fw-bold mb-3">
                             <i class="fas fa-info-circle text-primary me-2"></i>
-                            Thông tin đơn hàng
+                            <span th:text="#{checkout.success.order_info}">Thông tin đơn hàng</span>
                         </h5>
                         <div class="row">
                             <div class="col-md-6 mb-2">
-                                <small class="text-muted">Mã đơn hàng:</small><br>
-                                <strong class="text-danger" th:text="${orderId != null ? '#' + orderId : 'Đang xử lý'}">Đang xử lý</strong>
+                                <small class="text-muted" th:text="#{checkout.success.order_code} + ':'">Mã đơn hàng:</small><br>
+                                <strong class="text-danger" th:text="${orderId != null ? '#' + orderId : #{checkout.success.processing}}">Đang xử lý</strong>
                             </div>
                             <div class="col-md-6 mb-2">
-                                <small class="text-muted">Trạng thái:</small><br>
-                                <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                                <small class="text-muted" th:text="#{label.status} + ':'">Trạng thái:</small><br>
+                                <span class="badge bg-warning text-dark" th:text="#{checkout.success.pending}">Chờ xác nhận</span>
                             </div>
                             <div class="col-12 mt-2">
                                 <small class="text-muted">
                                     <i class="fas fa-envelope me-1"></i>
-                                    Email xác nhận đã được gửi đến hộp thư của bạn.
+                                    <span th:text="#{checkout.success.email_sent}">Email xác nhận đã được gửi đến hộp thư của bạn.</span>
                                 </small>
                             </div>
                         </div>
@@ -63,11 +63,11 @@
                     <div class="d-grid gap-2 d-md-flex justify-content-md-center">
                         <a href="/home" class="btn btn-danger btn-lg px-5 fw-bold">
                             <i class="fas fa-home me-2"></i>
-                            Về trang chủ
+                            <span th:text="#{checkout.success.back_home}">Về trang chủ</span>
                         </a>
                         <a href="/product/list" class="btn btn-outline-secondary btn-lg px-5">
                             <i class="fas fa-shopping-bag me-2"></i>
-                            Tiếp tục mua sắm
+                            <span th:text="#{cart.continue_shopping}">Tiếp tục mua sắm</span>
                         </a>
                     </div>
 
@@ -75,7 +75,7 @@
                     <div class="mt-5 pt-4 border-top">
                         <p class="text-muted small mb-2">
                             <i class="fas fa-headset me-2"></i>
-                            Cần hỗ trợ? Liên hệ với chúng tôi:
+                            <span th:text="#{checkout.success.support}">Cần hỗ trợ? Liên hệ với chúng tôi:</span>
                         </p>
                         <p class="mb-0">
                             <a href="tel:0817909090" class="text-decoration-none text-danger fw-bold me-3">

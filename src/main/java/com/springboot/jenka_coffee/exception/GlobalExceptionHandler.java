@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.exception;
 
+import com.springboot.jenka_coffee.util.MessageHelper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,11 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private final MessageHelper messageHelper;
+
+    public GlobalExceptionHandler(MessageHelper messageHelper) {
+        this.messageHelper = messageHelper;
+    }
 
     /**
      * Handle business logic exceptions - Redirect with flash message
@@ -50,7 +56,7 @@ public class GlobalExceptionHandler {
         String errorMessage = ex.getBindingResult().getAllErrors().stream()
                 .findFirst()
                 .map(error -> error.getDefaultMessage())
-                .orElse("Dữ liệu không hợp lệ");
+                .orElse(messageHelper.getMessage("message.error"));
         
         redirectAttributes.addFlashAttribute("error", errorMessage);
         return getRedirectUrl(request);
