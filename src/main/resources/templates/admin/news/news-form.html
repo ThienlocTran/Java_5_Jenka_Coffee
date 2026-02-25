@@ -4,11 +4,11 @@
 <main>
     <!-- Page Header -->
     <div class="page-header">
-        <h1 class="page-title" th:text="${item.id == null ? 'Thêm tin tức mới' : 'Chỉnh sửa tin tức'}">Thêm tin tức mới</h1>
+        <h1 class="page-title" th:text="${item?.id == null ? 'Thêm tin tức mới' : 'Chỉnh sửa tin tức'}">Thêm tin tức mới</h1>
         <div class="page-breadcrumb">
             <a href="/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a> / 
             <a href="/admin/news/list">Tin tức</a> / 
-            <span th:text="${item.id == null ? 'Thêm mới' : 'Chỉnh sửa'}">Thêm mới</span>
+            <span th:text="${item?.id == null ? 'Thêm mới' : 'Chỉnh sửa'}">Thêm mới</span>
         </div>
     </div>
 
@@ -17,7 +17,7 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom">
                 <i class="fas fa-newspaper me-2"></i>
-                <span th:text="${item.id == null ? 'Thông tin tin tức mới' : 'Cập nhật thông tin'}">Thông tin tin tức mới</span>
+                <span th:text="${item?.id == null ? 'Thông tin tin tức mới' : 'Cập nhật thông tin'}">Thông tin tin tức mới</span>
             </h5>
         </div>
 

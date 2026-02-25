@@ -241,39 +241,22 @@
 
             <!-- News Grid -->
             <div class="col-lg-10">
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                    <!-- Article 1 -->
-                    <div class="col">
-                        <div class="news-card">
-                            <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_02.jpg}" class="news-img" alt="News 1">
-                            <h6 class="news-title">Khám phá hạt hướng dương Jenka - Sức khoẻ từ tự nhiên</h6>
-                            <p class="news-summary">Chào mừng bạn đến với Jenka, nơi mang đến những hạt hướng dương chất lượng cao, giàu dinh dưỡng và hoàn toàn tự nhiên...</p>
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4" th:if="${not #lists.isEmpty(recentNews)}">
+                    <!-- Dynamic Article -->
+                    <div class="col" th:each="article : ${recentNews}">
+                        <div class="news-card h-100">
+                            <!-- Link to article detail if available, currently just # -->
+                            <a href="#" class="text-decoration-none text-dark">
+                                <img th:src="@{${article.image}}" class="news-img" th:alt="${article.title}" onerror="this.src='/images/logo/logo.png'">
+                                <h6 class="news-title mt-2 fw-bold" th:text="${article.title}">Tiêu đề</h6>
+                                <p class="news-summary text-muted mt-1 small" th:text="${#strings.abbreviate(article.content, 120)}">Nội dung...</p>
+                            </a>
                         </div>
                     </div>
-                    <!-- Article 2 -->
-                    <div class="col">
-                        <div class="news-card">
-                            <img th:src="@{/images/product/ca_phe_va_do_an_vat/cafe_an_vat_01.jpg}" class="news-img" alt="News 2">
-                            <h6 class="news-title">Khám Phá Hương Vị Đặc Biệt Của Cafe Jenka - Thức Uống...</h6>
-                            <p class="news-summary">Chào mừng bạn đến với thế giới của cafe Jenka, nơi mà từng hạt cafe mang trong mình một câu chuyện riêng...</p>
-                        </div>
-                    </div>
-                    <!-- Article 3 -->
-                    <div class="col">
-                        <div class="news-card">
-                            <img th:src="@{/images/banner/banner1.jpg}" class="news-img" alt="News 3">
-                            <h6 class="news-title">Dịch Vụ Sửa Chữa & Mua Bán Máy Xay, Máy Pha Cà Phê - ...</h6>
-                            <p class="news-summary">Chào mừng bạn đến với dịch vụ sửa chữa và mua bán máy xay, máy pha cà phê chuyên nghiệp của chúng tôi...</p>
-                        </div>
-                    </div>
-                    <!-- Article 4 -->
-                    <div class="col">
-                        <div class="news-card">
-                            <img th:src="@{/images/banner/banner2.jpg}" class="news-img" alt="News 4">
-                            <h6 class="news-title">Setup và Đào Tạo Vận Hành Quán Cà Phê Cùng Sentosy...</h6>
-                            <p class="news-summary">Kinh doanh quán cà phê đang trở thành một xu hướng phổ biến tại Việt Nam, và việc sở hữu một quán cà phê thành công...</p>
-                        </div>
-                    </div>
+                </div>
+                
+                <div th:if="${#lists.isEmpty(recentNews)}" class="text-center py-5">
+                    <p class="text-muted">Chưa có bài viết nào.</p>
                 </div>
 
                 <!-- Pagination -->

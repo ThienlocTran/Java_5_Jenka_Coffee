@@ -15,17 +15,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.springboot.jenka_coffee.service.NewsService;
 
 @Controller
 public class HomeController {
 
     final ProductService productService;
     final CategoryService categoryService;
+    final NewsService newsService;
 
     public HomeController(ProductService productService,
-            CategoryService categoryService) {
+            CategoryService categoryService,
+            NewsService newsService) {
         this.productService = productService;
         this.categoryService = categoryService;
+        this.newsService = newsService;
     }
 
     @RequestMapping("/home")
@@ -51,6 +55,11 @@ public class HomeController {
         // Mocking related products (4 items)
         Collections.shuffle(randomList);
         model.addAttribute("relatedItems", randomList.stream().limit(4).collect(Collectors.toList()));
+
+        // Real news (4 latest)
+        model.addAttribute("recentNews", newsService.findAvailableNews().stream()
+                .sorted((n1, n2) -> n2.getCreateDate().compareTo(n1.getCreateDate()))
+                .limit(4).collect(Collectors.toList()));
 
         return "index";
     }
