@@ -72,7 +72,8 @@
                         <th style="width: 150px;" th:text="#{admin.product.actions}">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tableBody">
+                    <th:block th:fragment="productRows">
                     <tr th:if="${#lists.isEmpty(items)}">
                         <td colspan="8" class="text-center py-5">
                             <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
@@ -134,41 +135,85 @@
                             </div>
                         </td>
                     </tr>
+                    </th:block>
                 </tbody>
             </table>
         </div>
 
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-3" th:if="${totalPages > 0}">
-            <div class="text-muted small">
-                <span th:text="#{admin.product.showing}">Hiển thị</span> 
-                <strong th:text="${items.size()}">0</strong> / 
-                <strong th:text="${totalElements}">0</strong> 
-                <span th:text="#{admin.product.products_count}">sản phẩm</span>
+        <!-- Loading indicator -->
+        <div id="loadingSpinner" class="text-center my-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
             </div>
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                        <a class="page-link" th:href="@{/admin/product/list(p=${currentPage - 1})}">
-                            <i class="fas fa-chevron-left"></i>
-                        </a>
-                    </li>
-                    <li class="page-item" 
-                        th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
-                        th:classappend="${i == currentPage} ? 'active'">
-                        <a class="page-link" th:href="@{/admin/product/list(p=${i})}" th:text="${i + 1}">1</a>
-                    </li>
-                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
-                        <a class="page-link" th:href="@{/admin/product/list(p=${currentPage + 1})}">
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <div class="text-muted mt-2 small">Đang tải thêm sản phẩm...</div>
+        </div>
+        
+        <!-- Invisible trigger for IntersectionObserver -->
+        <div id="loadMoreTrigger" style="height: 10px; width: 100%;"></div>
+
+        <!-- Pagination info (Updated to show total only) -->
+        <div class="d-flex justify-content-between align-items-center mt-3" th:if="${totalElements > 0}">
+            <div class="text-muted small">
+                Tổng cộng <strong th:text="${totalElements}">0</strong> <span th:text="#{admin.product.products_count}">sản phẩm</span>
+            </div>
         </div>
     </div>
     
+    </div>
+    
     <script src="/js/admin-filter.js"></script>
+    <script>
+        // Lazy Loading implementation
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentPage = 2; // API uses size=5, offset=page*5. Initial load was size=10, so starting at page=2 skips the first 10 items.
+            let isLoading = false;
+            let hasMore = true;
+            
+            const trigger = document.getElementById('loadMoreTrigger');
+            const spinner = document.getElementById('loadingSpinner');
+            const tbody = document.getElementById('tableBody');
+            
+            // Intersection Observer setup
+            const observerInfo = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !isLoading && hasMore) {
+                    loadMoreProducts();
+                }
+            }, { rootMargin: '100px' });
+            
+            if (trigger) {
+                observerInfo.observe(trigger);
+            }
+            
+            function loadMoreProducts() {
+                isLoading = true;
+                spinner.style.display = 'block';
+                
+                fetch(`/admin/product/fragment/list?p=${currentPage}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.text();
+                    })
+                    .then(html => {
+                        if (html.trim() === '') {
+                            hasMore = false; // no more data
+                            spinner.style.display = 'none';
+                            return;
+                        }
+                        
+                        // Append the new rows
+                        tbody.insertAdjacentHTML('beforeend', html);
+                        currentPage++;
+                        isLoading = false;
+                        spinner.style.display = 'none';
+                    })
+                    .catch(err => {
+                        console.error('Failed to load more products:', err);
+                        isLoading = false;
+                        spinner.style.display = 'none';
+                    });
+            }
+        });
+    </script>
 </main>
 </body>
 </html>

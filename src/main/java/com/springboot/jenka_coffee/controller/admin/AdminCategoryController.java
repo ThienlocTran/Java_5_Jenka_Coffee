@@ -12,6 +12,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Controller
 @RequestMapping("/admin/category")
@@ -28,9 +32,25 @@ public class AdminCategoryController {
      */
     @GetMapping("/list")
     public String listCategories(Model model) {
-        List<Category> categories = categoryService.findAll();
-        model.addAttribute("categories", categories);
+        // Initial load: 10 items
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "id"));
+        Page<Category> categoryPage = categoryService.findAllPaginated(pageable);
+        model.addAttribute("categories", categoryPage.getContent());
+        model.addAttribute("totalElements", categoryPage.getTotalElements());
         return "admin/categories/category-index";
+    }
+
+    /**
+     * Lazy load HTML fragment
+     */
+    @GetMapping("/fragment/list")
+    public String loadMoreCategories(@RequestParam(value = "p", defaultValue = "2") int page, Model model) {
+        // Offset logic: initial load 10 items. Our fragment size is 5.
+        // Therefore, page * size => 2 * 5 = 10 (items 10-14).
+        Pageable pageable = PageRequest.of(page, 5, Sort.by(Sort.Direction.DESC, "id"));
+        Page<Category> categoryPage = categoryService.findAllPaginated(pageable);
+        model.addAttribute("categories", categoryPage.getContent());
+        return "admin/categories/category-index :: categoryRows";
     }
 
     /**

@@ -4,9 +4,13 @@ import com.springboot.jenka_coffee.dto.request.CategoryRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CategoryService {
     List<Category> findAll();
+
+    Page<Category> findAllPaginated(Pageable pageable);
 
     Category findById(String id);
 

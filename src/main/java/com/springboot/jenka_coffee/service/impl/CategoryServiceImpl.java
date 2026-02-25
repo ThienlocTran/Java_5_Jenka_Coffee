@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @Transactional
@@ -38,6 +40,18 @@ public class CategoryServiceImpl implements CategoryService {
             }
         });
         return categories;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Category> findAllPaginated(Pageable pageable) {
+        Page<Category> categoryPage = categoryRepository.findAll(pageable);
+        categoryPage.getContent().forEach(cat -> {
+            if (cat.getProducts() != null) {
+                cat.getProducts().size();
+            }
+        });
+        return categoryPage;
     }
 
     @Override
@@ -114,7 +128,7 @@ public class CategoryServiceImpl implements CategoryService {
     public Category createCategory(CategoryRequest request) {
         // Normalize data
         request.normalize();
-        
+
         // Check duplicate
         if (categoryRepository.existsById(request.getId())) {
             throw new DuplicateResourceException(
@@ -122,13 +136,13 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category category = request.toEntity();
-        
+
         // Set icon from predefined list if not provided
         if (category.getIcon() == null || category.getIcon().isEmpty()) {
             Map<String, String> icons = getCategoryIcons();
             category.setIcon(icons.get(category.getId()));
         }
-        
+
         return categoryRepository.save(category);
     }
 
@@ -141,7 +155,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         // Update fields from request
         existing.setName(request.getName());
-        
+
         // Update icon if provided, otherwise keep existing or set from predefined list
         if (request.getIcon() != null && !request.getIcon().isEmpty()) {
             existing.setIcon(request.getIcon());

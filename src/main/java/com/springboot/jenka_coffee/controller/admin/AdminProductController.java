@@ -29,15 +29,26 @@ public class AdminProductController {
 
     // 1. Admin List View
     @GetMapping("/list")
-    public String index(Model model, @RequestParam(value = "p", defaultValue = "0") int page) {
-        Pageable pageable = PageRequest.of(page, 20, Sort.by(Sort.Direction.DESC, "createDate"));
+    public String index(Model model) {
+        // Initial load: 10 items
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createDate"));
         Page<Product> productPage = productService.findAllPaginated(pageable);
         model.addAttribute("productPage", productPage);
         model.addAttribute("items", productPage.getContent());
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", productPage.getTotalPages());
         model.addAttribute("totalElements", productPage.getTotalElements());
         return "admin/products/list"; // Admin table view
+    }
+
+    // Lazy load API returning HTML fragment
+    @GetMapping("/fragment/list")
+    public String loadMore(@RequestParam(value = "p", defaultValue = "2") int page, Model model) {
+        // Offset logic: initial load was 10. Our fragment size is 5.
+        // Therefore, page 2 of size 5 gives items 10-14, which naturally follows the
+        // first 10 items.
+        Pageable pageable = PageRequest.of(page, 5, Sort.by(Sort.Direction.DESC, "createDate"));
+        Page<Product> productPage = productService.findAllPaginated(pageable);
+        model.addAttribute("items", productPage.getContent());
+        return "admin/products/list :: productRows";
     }
 
     // 2. Create Form
