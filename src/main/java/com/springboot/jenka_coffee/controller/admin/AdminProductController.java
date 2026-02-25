@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Controller
 @RequestMapping("/admin/product")
@@ -26,9 +29,14 @@ public class AdminProductController {
 
     // 1. Admin List View
     @GetMapping("/list")
-    public String index(Model model) {
-        List<Product> list = productService.findAll();
-        model.addAttribute("items", list);
+    public String index(Model model, @RequestParam(value = "p", defaultValue = "0") int page) {
+        Pageable pageable = PageRequest.of(page, 20, Sort.by(Sort.Direction.DESC, "createDate"));
+        Page<Product> productPage = productService.findAllPaginated(pageable);
+        model.addAttribute("productPage", productPage);
+        model.addAttribute("items", productPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", productPage.getTotalPages());
+        model.addAttribute("totalElements", productPage.getTotalElements());
         return "admin/products/list"; // Admin table view
     }
 

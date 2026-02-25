@@ -139,20 +139,29 @@
         </div>
 
         <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="d-flex justify-content-between align-items-center mt-3" th:if="${totalPages > 0}">
             <div class="text-muted small">
-                <span th:text="#{admin.product.showing}">Hiển thị</span> <strong th:text="${#lists.size(items)}">0</strong> <span th:text="#{admin.product.products_count}">sản phẩm</span>
+                <span th:text="#{admin.product.showing}">Hiển thị</span> 
+                <strong th:text="${items.size()}">0</strong> / 
+                <strong th:text="${totalElements}">0</strong> 
+                <span th:text="#{admin.product.products_count}">sản phẩm</span>
             </div>
             <nav>
                 <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#"><i class="fas fa-chevron-left"></i></a>
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/product/list(p=${currentPage - 1})}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
                     </li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#"><i class="fas fa-chevron-right"></i></a>
+                    <li class="page-item" 
+                        th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
+                        th:classappend="${i == currentPage} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/product/list(p=${i})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/product/list(p=${currentPage + 1})}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
                     </li>
                 </ul>
             </nav>

@@ -4,11 +4,15 @@
 <main>
     <!-- Page Header -->
     <div class="page-header">
-        <h1 class="page-title" th:text="${item.id == null ? #{admin.category.form.add_title} : #{admin.category.form.edit_title}}">Thêm loại hàng mới</h1>
+        <h1 class="page-title">
+            <span th:if="${item.id == null}" th:text="#{admin.category.form.add_title}">Thêm loại hàng mới</span>
+            <span th:unless="${item.id == null}" th:text="#{admin.category.form.edit_title}">Cập nhật loại hàng</span>
+        </h1>
         <div class="page-breadcrumb">
             <a href="/admin/dashboard"><i class="fas fa-home"></i> <span th:text="#{admin.dashboard.breadcrumb}">Dashboard</span></a> / 
             <a href="/admin/category/list" th:text="#{admin.category.breadcrumb}">Loại hàng</a> / 
-            <span th:text="${item.id == null ? #{admin.category.form.add_breadcrumb} : #{admin.category.form.edit_breadcrumb}}">Thêm mới</span>
+            <th:block th:if="${item.id == null}" th:text="#{admin.category.form.add_breadcrumb}">Thêm mới</th:block>
+            <th:block th:unless="${item.id == null}" th:text="#{admin.category.form.edit_breadcrumb}">Cập nhật</th:block>
         </div>
     </div>
 
@@ -30,7 +34,7 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom">
                 <i class="fas fa-edit me-2"></i>
-                <span th:text="${item.id == null ? #{admin.category.form.info_title} : #{admin.category.form.info_title}}">Thông tin loại hàng mới</span>
+                <span th:text="#{admin.category.form.info_title}">Thông tin loại hàng mới</span>
             </h5>
         </div>
 
