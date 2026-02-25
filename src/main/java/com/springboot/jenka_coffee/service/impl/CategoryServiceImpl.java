@@ -31,7 +31,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public List<Category> findAll() {
         List<Category> categories = categoryRepository.findAll();
-        System.out.println("=== CategoryService.findAll() returned: " + categories.size() + " categories");
         // Initialize products collection để tránh lazy loading exception
         categories.forEach(cat -> {
             if (cat.getProducts() != null) {
