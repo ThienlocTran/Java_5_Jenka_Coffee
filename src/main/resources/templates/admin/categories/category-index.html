@@ -143,22 +143,26 @@
             </table>
         </div>
 
-        <!-- Loading indicator -->
-        <div id="loadingSpinner" class="text-center my-4" style="display: none;">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Đang tải...</span>
-            </div>
-            <div class="text-muted mt-2 small">Đang tải thêm danh mục...</div>
-        </div>
-        
-        <!-- Invisible trigger for IntersectionObserver -->
-        <div id="loadMoreTrigger" style="height: 10px; width: 100%;"></div>
-
-        <!-- Pagination info -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
+        <!-- Pagination info & controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3" th:if="${totalPages > 0}">
             <div class="text-muted small">
-                Tổng cộng <strong th:text="${totalElements}">0</strong> <span th:text="#{admin.category.categories_count}">loại hàng</span>
+                Hiển thị trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages}">1</strong> 
+                (Tổng <strong th:text="${totalElements}">0</strong> loại hàng)
             </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/category/list(p=${currentPage - 1})}"><i class="fas fa-chevron-left"></i></a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
+                        th:classappend="${currentPage == i} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/category/list(p=${i})}" th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/category/list(p=${currentPage + 1})}"><i class="fas fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 
@@ -279,56 +283,6 @@
     </script>
     
     <script src="/js/admin-filter.js"></script>
-    <script>
-        // Lazy Loading implementation for Categories
-        document.addEventListener('DOMContentLoaded', function() {
-            let currentPage = 2; // Start from offset 10 (2 * 5)
-            let isLoading = false;
-            let hasMore = true;
-            
-            const trigger = document.getElementById('loadMoreTrigger');
-            const spinner = document.getElementById('loadingSpinner');
-            const tbody = document.getElementById('tableBody');
-            
-            const observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && !isLoading && hasMore) {
-                    loadMoreCategories();
-                }
-            }, { rootMargin: '100px' });
-            
-            if (trigger) {
-                observer.observe(trigger);
-            }
-            
-            function loadMoreCategories() {
-                isLoading = true;
-                spinner.style.display = 'block';
-                
-                fetch(`/admin/category/fragment/list?p=${currentPage}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response code: ' + response.status);
-                        return response.text();
-                    })
-                    .then(html => {
-                        if (html.trim() === '') {
-                            hasMore = false;
-                            spinner.style.display = 'none';
-                            return;
-                        }
-                        
-                        tbody.insertAdjacentHTML('beforeend', html);
-                        currentPage++;
-                        isLoading = false;
-                        spinner.style.display = 'none';
-                    })
-                    .catch(error => {
-                        console.error('Failed to load more categories:', error);
-                        isLoading = false;
-                        spinner.style.display = 'none';
-                    });
-            }
-        });
-    </script>
 </main>
 </body>
 </html>
