@@ -17,8 +17,8 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <div class="text-muted small mb-1" th:text="#{admin.dashboard.total_revenue}">Tổng doanh thu</div>
-                        <h3 class="mb-0 fw-bold" style="color: #212529;">125.500.000 <span th:text="${#locale.language == 'vi'} ? 'đ' : 'VND'">đ</span></h3>
-                        <small style="color: #D32F2F;"><i class="fas fa-arrow-up"></i> 12% <span th:text="#{admin.dashboard.vs_last_month}">tháng trước</span></small>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;" th:text="${#numbers.formatDecimal(totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">125.500.000 đ</h3>
+                        <small style="color: #D32F2F;"><i class="fas fa-arrow-up"></i> <span th:text="${revenueGrowth}">12</span>% <span th:text="#{admin.dashboard.vs_last_month}">tháng trước</span></small>
                     </div>
                     <div class="ms-3">
                         <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -34,8 +34,8 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <div class="text-muted small mb-1" th:text="#{admin.dashboard.new_orders}">Đơn hàng mới</div>
-                        <h3 class="mb-0 fw-bold" style="color: #212529;">45</h3>
-                        <small style="color: #2196F3;"><i class="fas fa-arrow-up"></i> 8 <span th:text="#{admin.dashboard.orders_today}">đơn hôm nay</span></small>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;" th:text="${totalOrders}">45</h3>
+                        <small style="color: #2196F3;"><i class="fas fa-arrow-up"></i> <span th:text="${newOrdersToday}">8</span> <span th:text="#{admin.dashboard.orders_today}">đơn hôm nay</span></small>
                     </div>
                     <div class="ms-3">
                         <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -51,8 +51,8 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <div class="text-muted small mb-1" th:text="#{admin.dashboard.products}">Sản phẩm</div>
-                        <h3 class="mb-0 fw-bold" style="color: #212529;">156</h3>
-                        <small style="color: #FF9800;"><i class="fas fa-box"></i> 12 <span th:text="#{admin.dashboard.new_products}">sản phẩm mới</span></small>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;" th:text="${totalProducts}">156</h3>
+                        <small style="color: #FF9800;"><i class="fas fa-box"></i> <span th:text="${newProducts}">12</span> <span th:text="#{admin.dashboard.new_products}">sản phẩm mới</span></small>
                     </div>
                     <div class="ms-3">
                         <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -68,8 +68,8 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
                         <div class="text-muted small mb-1" th:text="#{admin.dashboard.customers}">Khách hàng</div>
-                        <h3 class="mb-0 fw-bold" style="color: #212529;">1,234</h3>
-                        <small style="color: #4CAF50;"><i class="fas fa-users"></i> 45 <span th:text="#{admin.dashboard.new_customers}">người mới</span></small>
+                        <h3 class="mb-0 fw-bold" style="color: #212529;" th:text="${totalCustomers}">1,234</h3>
+                        <small style="color: #4CAF50;"><i class="fas fa-users"></i> <span th:text="${newCustomers}">45</span> <span th:text="#{admin.dashboard.new_customers}">người mới</span></small>
                     </div>
                     <div class="ms-3">
                         <div style="width: 60px; height: 60px; background: #FAFAFA; border: 2px solid #EEEEEE; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -106,41 +106,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td><strong>#ORD-001</strong></td>
-                        <td>Nguyễn Văn A</td>
-                        <td>14/01/2026</td>
-                        <td><strong style="color: #D32F2F;">2.500.000 <span th:text="${#locale.language == 'vi'} ? 'đ' : 'VND'">đ</span></strong></td>
-                        <td><span class="badge" style="background: #FF9800; color: white;" th:text="#{admin.order.status_pending}">Chờ xác nhận</span></td>
+                    <tr th:each="order : ${recentOrders}">
+                        <td><strong th:text="'#ORD-' + ${#numbers.formatInteger(order.id, 3)}">#ORD-001</strong></td>
+                        <td th:text="${order.account != null ? order.account.fullname : 'Khách vãng lai'}">Nguyễn Văn A</td>
+                        <td th:text="${#temporals.format(order.createDate, 'dd/MM/yyyy')}">14/01/2026</td>
+                        <td><strong style="color: #D32F2F;" th:text="${#numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' ' + (${#locale.language == 'vi'} ? 'đ' : 'VND')">2.500.000 đ</strong></td>
                         <td>
-                            <button class="btn btn-sm" style="background: #2196F3; color: white;" th:title="#{admin.dashboard.view}">
+                            <span th:if="${order.status == 0}" class="badge" style="background: #FF9800; color: white;" th:text="#{admin.order.status_pending}">Chờ xác nhận</span>
+                            <span th:if="${order.status == 1}" class="badge" style="background: #2196F3; color: white;" th:text="#{admin.order.status_confirmed}">Đã xác nhận</span>
+                            <span th:if="${order.status == 2}" class="badge" style="background: #00BCD4; color: white;" th:text="#{admin.order.status_shipping}">Đang giao</span>
+                            <span th:if="${order.status == 3}" class="badge" style="background: #F44336; color: white;" th:text="#{admin.order.status_cancelled}">Đã hủy</span>
+                            <span th:if="${order.status == 4}" class="badge" style="background: #4CAF50; color: white;" th:text="#{admin.order.status_completed}">Hoàn thành</span>
+                        </td>
+                        <td>
+                            <a th:href="@{'/admin/order/detail/' + ${order.id}}" class="btn btn-sm" style="background: #2196F3; color: white;" th:title="#{admin.dashboard.view}">
                                 <i class="fas fa-eye"></i>
-                            </button>
+                            </a>
                         </td>
                     </tr>
-                    <tr>
-                        <td><strong>#ORD-002</strong></td>
-                        <td>Trần Thị B</td>
-                        <td>14/01/2026</td>
-                        <td><strong style="color: #D32F2F;">1.800.000 <span th:text="${#locale.language == 'vi'} ? 'đ' : 'VND'">đ</span></strong></td>
-                        <td><span class="badge" style="background: #2196F3; color: white;" th:text="#{admin.order.status_shipping}">Đang giao</span></td>
-                        <td>
-                            <button class="btn btn-sm" style="background: #2196F3; color: white;" th:title="#{admin.dashboard.view}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>#ORD-003</strong></td>
-                        <td>Lê Văn C</td>
-                        <td>13/01/2026</td>
-                        <td><strong style="color: #D32F2F;">3.200.000 <span th:text="${#locale.language == 'vi'} ? 'đ' : 'VND'">đ</span></strong></td>
-                        <td><span class="badge" style="background: #4CAF50; color: white;" th:text="#{admin.order.status_completed}">Hoàn thành</span></td>
-                        <td>
-                            <button class="btn btn-sm" style="background: #2196F3; color: white;" th:title="#{admin.dashboard.view}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
+                    <tr th:if="${#lists.isEmpty(recentOrders)}">
+                        <td colspan="6" class="text-center py-4 text-muted">Không có đơn hàng nào</td>
                     </tr>
                 </tbody>
             </table>

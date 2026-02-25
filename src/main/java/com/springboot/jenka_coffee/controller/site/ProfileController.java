@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/profile")
 @RequiredArgsConstructor
 @Slf4j
-public class ProfileController {
+public class  ProfileController {
 
     private final ProfileService profileService;
 
