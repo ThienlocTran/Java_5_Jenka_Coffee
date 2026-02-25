@@ -4,11 +4,11 @@
 <main>
     <!-- Page Header -->
     <div class="page-header">
-        <h1 class="page-title" th:text="${item.id == null ? #{admin.product.form.add_title} : #{admin.product.form.edit_title}}">Thêm sản phẩm mới</h1>
+        <h1 class="page-title" th:text="${item?.id == null} ? #{admin.product.form.add_title} : #{admin.product.form.edit_title}">Thêm sản phẩm mới</h1>
         <div class="page-breadcrumb">
             <a href="/admin/dashboard"><i class="fas fa-home"></i> <span th:text="#{admin.dashboard.breadcrumb}">Dashboard</span></a> / 
             <a href="/admin/products" th:text="#{admin.product.breadcrumb}">Sản phẩm</a> / 
-            <span th:text="${item.id == null ? #{admin.product.form.add_breadcrumb} : #{admin.product.form.edit_breadcrumb}}">Thêm mới</span>
+            <span th:text="${item?.id == null} ? #{admin.product.form.add_breadcrumb} : #{admin.product.form.edit_breadcrumb}">Thêm mới</span>
         </div>
     </div>
 
@@ -17,7 +17,7 @@
         <div class="card-header-custom">
             <h5 class="card-title-custom">
                 <i class="fas fa-edit me-2"></i>
-                <span th:text="${item.id == null ? #{admin.product.form.info_title} : #{admin.product.form.update_title}}">Thông tin sản phẩm mới</span>
+                <span th:text="${item?.id == null} ? #{admin.product.form.info_title} : #{admin.product.form.update_title}">Thông tin sản phẩm mới</span>
             </h5>
         </div>
 

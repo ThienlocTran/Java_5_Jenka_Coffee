@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.controller.admin;
 
+import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
@@ -35,6 +36,7 @@ public class AdminProductController {
     @GetMapping("/create")
     public String create(Model model) {
         Product p = new Product();
+        p.setCategory(new Category());
         model.addAttribute("item", p);
         model.addAttribute("categories", categoryService.findAll());
         return "admin/products/form";
