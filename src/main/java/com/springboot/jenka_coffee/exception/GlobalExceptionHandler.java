@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Global exception handler for all controllers
@@ -39,7 +40,8 @@ public class GlobalExceptionHandler {
             InvalidFileException.class,
             IllegalStateException.class
     })
-    public String handleBusinessExceptions(RuntimeException ex, RedirectAttributes redirectAttributes, HttpServletRequest request) {
+    public String handleBusinessExceptions(RuntimeException ex, RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
         logger.warn("Business exception: {}", ex.getMessage());
         redirectAttributes.addFlashAttribute("error", ex.getMessage());
         if (ex instanceof ValidationException && ((ValidationException) ex).getField() != null) {
@@ -49,15 +51,28 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle large file uploads
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public String handleMaxSizeException(MaxUploadSizeExceededException exc, RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
+        logger.warn("Upload size exceeded: {}", exc.getMessage());
+        redirectAttributes.addFlashAttribute("error",
+                "Kích thước tệp tin tải lên quá lớn! Vui lòng chọn tệp nhỏ hơn 5MB.");
+        return getRedirectUrl(request);
+    }
+
+    /**
      * Handle validation errors
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public String handleValidationErrors(MethodArgumentNotValidException ex, RedirectAttributes redirectAttributes, HttpServletRequest request) {
+    public String handleValidationErrors(MethodArgumentNotValidException ex, RedirectAttributes redirectAttributes,
+            HttpServletRequest request) {
         String errorMessage = ex.getBindingResult().getAllErrors().stream()
                 .findFirst()
                 .map(error -> error.getDefaultMessage())
                 .orElse(messageHelper.getMessage("message.error"));
-        
+
         redirectAttributes.addFlashAttribute("error", errorMessage);
         return getRedirectUrl(request);
     }
@@ -65,7 +80,7 @@ public class GlobalExceptionHandler {
     /**
      * Handle 404 - Page Not Found
      */
-    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    @ExceptionHandler({ NoHandlerFoundException.class, NoResourceFoundException.class })
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public String handleNotFound(Exception ex, Model model) {
         logger.warn("Page not found: {}", ex.getMessage());
@@ -82,7 +97,7 @@ public class GlobalExceptionHandler {
         if (ex.getMessage() != null && ex.getMessage().contains("favicon")) {
             return null;
         }
-        
+
         logger.error("Internal Server Error", ex);
         model.addAttribute("errorMessage", "Đã có lỗi xảy ra. Vui lòng thử lại sau!");
         model.addAttribute("debugMessage", ex.getMessage());
@@ -92,9 +107,14 @@ public class GlobalExceptionHandler {
     private String getRedirectUrl(HttpServletRequest request) {
         String referer = request.getHeader("Referer");
         if (referer == null || referer.isEmpty()) {
-            return "redirect:/home";
+            // Fallback to a safe GET URL
+            return "redirect:/admin/product/list";
         }
-        // Avoid redirect loop if referer is same as error URL (simplified)
+
+        // If the exception happened on a POST request, returning to the referer is
+        // usually
+        // the safest way to get back to the form (since the referer is where the form
+        // was rendered from)
         return "redirect:" + referer;
     }
 }

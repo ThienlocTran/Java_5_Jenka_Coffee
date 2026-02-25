@@ -29,7 +29,7 @@ public class UploadServiceImpl implements UploadService {
     public UploadServiceImpl(Cloudinary cloudinary, ImageService imageService) {
         this.cloudinary = cloudinary;
         this.imageService = imageService;
-        
+
         // Create upload directory if not exists
         File uploadDirectory = new File(uploadDir);
         if (!uploadDirectory.exists()) {
@@ -44,7 +44,8 @@ public class UploadServiceImpl implements UploadService {
 
     @Override
     public String saveProductImage(MultipartFile file) {
-        return uploadToCloudinary(file, true, ImageUtils.ImagePresets.PRODUCT_WIDTH, ImageUtils.ImagePresets.PRODUCT_QUALITY);
+        return uploadToCloudinary(file, true, ImageUtils.ImagePresets.PRODUCT_WIDTH,
+                ImageUtils.ImagePresets.PRODUCT_QUALITY);
     }
 
     @Override
@@ -78,12 +79,18 @@ public class UploadServiceImpl implements UploadService {
         try {
             // Create temporary file
             tempFile = createTempFile(file);
-            
-            // Compress if requested and file is image
-            if (compress && isImageFile(file)) {
-                log.info("Compressing image before upload: {} ({}x{}, quality: {})", 
-                        file.getOriginalFilename(), targetWidth, quality);
-                imageService.processImage(tempFile, targetWidth, quality);
+
+            // Compress if requested OR if file is larger than 5MB
+            long fiveMB = 5 * 1024 * 1024;
+            boolean forceCompress = tempFile.length() > fiveMB;
+
+            if ((compress || forceCompress) && isImageFile(file)) {
+                int finalWidth = targetWidth > 0 ? targetWidth : ImageUtils.ImagePresets.NEWS_WIDTH;
+                float finalQuality = quality > 0 ? quality : ImageUtils.ImagePresets.NEWS_QUALITY;
+
+                log.info("Compressing image before upload: {} ({}x{}, quality: {}, forced: {})",
+                        file.getOriginalFilename(), finalWidth, finalQuality, forceCompress);
+                imageService.processImage(tempFile, finalWidth, finalQuality);
             }
 
             // Upload to Cloudinary
@@ -93,7 +100,7 @@ public class UploadServiceImpl implements UploadService {
                     "use_filename", true,
                     "unique_filename", true,
                     "quality", "auto:good", // Cloudinary auto quality optimization
-                    "fetch_format", "auto"  // Auto format selection (WebP when supported)
+                    "fetch_format", "auto" // Auto format selection (WebP when supported)
             ));
 
             String secureUrl = (String) uploadResult.get("secure_url");
@@ -128,11 +135,11 @@ public class UploadServiceImpl implements UploadService {
 
         // Create temp file with safe name
         File tempFile = File.createTempFile("upload_" + UUID.randomUUID(), "." + extension);
-        
+
         try (FileOutputStream fos = new FileOutputStream(tempFile)) {
             fos.write(file.getBytes());
         }
-        
+
         return tempFile;
     }
 
@@ -143,40 +150,40 @@ public class UploadServiceImpl implements UploadService {
         String contentType = file.getContentType();
         return contentType != null && contentType.startsWith("image/");
     }
-    
+
     @Override
     public String uploadFile(MultipartFile file, String subfolder) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IOException("File is null or empty");
         }
-        
+
         // Create subfolder if not exists
         File subfolderDir = new File(uploadDir, subfolder);
         if (!subfolderDir.exists()) {
             subfolderDir.mkdirs();
         }
-        
+
         // Generate unique filename
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        
+
         String uniqueFilename = UUID.randomUUID().toString() + extension;
         File targetFile = new File(subfolderDir, uniqueFilename);
-        
+
         // Save file
         try (FileOutputStream fos = new FileOutputStream(targetFile)) {
             fos.write(file.getBytes());
         }
-        
+
         // Return relative path
         String relativePath = subfolder + "/" + uniqueFilename;
         log.info("Uploaded file to local storage: {}", relativePath);
         return relativePath;
     }
-    
+
     @Override
     public String getUploadDir() {
         return uploadDir;

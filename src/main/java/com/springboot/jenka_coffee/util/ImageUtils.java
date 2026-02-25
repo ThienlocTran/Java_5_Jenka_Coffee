@@ -12,16 +12,14 @@ public class ImageUtils {
 
     // Supported image formats
     private static final List<String> SUPPORTED_IMAGE_TYPES = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
-    );
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp");
 
     // File extensions
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
-            "jpg", "jpeg", "png", "gif", "webp"
-    );
+            "jpg", "jpeg", "png", "gif", "webp");
 
-    // Max file size (5MB)
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    // Max file size (20MB) to allow server compression
+    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
     /**
      * Validate if uploaded file is a valid image
@@ -72,10 +70,10 @@ public class ImageUtils {
 
         String extension = getFileExtension(originalFilename);
         String baseName = originalFilename.substring(0, originalFilename.lastIndexOf("."));
-        
+
         // Remove special characters and spaces
         baseName = baseName.replaceAll("[^a-zA-Z0-9]", "_");
-        
+
         // Limit length
         if (baseName.length() > 50) {
             baseName = baseName.substring(0, 50);
@@ -93,7 +91,7 @@ public class ImageUtils {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            return "Kích thước file không được vượt quá 5MB";
+            return "Kích thước file quá lớn. Vui lòng chọn file dưới 20MB để hệ thống tự động nén.";
         }
 
         String contentType = file.getContentType();
