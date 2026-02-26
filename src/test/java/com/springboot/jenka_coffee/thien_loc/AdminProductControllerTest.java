@@ -835,11 +835,33 @@ public class AdminProductControllerTest {
                 .thenReturn("Chỉ còn lại 5 sản phẩm!");
 
         // --- THỰC THI ---
-       StockStatus status = productService.getStockStatus(5);
+        StockStatus status = productService.getStockStatus(5);
         String msg = productService.getStockMessage(5);
 
         // --- KIỂM TRA MONG ĐỢI ---
         Assertions.assertEquals(StockStatus.LOW_STOCK, status);
         Assertions.assertEquals("Chỉ còn lại 5 sản phẩm!", msg);
+    }
+
+    /**
+     * KỊCH BẢN: Kiểm tra trạng thái tồn kho (OUT_OF_STOCK)
+     * Kịch bản TC_PROD_020
+     */
+    @Test
+    @DisplayName("TC_PROD_020: Kiểm tra trạng thái tồn kho (OUT_OF_STOCK)")
+    void testCheckStockStatus_OutOfStock() {
+        // --- CHUẨN BỊ ---
+        Mockito.when(productService.getStockStatus(0))
+                .thenReturn(StockStatus.OUT_OF_STOCK);
+        Mockito.when(productService.getStockMessage(0))
+                .thenReturn("Hết hàng");
+
+        // --- THỰC THI ---
+        StockStatus status = productService.getStockStatus(0);
+        String msg = productService.getStockMessage(0);
+
+        // --- KIỂM TRA MONG ĐỢI ---
+        Assertions.assertEquals(StockStatus.OUT_OF_STOCK, status);
+        Assertions.assertEquals("Hết hàng", msg);
     }
 }
