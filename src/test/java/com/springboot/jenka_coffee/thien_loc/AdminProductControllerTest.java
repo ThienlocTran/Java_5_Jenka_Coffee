@@ -4,10 +4,12 @@ import com.springboot.jenka_coffee.controller.admin.AdminProductController;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.interceptor.AuthInterceptor;
 import com.springboot.jenka_coffee.service.*;
 import com.springboot.jenka_coffee.util.ImageHelper;
 import com.springboot.jenka_coffee.util.MessageHelper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -253,32 +255,107 @@ public class AdminProductControllerTest {
     /**
      * KỊCH BẢN: Thêm Sản Phẩm (Lỗi do Giá Bằng 0)
      * Kịch bản TC_PROD_004
+     * Giải thích:
+     * - Trong bảng Product.java, thuộc tính price được gán cờ @Min(value = 0)
+     * - Tức là mức giá 0 đồng VẪN LÀ HỢP LỆ (Không vi phạm ràng buộc dữ liệu)
+     * - Test này giả lập trường hợp tạo một sản phẩm tặng miễn phí (giá 0đ)
      */
     @Test
     @DisplayName("TC_PROD_004: Thêm sản phẩm với giá bằng 0")
     @WithMockUser(username = "admin", roles = { "ADMIN" })
     void testSaveProduct_ZeroPrice() throws Exception {
 
+        // --- BƯỚC 1: CHUẨN BỊ (ARRANGE) ---
+        // Giả lập (Mock) hành vi của ProductService.
+        // Cụ thể: Khi có ai đó (Controller) gửi yêu cầu lưu một đối tượng Product mới
+        // vào hàm saveProduct(), thì hãy trả về expectedSavedProduct giả lập này.
         Product expectedSavedProduct = new Product();
         expectedSavedProduct.setId(2);
         expectedSavedProduct.setName("Sản phẩm test giá 0");
         Mockito.when(productService.saveProduct(any(Product.class), any()))
                 .thenReturn(expectedSavedProduct);
 
+        // --- BƯỚC 2: THỰC THI (ACT) ---
+        // Dùng MockMvc (Trình duyệt ảo) để gửi một HTTP POST request,
+        // giống y hệt như việc nhấn nút [Submit] trên giao diện web.
         mockMvc.perform(multipart("/admin/product/save")
-                .param("name", "Sản phẩm test giá 0")
-                .param("price", "0") // Giá = 0
-                .param("category.id", "CP")
+                .param("name", "Sản phẩm test giá 0") // TextBox Tên
+                .param("price", "0") // TextBox Giá: Gửi giá trị 0
+                .param("category.id", "CP") // Dropdown Category
+                .param("quantity", "10") // TextBox Số lượng
+                .param("description", "") // TextBox Mô tả
+                .param("available", "true") // Checkbox Kích hoạt
+                .session(session) // Truyền Session đã fake quyền Admin
+                .with(csrf())) // Vượt chốt bảo mật chống giả mạo request (CSRF)
+
+                // Hiển thị nội dung Request & Response ra màn hình Console để dễ debug
+                .andDo(MockMvcResultHandlers.print())
+
+                // --- BƯỚC 3: KIỂM TRA KẾT QUẢ (ASSERT) ---
+                // Hệ thống mong đợi: Vì giá = 0 hợp lệ (Pass qua lớp Validation),
+                // Controller sẽ xử lý lưu thành công và điều hướng (Redirect 3xx) về trang danh
+                // sách.
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/product/list"))
+
+                // Khẳng định: Có một biến Flash Message chứa thông báo "Lưu thành công" được
+                // gửi theo.
+                .andExpect(flash().attributeExists("successMessage"));
+
+        // --- BƯỚC 4: KIỂM CHỨNG TẦNG DƢỚI (VERIFY) ---
+        // Đây là bài kiểm tra cốt lõi nhất: Confirm chắc chắn rằng hàm saveProduct()
+        // thực sự đã được gọi đến (Đúng số lượng 1 lần).
+        // Nếu hàm này chưa từng chạy, chứng tỏ quá trình bị lỗi gãy ngang ở khâu
+        // Validation Controller.
+        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
+    }
+
+    /**
+     * KỊCH BẢN: Thêm SP với Category không tồn tại
+     * Kịch bản TC_PROD_005
+     * Giải thích:
+     * - Khi Submit form, CategoryID gửi lên không có thực trong DB.
+     * - Mong đợi hệ thống báo lỗi 404 hoặc ResourceNotFoundException.
+     */
+    @Test
+    @DisplayName("TC_PROD_005: Thêm SP với Category không tồn tại")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testSaveProduct_CategoryNotFound() throws Exception {
+
+        // --- BƯỚC 1: CHUẨN BỊ (ARRANGE) ---
+        // Giả lập lỗi ở tầng Service: Khi CategoryService tìm kiếm "INVALID_ID",
+        // nó sẽ ném ra ngoại lệ ResourceNotFoundException
+        Mockito.when(categoryService.findById("INVALID_ID"))
+                .thenThrow(new ResourceNotFoundException(
+                        "Category not found with id: INVALID_ID"));
+
+        // Hoặc giả lập thẳng trên ProductService nếu Controller truyền CategoryID xuống
+        // dưới mới check
+        Mockito.when(productService.saveProduct(any(Product.class), any()))
+                .thenThrow(new ResourceNotFoundException(
+                        "Category not found with id: INVALID_ID"));
+
+        // --- BƯỚC 2 & 3: THỰC THI (ACT) & KIỂM TRA (ASSERT) ---
+        mockMvc.perform(multipart("/admin/product/save")
+                .param("name", "Sản phẩm lỗi Category")
+                .param("price", "100000")
+                .param("category.id", "INVALID_ID") // Cố tình gửi ID linh tinh
                 .param("quantity", "10")
-                .param("description", "")
-                .param("available", "true")
                 .session(session)
                 .with(csrf()))
                 .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/product/list"))
-                .andExpect(flash().attributeExists("successMessage"));
 
-        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
+                // Mong đợi Controller/GlobalExceptionHandler bắt được lỗi
+                // ResourceNotFoundException
+                .andExpect(result -> {
+                    Exception resolvedException = result.getResolvedException();
+                    org.junit.jupiter.api.Assertions.assertNotNull(resolvedException, "Phải có Exception bị văng ra");
+                    org.junit.jupiter.api.Assertions.assertTrue(
+                            resolvedException instanceof ResourceNotFoundException,
+                            "Exception phải là loại ResourceNotFoundException");
+                    Assertions.assertEquals(
+                            "Category not found with id: INVALID_ID",
+                            resolvedException.getMessage());
+                });
     }
 }
