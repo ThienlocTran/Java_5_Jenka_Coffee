@@ -145,7 +145,7 @@
                     <div class="alert alert-info" th:if="${item.id != null}">
                         <small>
                             <strong th:text="#{admin.product.form.created_date} + ':'">Ngày tạo:</strong><br>
-                            <span th:text="${#temporals.format(item.createDate, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
+                            <span th:if="${item.createDate != null}" th:text="${#temporals.format(item.createDate, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
                         </small>
                     </div>
                 </div>

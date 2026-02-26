@@ -103,6 +103,8 @@ public class AdminProductControllerTest {
         categoryCP.setId("CP");
         categoryCP.setName("Cà phê");
         Mockito.when(categoryService.findById("CP")).thenReturn(categoryCP);
+        // Phục vụ cho việc load trang admin/products/form chứa danh sách Categories
+        Mockito.when(categoryService.findAll()).thenReturn(java.util.List.of(categoryCP));
     }
 
     /**
@@ -183,7 +185,7 @@ public class AdminProductControllerTest {
                 .thenThrow(new DataIntegrityViolationException("Column 'Name' cannot be null"));
 
         // --- THỰC THI & KIỂM TRA (ACT & ASSERT) ---
-        // Gửi Form nhưng KHÔNG có fie  ld "name" (Tương đương tên NULL)
+        // Gửi Form nhưng KHÔNG có fie ld "name" (Tương đương tên NULL)
         mockMvc.perform(multipart("/admin/product/save")
                 .param("price", "1000000")
                 .param("category.id", "CP")
@@ -203,5 +205,46 @@ public class AdminProductControllerTest {
 
         // Xác nhận Service giả đã bị gọi
         verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
+    }
+
+    /**
+     * KỊCH BẢN: Thêm Sản Phẩm (Lỗi do Giá Âm)
+     * Kịch bản TC_PROD_003 mong đợi lỗi Validation "Giá phải lớn hơn 0"
+     */
+    @Test
+    @DisplayName("TC_PROD_003: Thêm sản phẩm với giá âm")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testSaveProduct_NegativePrice() throws Exception {
+
+        // --- CHUẨN BỊ (ARRANGE) ---
+        // Không cần giả lập ProductService vì Controller sẽ chặn lại ở bước Validation
+        // và không bao giờ gọi xuống tầng Service.
+
+        // --- THỰC THI & KIỂM TRA (ACT & ASSERT) ---
+        try {
+            mockMvc.perform(multipart("/admin/product/save")
+                    .param("name", "Sản phẩm test")
+                    .param("price", "-50000") // Giá trị âm
+                    .param("category.id", "CP")
+                    // Các tham số khác
+                    .param("quantity", "10")
+                    .param("description", "")
+                    .param("available", "true")
+                    .session(session)
+                    .with(csrf()))
+
+                    // => KIỂM TRA MONG ĐỢI <=
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("admin/products/form"))
+                    .andExpect(model().attributeHasFieldErrors("item", "price"));
+
+            verify(productService, Mockito.never()).saveProduct(any(), any());
+        } catch (Exception e) {
+            try (java.io.PrintWriter pw = new java.io.PrintWriter(
+                    new java.io.FileWriter("D:\\Java_5_Jenka_Coffee\\error.txt"))) {
+                e.printStackTrace(pw);
+            }
+            throw e;
+        }
     }
 }
