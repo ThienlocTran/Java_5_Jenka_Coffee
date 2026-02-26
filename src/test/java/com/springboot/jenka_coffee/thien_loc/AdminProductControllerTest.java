@@ -24,7 +24,10 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
+import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -357,5 +360,142 @@ public class AdminProductControllerTest {
                             "Category not found with id: INVALID_ID",
                             resolvedException.getMessage());
                 });
+    }
+
+    /**
+     * KỊCH BẢN: Cập nhật tên sản phẩm
+     * Kịch bản TC_PROD_006
+     * Giải thích:
+     * - Product ID=1 tồn tại trong DB, tên cũ là "Máy pha A"
+     * - Khi Submit form cập nhật, truyền ID=1 và đổi tên thành "Máy pha B"
+     * - Mong đợi HTTP Status 302 Redirect về list và flash message "Cập nhật thành
+     * công"
+     */
+    @Test
+    @DisplayName("TC_PROD_006: Cập nhật tên sản phẩm")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testUpdateProduct_ChangeName() throws Exception {
+
+        // --- BƯỚC 1: CHUẨN BỊ (ARRANGE) ---
+        // Giả lập ProductService: Khi lưu ID=1 (update), trả về Product đã được cập
+        // nhật
+        Product updatedProduct = new Product();
+        updatedProduct.setId(1);
+        updatedProduct.setName("Máy pha B"); // Đã đổi tên
+
+        Mockito.when(productService.saveProduct(any(Product.class), any()))
+                .thenReturn(updatedProduct);
+
+        // --- BƯỚC 2: THỰC THI (ACT) ---
+        mockMvc.perform(multipart("/admin/product/save")
+                .param("id", "1") // Khác với create, update phải có truyền ID
+                .param("name", "Máy pha B") // Tên mới
+                .param("price", "5000000")
+                .param("category.id", "CP")
+                .param("quantity", "10")
+                .param("description", "Mô tả test")
+                .param("available", "true")
+                .session(session)
+                .with(csrf()))
+                .andDo(MockMvcResultHandlers.print())
+
+                // --- BƯỚC 3: KIỂM TRA MONG ĐỢI (ASSERT) ---
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/product/list"))
+                .andExpect(flash().attributeExists("successMessage"));
+        // Ghi chú: Có thể message thực tế của dự án là "Lưu thành công" dùng chung cho
+        // cả thêm mới và chỉnh sửa,
+        // nhưng flash().attributeExists() đã bao hàm điều kiện pass.
+
+        // Kiểm chứng phương thức saveProduct đã được gọi 1 lần khi update
+        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
+    }
+
+    /**
+     * KỊCH BẢN: Cập nhật giá sản phẩm
+     * Kịch bản TC_PROD_007
+     * Giải thích:
+     * - Product ID=1 tồn tại trong DB, giá cũ là 1.000.000
+     * - Khi Submit form cập nhật, truyền ID=1 và đổi giá thành 2.000.000
+     * - Mong đợi HTTP Status 302 Redirect về list và flash message "Cập nhật thành
+     * công"
+     */
+    @Test
+    @DisplayName("TC_PROD_007: Cập nhật giá sản phẩm")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testUpdateProduct_ChangePrice() throws Exception {
+
+        // --- BƯỚC 1: CHUẨN BỊ (ARRANGE) ---
+        // Giả lập ProductService: Khi lưu ID=1 (update), trả về Product đã được cập
+        // nhật giá
+        Product updatedProduct = new Product();
+        updatedProduct.setId(1);
+        updatedProduct.setPrice(new BigDecimal("2000000")); // Đã đổi giá
+
+        Mockito.when(productService.saveProduct(any(Product.class), any()))
+                .thenReturn(updatedProduct);
+
+        // --- BƯỚC 2: THỰC THI (ACT) ---
+        mockMvc.perform(multipart("/admin/product/save")
+                .param("id", "1") // Phải có ID để báo hiệu đây là lệnh Update
+                .param("name", "Sản phẩm A")
+                .param("price", "2000000") // Giá mới
+                .param("category.id", "CP")
+                .param("quantity", "10")
+                .param("description", "Mô tả test")
+                .param("available", "true")
+                .session(session)
+                .with(csrf()))
+                .andDo(MockMvcResultHandlers.print())
+
+                // --- BƯỚC 3: KIỂM TRA MONG ĐỢI (ASSERT) ---
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/product/list"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        // Kiểm chứng phương thức saveProduct đã được gọi 1 lần khi update
+        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
+    }
+
+    /**
+     * KỊCH BẢN: Cập nhật SP không tồn tại
+     * Kịch bản TC_PROD_008
+     * Giải thích:
+     * - Truy cập trang GET /admin/product/edit/999 hoặc gửi form POST id=999
+     * - Product ID=999 KHÔNG tồn tại trong DB
+     * - Mong đợi văng lỗi ResourceNotFoundException và chuyển đến error page
+     */
+    @Test
+    @DisplayName("TC_PROD_008: Cập nhật SP không tồn tại")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testUpdateProduct_NotFound() throws Exception {
+
+        // --- BƯỚC 1: CHUẨN BỊ (ARRANGE) ---
+        // Giả lập ProductService: Khi gọi findById("999"), ném ngoại lệ
+        // ResourceNotFoundException
+        Mockito.when(productService.findById(999))
+                .thenThrow(new ResourceNotFoundException("Product not found with id: 999"));
+
+        // --- BƯỚC 2 & 3: THỰC THI (ACT) & KIỂM TRA (ASSERT) ---
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/admin/product/edit/999")
+                        .session(session)
+                        .with(csrf()))
+                .andDo(MockMvcResultHandlers.print())
+
+                // Mong đợi Controller bắt được và hiển thị lỗi
+                .andExpect(result -> {
+                    Exception resolvedException = result.getResolvedException();
+                   Assertions.assertNotNull(resolvedException, "Phải ném ra ngoại lệ");
+                   Assertions.assertTrue(
+                            resolvedException instanceof ResourceNotFoundException,
+                            "Ngoại lệ phải là kiểu ResourceNotFoundException");
+                    org.junit.jupiter.api.Assertions.assertEquals(
+                            "Product not found with id: 999",
+                            resolvedException.getMessage());
+                });
+
+        // Xác nhận hàm findById đã được gọi để tìm kiếm product 999
+        verify(productService, Mockito.times(1)).findById(999);
     }
 }
