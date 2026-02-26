@@ -22,6 +22,8 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -246,5 +248,37 @@ public class AdminProductControllerTest {
             }
             throw e;
         }
+    }
+
+    /**
+     * KỊCH BẢN: Thêm Sản Phẩm (Lỗi do Giá Bằng 0)
+     * Kịch bản TC_PROD_004
+     */
+    @Test
+    @DisplayName("TC_PROD_004: Thêm sản phẩm với giá bằng 0")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testSaveProduct_ZeroPrice() throws Exception {
+
+        Product expectedSavedProduct = new Product();
+        expectedSavedProduct.setId(2);
+        expectedSavedProduct.setName("Sản phẩm test giá 0");
+        Mockito.when(productService.saveProduct(any(Product.class), any()))
+                .thenReturn(expectedSavedProduct);
+
+        mockMvc.perform(multipart("/admin/product/save")
+                .param("name", "Sản phẩm test giá 0")
+                .param("price", "0") // Giá = 0
+                .param("category.id", "CP")
+                .param("quantity", "10")
+                .param("description", "")
+                .param("available", "true")
+                .session(session)
+                .with(csrf()))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/product/list"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
     }
 }
