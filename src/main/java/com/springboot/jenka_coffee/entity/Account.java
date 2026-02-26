@@ -22,7 +22,7 @@ public class Account implements Serializable {
     @Column(name = "Username", length = 50)
     private String username;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
     @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
@@ -37,7 +37,7 @@ public class Account implements Serializable {
     @Column(name = "phone_verified")
     private Boolean phoneVerified = false;
 
-    @Column(name = "Photo", length = 255)
+    @Column(name = "Photo")
     private String photo;
 
     @Column(name = "Activated")

@@ -3,7 +3,6 @@ package com.springboot.jenka_coffee.controller.admin;
 import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
-import com.springboot.jenka_coffee.util.MessageHelper;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -148,7 +147,7 @@ public class AdminAccountController {
     public String showResetPasswordForm(@PathVariable String username, Model model) {
         Account account = accountService.findByIdOrThrow(username);
         model.addAttribute("account", account);
-        return "admin/accounts/reset-password-form";
+        return "redirect:admin/accounts/reset-password-form";
     }
 
     /**

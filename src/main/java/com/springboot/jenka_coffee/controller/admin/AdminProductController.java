@@ -62,8 +62,10 @@ public class AdminProductController {
     // 4. Save Action
     @PostMapping("/save")
     public String save(@ModelAttribute("item") Product product,
-            @RequestParam(value = "imageFile", required = false) MultipartFile file) {
+            @RequestParam(value = "imageFile", required = false) MultipartFile file,
+            RedirectAttributes redirectAttributes) {
         productService.saveProduct(product, file);
+        redirectAttributes.addFlashAttribute("successMessage", "Lưu thành công");
         return "redirect:/admin/product/list";
     }
 

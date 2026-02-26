@@ -24,7 +24,7 @@ public class Category implements Serializable {
     @Column(name = "Name", length = 100, nullable = false)
     private String name;
 
-    @Column(name = "Icon", length = 255)
+    @Column(name = "Icon")
     private String icon; // Tên file icon (VD: May_Pha_Ca_Phe.webp)
 
     // Quan hệ 1-N với Product

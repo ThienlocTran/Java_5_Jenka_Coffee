@@ -6,18 +6,20 @@ import com.springboot.jenka_coffee.service.CookieService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private AccountService accountService;
+    private final AccountService accountService;
 
-    @Autowired
-    private CookieService cookieService;
+    private final CookieService cookieService;
+
+    public AuthInterceptor(AccountService accountService, CookieService cookieService) {
+        this.accountService = accountService;
+        this.cookieService = cookieService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request,

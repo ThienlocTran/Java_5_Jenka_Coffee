@@ -4,7 +4,6 @@ import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.CategoryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component; // Bắt buộc phải có
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -12,11 +11,14 @@ import org.springframework.web.servlet.ModelAndView;
 @Component
 public class GlobalInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
+
+    public GlobalInterceptor(CategoryService categoryService, CartService cartService) {
+        this.categoryService = categoryService;
+        this.cartService = cartService;
+    }
 
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
