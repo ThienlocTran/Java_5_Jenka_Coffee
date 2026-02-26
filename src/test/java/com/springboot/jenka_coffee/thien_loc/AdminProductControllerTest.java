@@ -97,7 +97,7 @@ public class AdminProductControllerTest {
         // Expected Result 4 & 5: DB Record is inserted & Image uploaded to Cloudinary
         // Since we are mocking ProductService, we verify it is called with the correct
         // parameters,
-        // which means the controller successfully delegated the save & upload logic to
+        // which means the controller successfully delegated the save and upload logic to
         // the service layer.
         verify(productService).saveProduct(any(Product.class), any(MockMultipartFile.class));
     }
