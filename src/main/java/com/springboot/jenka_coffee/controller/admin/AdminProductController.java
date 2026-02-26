@@ -4,8 +4,10 @@ import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -61,9 +63,19 @@ public class AdminProductController {
 
     // 4. Save Action
     @PostMapping("/save")
-    public String save(@ModelAttribute("item") Product product,
+    public String save(@Valid @ModelAttribute("item") Product product,
+           BindingResult bindingResult,
             @RequestParam(value = "imageFile", required = false) MultipartFile file,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes, Model model) {
+
+        if (bindingResult.hasErrors()) {
+            if (product.getCategory() == null) {
+                product.setCategory(new Category());
+            }
+            model.addAttribute("categories", categoryService.findAll());
+            return "admin/products/form";
+        }
+
         productService.saveProduct(product, file);
         redirectAttributes.addFlashAttribute("successMessage", "Lưu thành công");
         return "redirect:/admin/product/list";
