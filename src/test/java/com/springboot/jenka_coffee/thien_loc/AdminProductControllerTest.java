@@ -17,11 +17,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 /**
-
+ * 
  * 
  * @WebMvcTest: Báo cho Spring biết "Chỉ nạp Controller này thôi, bỏ qua toàn bộ
  *              Database & Service".
@@ -164,5 +164,44 @@ public class AdminProductControllerTest {
         // được gọi ĐÚNG 1 LẦN với file ảnh và object đã cho.
         // (Nếu không gọi chứng tỏ Form đã bị rớt / lỗi ở đâu đó trên tầng Controller).
         verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any(MockMultipartFile.class));
+    }
+
+    /**
+     * KỊCH BẢN: Thêm Sản Phẩm (Lỗi do Tên là NULL)
+     * Kịch bản TC_PROD_002 mong đợi lỗi DataIntegrityViolationException tung ra từ
+     * Database
+     */
+    @Test
+    @DisplayName("TC_PROD_002: Thêm sản phẩm với tên NULL")
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
+    void testSaveProduct_NullName() throws Exception {
+
+        // --- CHUẨN BỊ (ARRANGE) ---
+        // 1. Giả lập lỗi ở DB: Khi gọi saveProduct với bất kỳ tham số nào, ném ra lỗi
+        // DataIntegrityViolationException
+        Mockito.when(productService.saveProduct(any(Product.class), any()))
+                .thenThrow(new DataIntegrityViolationException("Column 'Name' cannot be null"));
+
+        // --- THỰC THI & KIỂM TRA (ACT & ASSERT) ---
+        // Gửi Form nhưng KHÔNG có fie  ld "name" (Tương đương tên NULL)
+        mockMvc.perform(multipart("/admin/product/save")
+                .param("price", "1000000")
+                .param("category.id", "CP")
+                .param("quantity", "5")
+                .session(session)
+                .with(csrf()))
+
+                // Trông đợi Controller sẽ văng cái lỗi đó ra (Nó chứng minh DB đã chặn được sự
+                // cố Name=Null)
+                .andExpect(result -> {
+                    org.junit.jupiter.api.Assertions.assertTrue(
+                            result.getResolvedException() instanceof org.springframework.dao.DataIntegrityViolationException);
+                    org.junit.jupiter.api.Assertions.assertEquals(
+                            "Column 'Name' cannot be null",
+                            result.getResolvedException().getMessage());
+                });
+
+        // Xác nhận Service giả đã bị gọi
+        verify(productService, Mockito.times(1)).saveProduct(any(Product.class), any());
     }
 }
