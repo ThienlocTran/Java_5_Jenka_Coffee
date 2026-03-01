@@ -115,6 +115,14 @@ public class AuthController {
     }
 
     /**
+     * Hiển thị trang đăng ký
+     */
+    @GetMapping("/signup")
+    public String showSignupPage(Model model) {
+        return "site/auth/signup";
+    }
+
+    /**
      * Xử lý đăng ký tài khoản mới
      */
     @PostMapping("/signup")

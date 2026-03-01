@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -212,8 +213,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<Product> filterProductsAdvanced(String categoryId, Double minPrice, Double maxPrice,
-            Pageable pageable) {
+    public Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+                                                Pageable pageable) {
         return productRepository.findByCategoryAndPriceRange(categoryId, minPrice, maxPrice, pageable);
     }
 
@@ -223,8 +224,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, Double minPrice, Double maxPrice,
-            String keyword, Pageable pageable) {
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+                                                       String keyword, Pageable pageable) {
         return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
     }
 

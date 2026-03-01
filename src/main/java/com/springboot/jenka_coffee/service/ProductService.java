@@ -5,6 +5,7 @@ import com.springboot.jenka_coffee.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -89,7 +90,7 @@ public interface ProductService {
      * @param pageable   Pagination parameters
      * @return Page of filtered products
      */
-    Page<Product> filterProductsAdvanced(String categoryId, Double minPrice, Double maxPrice, Pageable pageable);
+    Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     /**
      * Search products by keyword with pagination
@@ -110,8 +111,10 @@ public interface ProductService {
      * @param pageable   Pagination parameters
      * @return Page of filtered products
      */
-    Page<Product> filterProductsWithAllCriteria(String categoryId, Double minPrice, Double maxPrice, String keyword,
-            Pageable pageable);
+ 
+
+    Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+                                                String keyword, Pageable pageable);
 
     /**
      * Delete product and add flash message
