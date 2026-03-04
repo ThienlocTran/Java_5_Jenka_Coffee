@@ -1,0 +1,158 @@
+<mxfile host="app.diagrams.net" modified="2024-03-04T00:00:00.000Z" agent="Kiro" version="24.0.0">
+  <diagram name="Jenka Coffee ERD" id="jenka-coffee-erd">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Accounts Table -->
+        <mxCell id="accounts" value="&lt;b&gt;Accounts&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Username (VARCHAR(50))&lt;br&gt;password_hash (VARCHAR)&lt;br&gt;Fullname (VARCHAR)&lt;br&gt;Email (VARCHAR(100))&lt;br&gt;phone (VARCHAR(15))&lt;br&gt;phone_verified (BOOLEAN)&lt;br&gt;Photo (VARCHAR)&lt;br&gt;Activated (BOOLEAN)&lt;br&gt;Admin (BOOLEAN)&lt;br&gt;points (INTEGER)&lt;br&gt;customer_rank (VARCHAR(20))&lt;br&gt;ActivationToken (VARCHAR(100))&lt;br&gt;ActivationTokenExpiry (DATETIME)&lt;br&gt;ResetToken (VARCHAR(100))&lt;br&gt;ResetTokenExpiry (DATETIME)&lt;br&gt;ActivationMethod (VARCHAR(10))&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="280" height="280" as="geometry" />
+        </mxCell>
+        
+        <!-- Categories Table -->
+        <mxCell id="categories" value="&lt;b&gt;Categories&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Id (VARCHAR(50))&lt;br&gt;Name (VARCHAR(100))&lt;br&gt;Icon (VARCHAR)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="240" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Products Table -->
+        <mxCell id="products" value="&lt;b&gt;Products&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Id (INTEGER)&lt;br&gt;Name (VARCHAR(200))&lt;br&gt;Image (VARCHAR)&lt;br&gt;price (DECIMAL(18,2))&lt;br&gt;description (TEXT)&lt;br&gt;createDate (DATETIME)&lt;br&gt;Available (BOOLEAN)&lt;br&gt;Quantity (INTEGER)&lt;br&gt;FK: Categoryid (VARCHAR(50))&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="180" width="240" height="180" as="geometry" />
+        </mxCell>
+        
+        <!-- Orders Table -->
+        <mxCell id="orders" value="&lt;b&gt;Orders&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Id (BIGINT)&lt;br&gt;Address (VARCHAR)&lt;br&gt;CreateDate (DATETIME)&lt;br&gt;Phone (VARCHAR(15))&lt;br&gt;Status (INTEGER)&lt;br&gt;VoucherCode (VARCHAR(20))&lt;br&gt;totalAmount (DECIMAL(18,2))&lt;br&gt;FK: Username (VARCHAR(50))&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="280" height="180" as="geometry" />
+        </mxCell>
+        
+        <!-- OrderDetails Table -->
+        <mxCell id="orderdetails" value="&lt;b&gt;OrderDetails&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Id (BIGINT)&lt;br&gt;price (DECIMAL(18,2))&lt;br&gt;Quantity (INTEGER)&lt;br&gt;FK: Orderid (BIGINT)&lt;br&gt;FK: Productid (INTEGER)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="420" width="240" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- Payments Table -->
+        <mxCell id="payments" value="&lt;b&gt;Payments&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: id (BIGINT)&lt;br&gt;amount (DECIMAL(18,2))&lt;br&gt;paymentMethod (VARCHAR(20))&lt;br&gt;transactionCode (VARCHAR(50))&lt;br&gt;paymentDate (DATETIME)&lt;br&gt;status (VARCHAR(20))&lt;br&gt;FK: OrderId (BIGINT)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="280" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- PointHistory Table -->
+        <mxCell id="pointhistory" value="&lt;b&gt;PointHistory&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: id (BIGINT)&lt;br&gt;amount (INTEGER)&lt;br&gt;reason (VARCHAR)&lt;br&gt;createDate (DATETIME)&lt;br&gt;FK: username (VARCHAR(50))&lt;br&gt;FK: OrderId (BIGINT)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="400" y="640" width="240" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- ServiceBookings Table -->
+        <mxCell id="servicebookings" value="&lt;b&gt;ServiceBookings&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: id (BIGINT)&lt;br&gt;customerName (VARCHAR(100))&lt;br&gt;phone (VARCHAR(15))&lt;br&gt;description (TEXT)&lt;br&gt;bookingDate (DATETIME)&lt;br&gt;preferredTime (VARCHAR(50))&lt;br&gt;status (VARCHAR(20))&lt;br&gt;FK: username (VARCHAR(50))&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="720" y="40" width="260" height="180" as="geometry" />
+        </mxCell>
+        
+        <!-- Vouchers Table -->
+        <mxCell id="vouchers" value="&lt;b&gt;Vouchers&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: code (VARCHAR(20))&lt;br&gt;discountAmount (DECIMAL(18,2))&lt;br&gt;discountType (VARCHAR(10))&lt;br&gt;minOrderAmount (DECIMAL(18,2))&lt;br&gt;expirationDate (DATETIME)&lt;br&gt;quantity (INTEGER)&lt;br&gt;active (BOOLEAN)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="720" y="280" width="260" height="160" as="geometry" />
+        </mxCell>
+        
+        <!-- News Table -->
+        <mxCell id="news" value="&lt;b&gt;News&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;PK: Id (INTEGER)&lt;br&gt;Title (VARCHAR(255))&lt;br&gt;Content (TEXT)&lt;br&gt;Image (VARCHAR)&lt;br&gt;CreateDate (DATETIME)&lt;br&gt;Available (BOOLEAN)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="720" y="500" width="260" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- Relationships -->
+        
+        <!-- Categories -> Products (1:N) -->
+        <mxCell id="rel1" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startFill=0;endFill=0;" edge="1" parent="1" source="categories" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel1-label" value="has" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel1">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Accounts -> Orders (1:N) -->
+        <mxCell id="rel2" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startFill=0;endFill=0;" edge="1" parent="1" source="accounts" target="orders">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel2-label" value="places" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel2">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Orders -> OrderDetails (1:N) -->
+        <mxCell id="rel3" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startFill=0;endFill=0;" edge="1" parent="1" source="orders" target="orderdetails">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel3-label" value="contains" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel3">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint y="-9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Products -> OrderDetails (1:N) -->
+        <mxCell id="rel4" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startFill=0;endFill=0;" edge="1" parent="1" source="products" target="orderdetails">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel4-label" value="in" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel4">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Orders -> Payments (1:N) -->
+        <mxCell id="rel5" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startFill=0;endFill=0;" edge="1" parent="1" source="orders" target="payments">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel5-label" value="has" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel5">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Accounts -> PointHistory (1:N) -->
+        <mxCell id="rel6" value="" style="endArrow=ERmany;startArrow=ERone;html=1;rounded=0;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startFill=0;endFill=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="accounts" target="pointhistory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel6-label" value="earns/spends" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel6">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="10" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Orders -> PointHistory (1:N) -->
+        <mxCell id="rel7" value="" style="endArrow=ERmany;startArrow=ERzeroToOne;html=1;rounded=0;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startFill=0;endFill=0;edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" parent="1" source="orders" target="pointhistory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel7-label" value="generates" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel7">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="10" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Accounts -> ServiceBookings (1:N) -->
+        <mxCell id="rel8" value="" style="endArrow=ERmany;startArrow=ERzeroToOne;html=1;rounded=0;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startFill=0;endFill=0;edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" parent="1" source="accounts" target="servicebookings">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel8-label" value="books" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel8">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="10" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Vouchers -> Orders (1:N) -->
+        <mxCell id="rel9" value="" style="endArrow=ERmany;startArrow=ERzeroToOne;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;startFill=0;endFill=0;edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" parent="1" source="vouchers" target="orders">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel9-label" value="applies to" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="rel9">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="10" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Legend -->
+        <mxCell id="legend" value="&lt;b&gt;LEGEND&lt;/b&gt;&lt;hr&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Solid line = Required FK&lt;br&gt;Dashed line = Optional FK&lt;br&gt;&lt;br&gt;Colors:&lt;br&gt;🔵 Blue = User/Account&lt;br&gt;🟢 Green = Product/Category&lt;br&gt;🟡 Yellow = Order/Payment&lt;br&gt;🟣 Purple = Points/Booking&lt;br&gt;🔴 Red = Voucher&lt;br&gt;⚪ Gray = News&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;verticalAlign=top;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="40" width="220" height="220" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
