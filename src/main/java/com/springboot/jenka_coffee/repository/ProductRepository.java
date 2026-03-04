@@ -79,19 +79,21 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      * Search products by keyword with pagination
      */
     @Query("SELECT p FROM Product p WHERE " +
+            "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
 
     /**
      * Filter products by all criteria with pagination
      * FIX: Convert Double to BigDecimal for proper comparison
+     * FIX: Handle empty strings as NULL
      */
     @Query("SELECT p FROM Product p WHERE " +
-            "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+            "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "(:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
                                    @Param("minPrice") BigDecimal minPrice,

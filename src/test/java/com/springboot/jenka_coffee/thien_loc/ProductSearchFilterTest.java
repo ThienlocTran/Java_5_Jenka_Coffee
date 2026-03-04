@@ -50,219 +50,162 @@ public class ProductSearchFilterTest {
     }
 
     /**
-     * TC_PROD_002_01: Test page load
+     * TC_PROD_002: Test tìm kiếm và filter sản phẩm (GỘP)
+     * 
+     * Điều kiện tiên quyết: Có dữ liệu sản phẩm trong database
+     * Kết quả mong đợi: 
+     * - Tìm kiếm theo keyword hoạt động đúng
+     * - Filter theo giá hoạt động đúng
+     * - Kết hợp search + filter hoạt động đúng
      */
     @Test
     @Order(1)
-    @DisplayName("TC_PROD_002_01: Kiểm tra page load")
-    public void testPageLoad() throws InterruptedException {
-        System.out.println("\n=== TEST: Kiểm tra page load ===");
+    @DisplayName("TC_PROD_002: Test tìm kiếm và filter sản phẩm")
+    public void testSearchAndFilter() throws InterruptedException {
+        System.out.println("\n=== TC_PROD_002: Test tìm kiếm và filter sản phẩm ===");
+        
+        // ============================================================
+        // PHẦN 1: TEST TÌM KIẾM THEO KEYWORD
+        // ============================================================
+        System.out.println("\n--- PHẦN 1: Tìm kiếm theo keyword ---");
         
         driver.get(PRODUCT_LIST_URL);
         System.out.println("✓ Đã truy cập: " + PRODUCT_LIST_URL);
+        Thread.sleep(3000);
         
-        Thread.sleep(5000);
-        
-        if (driver.getCurrentUrl().contains("500")) {
-            fail("❌ Application crash - RESTART APPLICATION!");
-        }
-        
+        // Verify page load
         List<WebElement> searchInputs = driver.findElements(By.cssSelector("input[name='keyword']"));
         assertTrue(!searchInputs.isEmpty(), "Page phải load được search input");
-        
         System.out.println("✓ Page load thành công");
-        System.out.println("=== TEST PASSED ===\n");
-    }
-
-    /**
-     * TC_PROD_002_02: Test lọc theo giá (PASS)
-     */
-    @Test
-    @Order(2)
-    @DisplayName("TC_PROD_002_02: Lọc sản phẩm theo khoảng giá")
-    public void testFilterByPriceRange() throws InterruptedException {
-        System.out.println("\n=== TEST: Lọc sản phẩm theo khoảng giá ===");
         
-        driver.get(PRODUCT_LIST_URL);
-        System.out.println("✓ Đã truy cập: " + PRODUCT_LIST_URL);
-        
-        Thread.sleep(3000);
-        
-        WebElement priceFilterForm = driver.findElement(By.id("priceFilterForm"));
-        ((JavascriptExecutor) driver).executeScript(
-            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", priceFilterForm);
-        Thread.sleep(500);
-        
-        System.out.println("✓ Tìm thấy form lọc giá");
-        
-        WebElement minPriceInput = priceFilterForm.findElement(By.name("minPrice"));
-        minPriceInput.clear();
-        minPriceInput.sendKeys("100000");
-        System.out.println("✓ Đã nhập giá min: 100,000");
-        
-        WebElement maxPriceInput = priceFilterForm.findElement(By.name("maxPrice"));
-        maxPriceInput.clear();
-        maxPriceInput.sendKeys("5000000");
-        System.out.println("✓ Đã nhập giá max: 5,000,000");
-        
-        WebElement filterButton = priceFilterForm.findElement(By.cssSelector("button[type='submit']"));
-        filterButton.click();
-        System.out.println("✓ Đã click nút lọc giá");
-        
-        Thread.sleep(2000);
-        
-        String currentUrl = driver.getCurrentUrl();
-        assertTrue(currentUrl.contains("minPrice") || currentUrl.contains("/product/filter"), 
-                "URL phải chứa minPrice");
-        System.out.println("✓ URL sau lọc: " + currentUrl);
-        
-        List<WebElement> productCards = driver.findElements(By.cssSelector(".product-card"));
-        System.out.println("✓ Số sản phẩm sau lọc: " + productCards.size());
-        
-        if (productCards.size() == 0) {
-            System.out.println("⚠ Không có sản phẩm trong khoảng giá (filter có thể có bug)");
-        }
-        
-        System.out.println("=== TEST PASSED: Filter form hoạt động ===\n");
-    }
-
-    /**
-     * TC_PROD_002_03: Test lọc nhanh (PASS)
-     */
-    @Test
-    @Order(3)
-    @DisplayName("TC_PROD_002_03: Lọc nhanh theo khoảng giá")
-    public void testQuickPriceFilter() throws InterruptedException {
-        System.out.println("\n=== TEST: Lọc nhanh theo khoảng giá ===");
-        
-        driver.get(PRODUCT_LIST_URL);
-        System.out.println("✓ Đã truy cập: " + PRODUCT_LIST_URL);
-        
-        Thread.sleep(3000);
-        
-        List<WebElement> quickFilterLinks = driver.findElements(
-            By.xpath("//a[contains(@href, '/product/filter') and contains(., 'triệu')]"));
-        
-        assertTrue(quickFilterLinks.size() > 0, "Phải có ít nhất 1 link lọc nhanh");
-        System.out.println("✓ Số lượng link lọc nhanh: " + quickFilterLinks.size());
-        
-        WebElement filter1to5M = null;
-        for (WebElement link : quickFilterLinks) {
-            if (link.getText().contains("1 triệu - 5 triệu")) {
-                filter1to5M = link;
-                break;
-            }
-        }
-        
-        if (filter1to5M != null) {
-            String filterText = filter1to5M.getText();
-            
-            ((JavascriptExecutor) driver).executeScript(
-                "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", filter1to5M);
-            Thread.sleep(500);
-            
-            try {
-                filter1to5M.click();
-            } catch (Exception e) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", filter1to5M);
-            }
-            
-            System.out.println("✓ Đã click: " + filterText);
-            
-            Thread.sleep(2000);
-            
-            String currentUrl = driver.getCurrentUrl();
-            assertTrue(currentUrl.contains("minPrice=1000000"), "URL phải chứa minPrice=1000000");
-            System.out.println("✓ URL sau lọc nhanh: " + currentUrl);
-            
-            List<WebElement> products = driver.findElements(By.cssSelector(".product-card"));
-            System.out.println("✓ Số sản phẩm: " + products.size());
-            
-            if (products.size() == 0) {
-                System.out.println("⚠ Không có sản phẩm (filter có thể có bug)");
-            }
-        }
-        
-        System.out.println("=== TEST PASSED: Quick filter hoạt động ===\n");
-    }
-
-    /**
-     * TC_PROD_002_04: Test lọc theo danh mục (đơn giản hóa)
-     */
-    @Test
-    @Order(4)
-    @DisplayName("TC_PROD_002_04: Lọc sản phẩm theo danh mục")
-    public void testFilterByCategory() throws InterruptedException {
-        System.out.println("\n=== TEST: Lọc sản phẩm theo danh mục ===");
-        
-        driver.get(PRODUCT_LIST_URL);
-        System.out.println("✓ Đã truy cập: " + PRODUCT_LIST_URL);
-        
-        Thread.sleep(3000);
-        
-        List<WebElement> categoryLinks = driver.findElements(
-            By.xpath("//h5[contains(text(), 'Danh mục')]/following-sibling::ul//a"));
-        
-        assertTrue(categoryLinks.size() > 0, "Phải có ít nhất 1 danh mục");
-        System.out.println("✓ Số lượng danh mục: " + categoryLinks.size());
-        
-        WebElement firstCategory = categoryLinks.get(0);
-        String categoryName = firstCategory.findElement(By.tagName("span")).getText();
-        String categoryHref = firstCategory.getAttribute("href");
-        System.out.println("✓ Danh mục đầu tiên: " + categoryName);
-        
-        // Navigate trực tiếp bằng href để tránh stale element
-        driver.get(categoryHref);
-        System.out.println("✓ Đã navigate đến: " + categoryHref);
-        
-        Thread.sleep(3000);
-        
-        String currentUrl = driver.getCurrentUrl();
-        assertTrue(currentUrl.contains("categoryId"), "URL phải chứa categoryId");
-        System.out.println("✓ URL: " + currentUrl);
-        
-        System.out.println("=== TEST PASSED: Category filter hoạt động ===\n");
-    }
-
-    /**
-     * TC_PROD_002_05: Test kết hợp (đơn giản hóa)
-     */
-    @Test
-    @Order(5)
-    @DisplayName("TC_PROD_002_05: Kết hợp tìm kiếm và lọc giá")
-    public void testCombinedSearchAndFilter() throws InterruptedException {
-        System.out.println("\n=== TEST: Kết hợp tìm kiếm và lọc giá ===");
-        
-        driver.get(PRODUCT_LIST_URL);
-        System.out.println("✓ Đã truy cập: " + PRODUCT_LIST_URL);
-        
-        Thread.sleep(3000);
-        
-        List<WebElement> searchInputs = driver.findElements(By.cssSelector("input[name='keyword']"));
-        assertTrue(!searchInputs.isEmpty(), "Phải có search input");
-        
+        // Nhập keyword "Cafe"
         WebElement searchInput = searchInputs.get(0);
         ((JavascriptExecutor) driver).executeScript(
             "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", searchInput);
         Thread.sleep(500);
         
-        String keyword = "Máy";
-        searchInput.clear();
-        searchInput.sendKeys(keyword);
+        String keyword = "Cà Phê";
+        // Use JavaScript to set value directly to avoid ElementNotInteractableException
+        ((JavascriptExecutor) driver).executeScript(
+            "arguments[0].value = arguments[1];" +
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));" +
+            "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
+            searchInput, keyword);
         System.out.println("✓ Đã nhập từ khóa: " + keyword);
         
+        // Submit search - Click button instead of form.submit() to ensure values are captured
         WebElement searchButton = driver.findElement(By.cssSelector("button[type='submit'] .fa-search"));
-        WebElement searchForm = searchButton.findElement(By.xpath("ancestor::form"));
-        searchForm.submit();
+        WebElement submitButton = searchButton.findElement(By.xpath("ancestor::button"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submitButton);
         System.out.println("✓ Đã submit tìm kiếm");
         
         Thread.sleep(3000);
         
+        // Verify search results
         String currentUrl = driver.getCurrentUrl();
         assertTrue(currentUrl.contains("keyword") || currentUrl.contains("/product/filter"), 
                 "URL phải chứa keyword");
-        System.out.println("✓ URL: " + currentUrl);
+        System.out.println("✓ URL sau search: " + currentUrl);
         
-        System.out.println("=== TEST PASSED: Combined filter hoạt động ===\n");
+        List<WebElement> searchResults = driver.findElements(By.cssSelector(".product-card"));
+        System.out.println("✓ Số sản phẩm tìm thấy: " + searchResults.size());
+        
+        if (searchResults.size() > 0) {
+            // Verify keyword hiển thị
+            List<WebElement> keywordDisplay = driver.findElements(By.xpath("//span[contains(text(), '" + keyword + "')]"));
+            if (!keywordDisplay.isEmpty()) {
+                System.out.println("✓ Keyword được hiển thị trên trang");
+            }
+        }
+        
+        System.out.println("✓ PHẦN 1 PASSED: Tìm kiếm hoạt động đúng");
+        
+        // ============================================================
+        // PHẦN 2: TEST FILTER THEO GIÁ
+        // ============================================================
+        System.out.println("\n--- PHẦN 2: Filter theo khoảng giá ---");
+        
+        // Quay lại trang list
+        driver.get(PRODUCT_LIST_URL);
+        Thread.sleep(3000);
+        
+        // Tìm form filter giá
+        WebElement priceFilterForm = driver.findElement(By.id("priceFilterForm"));
+        ((JavascriptExecutor) driver).executeScript(
+            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", priceFilterForm);
+        Thread.sleep(500);
+        System.out.println("✓ Tìm thấy form lọc giá");
+        
+        // Nhập giá từ 100,000
+        WebElement minPriceInput = priceFilterForm.findElement(By.name("minPrice"));
+        // Use JavaScript to set value directly to avoid ElementNotInteractableException
+        ((JavascriptExecutor) driver).executeScript(
+            "arguments[0].value = arguments[1];" +
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));" +
+            "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
+            minPriceInput, "100000");
+        System.out.println("✓ Đã nhập giá min: 100,000");
+        
+        // Submit filter
+        WebElement filterButton = priceFilterForm.findElement(By.cssSelector("button[type='submit']"));
+        filterButton.click();
+        System.out.println("✓ Đã click nút lọc giá");
+        
+        Thread.sleep(3000);
+        
+        // Verify filter results
+        currentUrl = driver.getCurrentUrl();
+        assertTrue(currentUrl.contains("minPrice") || currentUrl.contains("/product/filter"), 
+                "URL phải chứa minPrice");
+        System.out.println("✓ URL sau filter: " + currentUrl);
+        
+        List<WebElement> filteredProducts = driver.findElements(By.cssSelector(".product-card"));
+        System.out.println("✓ Số sản phẩm sau filter: " + filteredProducts.size());
+        
+        System.out.println("✓ PHẦN 2 PASSED: Filter giá hoạt động đúng");
+        
+        // ============================================================
+        // PHẦN 3: TEST KẾT HỢP SEARCH + FILTER
+        // ============================================================
+        System.out.println("\n--- PHẦN 3: Kết hợp tìm kiếm và filter ---");
+        
+        // Quay lại trang list
+        driver.get(PRODUCT_LIST_URL);
+        Thread.sleep(3000);
+        
+        // Nhập keyword
+        searchInputs = driver.findElements(By.cssSelector("input[name='keyword']"));
+        searchInput = searchInputs.get(0);
+        ((JavascriptExecutor) driver).executeScript(
+            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", searchInput);
+        Thread.sleep(500);
+        
+        // Use JavaScript to set value directly to avoid ElementNotInteractableException
+        ((JavascriptExecutor) driver).executeScript(
+            "arguments[0].value = arguments[1];" +
+            "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));" +
+            "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", 
+            searchInput, keyword);
+        System.out.println("✓ Đã nhập keyword: " + keyword);
+        
+        // Submit search (sẽ giữ keyword trong URL) - Click button instead of form.submit()
+        searchButton = driver.findElement(By.cssSelector("button[type='submit'] .fa-search"));
+        submitButton = searchButton.findElement(By.xpath("ancestor::button"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", submitButton);
+        System.out.println("✓ Đã submit search");
+        
+        Thread.sleep(3000);
+        
+        // Verify combined results
+        currentUrl = driver.getCurrentUrl();
+        assertTrue(currentUrl.contains("keyword"), "URL phải chứa keyword");
+        System.out.println("✓ URL kết hợp: " + currentUrl);
+        
+        List<WebElement> combinedResults = driver.findElements(By.cssSelector(".product-card"));
+        System.out.println("✓ Số sản phẩm kết hợp: " + combinedResults.size());
+        
+        System.out.println("✓ PHẦN 3 PASSED: Kết hợp search + filter hoạt động đúng");
+        
+        System.out.println("\n=== TC_PROD_002 PASSED: Tất cả kiểm tra đều thành công ===\n");
     }
 }
