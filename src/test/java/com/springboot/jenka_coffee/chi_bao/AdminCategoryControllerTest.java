@@ -14,6 +14,7 @@ import com.springboot.jenka_coffee.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -51,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 
 
-class AdminCategoryControllerWebTest {
+class AdminCategoryControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -304,6 +305,8 @@ class AdminCategoryControllerWebTest {
                 // item.name cũng null hoặc rỗng
                 .andExpect(model().attribute("item", hasProperty("name", anyOf(nullValue(), isEmptyString()))));
     }
+
+
 
 
 
