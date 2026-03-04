@@ -119,11 +119,7 @@ class CategoryServiceIntegrationTest {
                 .andExpect(content().string("5"));
     }
 
-    /**
-     * TC_CAT_022
-     * - Kiểm tra method findByIdOrThrow via controller edit form:
-     *   GET /admin/category/edit/CP -> model contains "item" with id = "CP"
-     */
+    
     @Test
     void TC_CAT_013_NormalizeId_ToUppercase() {
         CategoryRequest request = new CategoryRequest();
@@ -152,3 +148,4 @@ class CategoryServiceIntegrationTest {
         assertEquals(0, categoryRepository.count());
     }
 }
+
