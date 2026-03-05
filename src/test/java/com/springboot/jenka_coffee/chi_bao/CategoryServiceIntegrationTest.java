@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.chi_bao;
 
+import com.springboot.jenka_coffee.dto.request.CategoryRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
@@ -7,6 +8,7 @@ import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
+import com.springboot.jenka_coffee.service.CategoryService;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,16 +26,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class CategoryIntegrationTest {
+class CategoryServiceIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private CategoryService categoryService;
 
     @Autowired
     private ProductRepository productRepository;
@@ -113,28 +119,16 @@ class CategoryIntegrationTest {
                 .andExpect(content().string("5"));
     }
 
-    /**
-     * TC_CAT_022
-     * - Kiểm tra method findByIdOrThrow via controller edit form:
-     *   GET /admin/category/edit/CP -> model contains "item" with id = "CP"
-     */
+    
     @Test
-    void TC_CAT_022_EditForm_FindByIdOrThrow_ReturnsCategory() throws Exception {
-        Category cp = new Category();
-        cp.setId("CP");
-        cp.setName("Cà phê");
-        categoryRepository.save(cp); // sẽ lưu vào DB test (H2 / test db) nếu config đúng
+    void TC_CAT_013_NormalizeId_ToUppercase() {
+        CategoryRequest request = new CategoryRequest();
+        request.setId("tea");
+        request.setName("Trà");
 
-        Account admin = new Account();
-        admin.setAdmin(true);
+        Category result = categoryService.createCategory(request);
 
-        mockMvc.perform(get("/admin/category/edit/{id}", "CP")
-                        .sessionAttr("user", admin))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(model().attributeExists("item"))
-                .andExpect(model().attribute("item", hasProperty("id", is("CP"))))
-                .andExpect(model().attribute("item", hasProperty("name", is("Cà phê"))));
+        assertEquals("TEA", result.getId());
     }
 
     @Test
@@ -154,3 +148,4 @@ class CategoryIntegrationTest {
         assertEquals(0, categoryRepository.count());
     }
 }
+
