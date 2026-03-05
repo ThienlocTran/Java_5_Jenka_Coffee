@@ -173,8 +173,11 @@ public class AdminProductControllerTest {
                 // Mong đợi 3: Test xem Flash Attribute chứa câu thông báo màu xanh có hiện lên
                 // không?
                 .andExpect(flash().attributeExists("successMessage"))
-                .andExpect(flash().attribute("successMessage", "Lưu thành công"));
-
+                .andExpect(flash().attribute("successMessage", "Lưu thành công"))
+                .andDo(result -> {
+                    System.out.println("Status Code: " + result.getResponse().getStatus());
+                });
+        
         // Mong đợi cuối cùng: Chắc chắn rằng hàm saveProduct() dưới tầng Service đã
         // được gọi ĐÚNG 1 LẦN với file ảnh và object đã cho.
         // (Nếu không gọi chứng tỏ Form đã bị rớt / lỗi ở đâu đó trên tầng Controller).
@@ -209,9 +212,9 @@ public class AdminProductControllerTest {
                 // Trông đợi Controller sẽ văng cái lỗi đó ra (Nó chứng minh DB đã chặn được sự
                 // cố Name=Null)
                 .andExpect(result -> {
-                    org.junit.jupiter.api.Assertions.assertTrue(
-                            result.getResolvedException() instanceof org.springframework.dao.DataIntegrityViolationException);
-                    org.junit.jupiter.api.Assertions.assertEquals(
+                    Assertions.assertTrue(
+                            result.getResolvedException() instanceof DataIntegrityViolationException);
+                    Assertions.assertEquals(
                             "Column 'Name' cannot be null",
                             result.getResolvedException().getMessage());
                 });
