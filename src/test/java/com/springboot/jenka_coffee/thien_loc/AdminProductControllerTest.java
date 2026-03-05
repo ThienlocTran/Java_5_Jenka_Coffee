@@ -15,7 +15,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,9 +36,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 /**
  * 
@@ -361,8 +360,8 @@ public class AdminProductControllerTest {
                 // ResourceNotFoundException
                 .andExpect(result -> {
                     Exception resolvedException = result.getResolvedException();
-                    org.junit.jupiter.api.Assertions.assertNotNull(resolvedException, "Phải có Exception bị văng ra");
-                    org.junit.jupiter.api.Assertions.assertTrue(
+                    Assertions.assertNotNull(resolvedException, "Phải có Exception bị văng ra");
+                    Assertions.assertTrue(
                             resolvedException instanceof ResourceNotFoundException,
                             "Exception phải là loại ResourceNotFoundException");
                     Assertions.assertEquals(
