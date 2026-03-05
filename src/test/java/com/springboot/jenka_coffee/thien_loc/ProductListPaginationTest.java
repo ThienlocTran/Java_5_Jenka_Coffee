@@ -56,7 +56,7 @@ public class ProductListPaginationTest {
 
     /**
      * TC_PROD_001: Test hiển thị và phân trang danh sách sản phẩm (GỘP)
-     * 
+
      * Điều kiện tiên quyết: Có dữ liệu sản phẩm trong database
      * Kết quả mong đợi: 
      * - Load đúng danh sách sản phẩm với đầy đủ thông tin
@@ -107,7 +107,7 @@ public class ProductListPaginationTest {
         
         // Bước 5: Verify có hiển thị sản phẩm
         List<WebElement> productCards = driver.findElements(By.cssSelector(".product-card"));
-        assertTrue(productCards.size() > 0, "Phải có ít nhất 1 sản phẩm");
+        assertFalse(productCards.isEmpty(), "Phải có ít nhất 1 sản phẩm");
         System.out.println("✓ Số sản phẩm hiển thị: " + productCards.size());
         
         // Bước 6: Verify thông tin sản phẩm đầu tiên
@@ -185,7 +185,7 @@ public class ProductListPaginationTest {
         
         // Lấy danh sách các trang
         List<WebElement> pageLinks = driver.findElements(By.cssSelector(".pagination .page-link"));
-        assertTrue(pageLinks.size() > 0, "Phải có ít nhất 1 link phân trang");
+        assertFalse(pageLinks.isEmpty(), "Phải có ít nhất 1 link phân trang");
         System.out.println("✓ Số lượng page links: " + pageLinks.size());
         
         // Lấy tên sản phẩm đầu tiên ở trang 1

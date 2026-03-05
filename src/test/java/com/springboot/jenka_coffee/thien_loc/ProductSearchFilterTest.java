@@ -14,8 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ProductSearchFilterTest {
@@ -27,6 +26,18 @@ public class ProductSearchFilterTest {
 
     @BeforeEach
     public void setupTest() throws InterruptedException {
+        final ChromeOptions options = getChromeOptions();
+
+        driver = new ChromeDriver(options);
+        wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(90)); // Tăng timeout
+        driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(30));
+        
+        Thread.sleep(2000);
+    }
+
+    private static ChromeOptions getChromeOptions() {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--start-maximized");
         options.addArguments("--disable-notifications");
@@ -35,17 +46,10 @@ public class ProductSearchFilterTest {
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-gpu");
         options.addArguments("--disable-extensions");
-        
+
         // Set page load strategy to 'eager' - không đợi images/stylesheets load hết
         options.setPageLoadStrategy(org.openqa.selenium.PageLoadStrategy.EAGER);
-        
-        driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-        driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(90)); // Tăng timeout
-        driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(30));
-        
-        Thread.sleep(2000);
+        return options;
     }
 
     @AfterEach
@@ -59,7 +63,7 @@ public class ProductSearchFilterTest {
 
     /**
      * TC_PROD_002: Test tìm kiếm và filter sản phẩm (GỘP)
-     * 
+
      * Điều kiện tiên quyết: Có dữ liệu sản phẩm trong database
      * Kết quả mong đợi: 
      * - Tìm kiếm theo keyword hoạt động đúng
@@ -83,7 +87,7 @@ public class ProductSearchFilterTest {
         
         // Verify page load
         List<WebElement> searchInputs = driver.findElements(By.cssSelector("input[name='keyword']"));
-        assertTrue(!searchInputs.isEmpty(), "Page phải load được search input");
+        assertFalse(searchInputs.isEmpty(), "Page phải load được search input");
         System.out.println("✓ Page load thành công");
         System.out.println("DEBUG: Tìm thấy " + searchInputs.size() + " input có name='keyword'");
         
@@ -152,11 +156,11 @@ public class ProductSearchFilterTest {
         
         // ASSERTION: Số sản phẩm phải đúng với DB (5 sản phẩm có chữ "Cà Phê")
         // Nếu trả về 12 = bug (keyword bị rỗng)
-        assertTrue(searchResults.size() > 0 && searchResults.size() < 12, 
+        assertTrue(!searchResults.isEmpty() && searchResults.size() < 12,
             "Số sản phẩm tìm thấy phải > 0 và < 12 (không phải tất cả)");
         System.out.println("✓ Số lượng kết quả hợp lý (không phải tất cả sản phẩm)");
         
-        if (searchResults.size() > 0) {
+        if (!searchResults.isEmpty()) {
             // Verify keyword hiển thị
             List<WebElement> keywordDisplay = driver.findElements(By.xpath("//span[contains(text(), '" + keyword + "')]"));
             if (!keywordDisplay.isEmpty()) {
