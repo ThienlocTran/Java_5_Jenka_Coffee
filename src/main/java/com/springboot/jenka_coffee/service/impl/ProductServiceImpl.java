@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -43,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
@@ -117,6 +120,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product create(Product product) {
         log.info("Creating new product: {}", product.getName());
         Product savedProduct = productRepository.save(product);
@@ -125,6 +129,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product update(Product product) {
         log.info("Updating product with ID: {}", product.getId());
 
@@ -139,6 +144,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "categoryCounts", allEntries = true)
     public void delete(Integer id) {
         log.info("Deleting product with ID: {}", id);
 
@@ -188,12 +194,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable("categoryCounts")
     public Map<String, Long> getCategoryCounts() {
         Map<String, Long> counts = new HashMap<>();
-        List<Category> categories = categoryRepository.findAll();
-        for (Category category : categories) {
-            long count = productRepository.countByCategoryId(category.getId());
-            counts.put(category.getId(), count);
+        List<Object[]> results = productRepository.countProductsGroupedByCategory();
+        for (Object[] result : results) {
+            String categoryId = (String) result[0];
+            Long count = (Long) result[1];
+            counts.put(categoryId, count);
         }
         return counts;
     }
@@ -214,7 +222,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-                                                Pageable pageable) {
+            Pageable pageable) {
         return productRepository.findByCategoryAndPriceRange(categoryId, minPrice, maxPrice, pageable);
     }
 
@@ -225,11 +233,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-                                                       String keyword, Pageable pageable) {
+            String keyword, Pageable pageable) {
         return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
     }
 
     @Override
+    @CacheEvict(value = "categoryCounts", allEntries = true)
     public void deleteProduct(Integer id,
             RedirectAttributes redirectAttributes) {
         log.info("Attempting to delete product with ID: {}", id);

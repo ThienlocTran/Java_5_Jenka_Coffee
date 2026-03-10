@@ -14,90 +14,98 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
-    // ===== EXISTING METHODS =====
+        // ===== EXISTING METHODS =====
 
-    /**
-     * Find products by category
-     */
-    List<Product> findByCategoryId(String cid);
+        /**
+         * Find products by category
+         */
+        List<Product> findByCategoryId(String cid);
 
-    // Paginated version
-    Page<Product> findByCategoryId(String categoryId, Pageable pageable);
+        // Paginated version
+        Page<Product> findByCategoryId(String categoryId, Pageable pageable);
 
-    List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
+        /**
+         * Count products by category (for delete validation)
+         */
+        long countByCategoryId(String categoryId);
 
-    /**
-     * Count products by category (for delete validation)
-     */
-    long countByCategoryId(String categoryId);
+        List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
 
-    // ===== NEW METHODS =====
+        /**
+         * Count all products grouped by category
+         * Returns a list of Object[] where index 0 is category ID and index 1 is the
+         * count
+         */
+        @Query("SELECT p.category.id, COUNT(p) MATCH_ALL FROM Product p GROUP BY p.category.id")
+        List<Object[]> countProductsGroupedByCategory();
 
-    /**
-     * Find products by category with pagination
-     */
+        // ===== NEW METHODS =====
 
+        /**
+         * Find products by category with pagination
+         */
 
-    /**
-     * Find available products only (available = true)
-     * DSL method - Spring generates: SELECT * FROM products WHERE available = true
-     */
-    List<Product> findByAvailableTrue();
+        /**
+         * Find available products only (available = true)
+         * DSL method - Spring generates: SELECT * FROM products WHERE available = true
+         */
+        List<Product> findByAvailableTrue();
 
-    /**
-     * Search products by name or description
-     * JPQL required: multiple fields with LIKE + case-insensitive
-     */
-    @Query("SELECT p FROM Product p WHERE " +
-            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<Product> searchProducts(@Param("keyword") String keyword);
+        /**
+         * Search products by name or description
+         * JPQL required: multiple fields with LIKE + case-insensitive
+         */
+        @Query("SELECT p FROM Product p WHERE " +
+                        "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+        List<Product> searchProducts(@Param("keyword") String keyword);
 
-    /**
-     * Find products by price range
-     * DSL method - Spring generates: SELECT * FROM products WHERE price BETWEEN ?
-     * AND ?
-     */
-    List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
+        /**
+         * Find products by price range
+         * DSL method - Spring generates: SELECT * FROM products WHERE price BETWEEN ?
+         * AND ?
+         */
+        List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
 
-    // ========== ADVANCED FILTER METHODS WITH PAGINATION ==========
+        // ========== ADVANCED FILTER METHODS WITH PAGINATION ==========
 
-    /**
-     * Find products by category and price range with pagination
-     * FIX: Convert Double to BigDecimal for proper comparison
-     */
-    @Query("SELECT p FROM Product p WHERE " +
-            "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
-            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
-            "(:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
-                                              @Param("minPrice") BigDecimal minPrice,
-                                              @Param("maxPrice") BigDecimal maxPrice,
-                                              Pageable pageable);
+        /**
+         * Find products by category and price range with pagination
+         * FIX: Convert Double to BigDecimal for proper comparison
+         */
+        @Query("SELECT p FROM Product p WHERE " +
+                        "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
+                        "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+                        "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+        Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
+                        @Param("minPrice") BigDecimal minPrice,
+                        @Param("maxPrice") BigDecimal maxPrice,
+                        Pageable pageable);
 
-    /**
-     * Search products by keyword with pagination
-     */
-    @Query("SELECT p FROM Product p WHERE " +
-            "(:keyword IS NULL OR :keyword = '' OR " +
-            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
+        /**
+         * Search products by keyword with pagination
+         */
+        @Query("SELECT p FROM Product p WHERE " +
+                        "(:keyword IS NULL OR :keyword = '' OR " +
+                        "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+        Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
 
-    /**
-     * Filter products by all criteria with pagination
-     * FIX: Convert Double to BigDecimal for proper comparison
-     * FIX: Handle empty strings as NULL
-     */
-    @Query("SELECT p FROM Product p WHERE " +
-            "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
-            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
-            "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
-                                   @Param("minPrice") BigDecimal minPrice,
-                                   @Param("maxPrice") BigDecimal maxPrice,
-                                   @Param("keyword") String keyword,
-                                   Pageable pageable);
+        /**
+         * Filter products by all criteria with pagination
+         * FIX: Convert Double to BigDecimal for proper comparison
+         * FIX: Handle empty strings as NULL
+         */
+        @Query("SELECT p FROM Product p WHERE " +
+                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+                        "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
+                        "(:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+                        +
+                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+        Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                        @Param("minPrice") BigDecimal minPrice,
+                        @Param("maxPrice") BigDecimal maxPrice,
+                        @Param("keyword") String keyword,
+                        Pageable pageable);
 }

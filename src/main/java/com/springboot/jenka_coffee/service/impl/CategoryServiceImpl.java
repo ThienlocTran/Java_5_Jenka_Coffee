@@ -11,6 +11,8 @@ import com.springboot.jenka_coffee.service.CategoryService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.Map;
@@ -31,27 +33,15 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("categories")
     public List<Category> findAll() {
-        List<Category> categories = categoryRepository.findAll();
-        // Initialize products collection để tránh lazy loading exception
-        categories.forEach(cat -> {
-            if (cat.getProducts() != null) {
-                cat.getProducts().size(); // Trigger lazy load
-            }
-        });
-        return categories;
+        return categoryRepository.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Category> findAllPaginated(Pageable pageable) {
-        Page<Category> categoryPage = categoryRepository.findAll(pageable);
-        categoryPage.getContent().forEach(cat -> {
-            if (cat.getProducts() != null) {
-                cat.getProducts().size();
-            }
-        });
-        return categoryPage;
+        return categoryRepository.findAll(pageable);
     }
 
     @Override
@@ -61,11 +51,13 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public Category save(Category category) {
         return categoryRepository.save(category);
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public void delete(String id) {
         categoryRepository.deleteById(id);
     }
@@ -111,6 +103,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteOrThrow(String id) {
         // Verify category exists (throws exception if not found)
         findByIdOrThrow(id);
@@ -125,6 +118,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public Category createCategory(CategoryRequest request) {
         // Normalize data
         request.normalize();
@@ -147,6 +141,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public Category updateCategory(String id, CategoryRequest request) {
         Category existing = findByIdOrThrow(id);
 
