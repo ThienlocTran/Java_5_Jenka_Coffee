@@ -34,22 +34,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Permit all requests - custom authentication handled in AuthController
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll())
-                // Disable CSRF
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .csrf(csrf -> csrf.disable())
-                // Disable default form login (prevents auto-generated password)
                 .formLogin(form -> form.disable())
-                // Disable logout
                 .logout(logout -> logout.disable())
-                // Disable HTTP Basic
                 .httpBasic(basic -> basic.disable())
-                // Use STATELESS so Spring Security never touches HttpSession
-                // This prevents the deferred SecurityContext StackOverflow bug in 6.2.x
+                // IF_REQUIRED: Spring Security không tự tạo session nhưng dùng session có sẵn
+                // Tránh StackOverflow bug của 6.2.x mà vẫn cho phép HttpSession hoạt động
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Use NullSecurityContextRepository so Spring Security never reads/writes session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .securityContext(ctx -> ctx
                         .securityContextRepository(new NullSecurityContextRepository()));
 

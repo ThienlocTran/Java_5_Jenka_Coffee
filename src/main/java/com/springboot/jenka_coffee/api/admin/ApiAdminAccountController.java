@@ -24,9 +24,9 @@ public class ApiAdminAccountController {
     }
 
     @GetMapping
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<Account>>> listAccounts() {
         List<Account> accounts = accountService.findAll();
-        // Cần bảo mật: không trả về password nguyên vẹn
         accounts.forEach(a -> a.setPasswordHash(null));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", accounts));
     }
@@ -43,6 +43,11 @@ public class ApiAdminAccountController {
             @Valid @ModelAttribute AccountRequest request,
             @RequestParam(value = "photoFile", required = false) MultipartFile photoFile) {
         try {
+            // username is required for create — validate manually since DTO is shared with update
+            if (request.getUsername() == null || request.getUsername().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Tên đăng nhập không được để trống"));
+            }
             Account account = accountService.createAccount(request.toEntity(), photoFile);
             account.setPasswordHash(null);
             return ResponseEntity.ok(ApiResponse.success("Thêm tài khoản mới thành công", account));

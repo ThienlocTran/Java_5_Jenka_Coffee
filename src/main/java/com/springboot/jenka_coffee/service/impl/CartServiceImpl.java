@@ -50,6 +50,10 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void update(Integer productId, int qty) {
+        if (qty <= 0) {
+            map.remove(productId); // qty <= 0 → xóa khỏi giỏ
+            return;
+        }
         CartItem item = map.get(productId);
         if (item != null) {
             item.setQuantity(qty);
@@ -79,6 +83,13 @@ public class CartServiceImpl implements CartService {
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .doubleValue();
+    }
+
+    @Override
+    public BigDecimal getAmountExact() {
+        return map.values().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Override

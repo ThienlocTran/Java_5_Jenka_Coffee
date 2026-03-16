@@ -10,8 +10,10 @@ import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.cache.annotation.Cacheable;
@@ -40,6 +42,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productRepository.findAll();
     }
@@ -75,8 +78,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Product findById(Integer id) {
-        return productRepository.findById(id)
+        return productRepository.findByIdWithCategory(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
@@ -87,8 +91,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Product> getRelatedProducts(String categoryId, Integer productId) {
-        return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId);
+        return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId, PageRequest.of(0, 4));
     }
 
     @Override
@@ -100,6 +105,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> getProductDetail(Integer productId) {
         Product item = findById(productId);
         if (item == null) {
@@ -181,11 +187,13 @@ public class ProductServiceImpl implements ProductService {
     // ========== PAGINATION METHODS ==========
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> findAllPaginated(Pageable pageable) {
-        return productRepository.findAll(pageable);
+        return productRepository.findAllWithCategory(pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> filterProductsPaginated(String categoryId, Pageable pageable) {
         if (categoryId == null || categoryId.trim().isEmpty()) {
             return productRepository.findAll(pageable);
@@ -221,17 +229,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             Pageable pageable) {
         return productRepository.findByCategoryAndPriceRange(categoryId, minPrice, maxPrice, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
         return productRepository.searchProductsPaginated(keyword, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
         return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);

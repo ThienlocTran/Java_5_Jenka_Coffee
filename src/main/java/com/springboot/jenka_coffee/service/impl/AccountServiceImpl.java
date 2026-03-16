@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -74,47 +75,24 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account authenticate(String identifier, String password) {
-        System.out.println("DEBUG: Authenticating with identifier: " + identifier);
-        System.out.println("Identifier: " + identifier);
-        System.out.println("Password: " + password);
-
-        // Find account by username, email, or phone
         Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-
-        if (account == null) {
-            System.out.println("DEBUG: Account not found!");
-            return null; // User not found
+        if (account == null || !account.getActivated()) {
+            return null;
         }
-
-        System.out.println("DEBUG: Account found - " + account.getUsername());
-        System.out.println("DEBUG: Password hash: " + account.getPasswordHash());
-        System.out.println(
-                "DEBUG: Hash length: " + (account.getPasswordHash() != null ? account.getPasswordHash().length() : 0));
-
-        if (!account.getActivated()) {
-            System.out.println("DEBUG: Account not activated!");
-            return null; // Account deactivated
-        }
-
-        // BCrypt password verification
-        boolean passwordMatch = passwordSecurity.verifyPassword(password, account.getPasswordHash());
-        System.out.println("DEBUG: Password match: " + passwordMatch);
-
-        if (passwordMatch) {
-            System.out.println("DEBUG: Authentication SUCCESS!");
-            return account;
-        }
-
-        System.out.println("DEBUG: Authentication FAILED - wrong password");
-        return null; // Wrong password
+        return passwordSecurity.verifyPassword(password, account.getPasswordHash()) ? account : null;
     }
 
     @Override
     public void register(String username, String fullname, String phone, String email, String password) {
-        // 1. Validate duplicate email
+        // 1. Validate username
+        if (dao.existsById(username.trim())) {
+            throw new ValidationException("username", "Tên đăng nhập đã tồn tại!");
+        }
+
+        // 2. Validate duplicate email
         if (email != null && !email.trim().isEmpty()) {
             if (dao.existsByEmail(email.trim())) {
-                throw new ValidationException("Email đã được sử dụng!");
+                throw new ValidationException("email", "Email đã được sử dụng!");
             }
         }
 
@@ -223,8 +201,11 @@ public class AccountServiceImpl implements AccountService {
         }
 
         // Validation - check email (if changed)
-        if (!existingAccount.getEmail().equals(updatedAccount.getEmail()) &&
-                existsByEmail(updatedAccount.getEmail())) {
+        String existingEmail = existingAccount.getEmail();
+        String newEmail = updatedAccount.getEmail();
+        boolean emailChanged = !Objects.equals(existingEmail, newEmail)
+                && newEmail != null && !newEmail.trim().isEmpty();
+        if (emailChanged && existsByEmail(newEmail)) {
             throw new ValidationException("email", "Email đã được sử dụng!");
         }
 

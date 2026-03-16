@@ -43,12 +43,21 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Kích thước tệp tin tải lên quá lớn! Vui lòng chọn tệp nhỏ hơn 10MB."));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getAllErrors().stream()
-                .findFirst()
-                .map(e -> e.getDefaultMessage())
-                .orElse("Dữ liệu đầu vào không hợp lệ");
+    @ExceptionHandler({MethodArgumentNotValidException.class, org.springframework.validation.BindException.class})
+    public ResponseEntity<ApiResponse<Void>> handleValidationErrors(Exception ex) {
+        org.springframework.validation.BindingResult bindingResult = null;
+        if (ex instanceof MethodArgumentNotValidException e) {
+            bindingResult = e.getBindingResult();
+        } else if (ex instanceof org.springframework.validation.BindException e) {
+            bindingResult = e.getBindingResult();
+        }
+        String message = bindingResult != null
+                ? bindingResult.getAllErrors().stream()
+                        .findFirst()
+                        .map(e -> e.getDefaultMessage())
+                        .orElse("Dữ liệu đầu vào không hợp lệ")
+                : "Dữ liệu đầu vào không hợp lệ";
+        logger.warn("Validation error: {}", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(message));
     }
 

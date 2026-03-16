@@ -10,102 +10,89 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
-        // ===== EXISTING METHODS =====
+    // ── findAll with JOIN FETCH to avoid LazyInitializationException ──
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category",
+           countQuery = "SELECT COUNT(p) FROM Product p")
+    Page<Product> findAllWithCategory(Pageable pageable);
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.id = :id")
+    Optional<Product> findByIdWithCategory(@Param("id") Integer id);
 
-        /**
-         * Find products by category
-         */
-        List<Product> findByCategoryId(String cid);
+    // ── By category ──────────────────────────────────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.category.id = :cid")
+    List<Product> findByCategoryId(@Param("cid") String cid);
 
-        // Paginated version
-        Page<Product> findByCategoryId(String categoryId, Pageable pageable);
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE p.category.id = :categoryId",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId")
+    Page<Product> findByCategoryId(@Param("categoryId") String categoryId, Pageable pageable);
 
-        /**
-         * Count products by category (for delete validation)
-         */
-        long countByCategoryId(String categoryId);
+    long countByCategoryId(String categoryId);
 
-        List<Product> findTop4ByCategoryIdAndIdNot(String categoryId, Integer id);
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.category.id = :categoryId AND p.id <> :id")
+    List<Product> findTop4ByCategoryIdAndIdNot(@Param("categoryId") String categoryId, @Param("id") Integer id,
+                                               Pageable pageable);
 
-        /**
-         * Count all products grouped by category
-         * Returns a list of Object[] where index 0 is category ID and index 1 is the
-         * count
-         */
-        @Query("SELECT p.category.id, COUNT(p) MATCH_ALL FROM Product p GROUP BY p.category.id")
-        List<Object[]> countProductsGroupedByCategory();
+    // ── Category counts ──────────────────────────────────────────────
+    @Query("SELECT p.category.id, COUNT(p) FROM Product p GROUP BY p.category.id")
+    List<Object[]> countProductsGroupedByCategory();
 
-        // ===== NEW METHODS =====
+    // ── Available only ───────────────────────────────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.available = true")
+    List<Product> findByAvailableTrue();
 
-        /**
-         * Find products by category with pagination
-         */
+    // ── Search ───────────────────────────────────────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+           "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Product> searchProducts(@Param("keyword") String keyword);
 
-        /**
-         * Find available products only (available = true)
-         * DSL method - Spring generates: SELECT * FROM products WHERE available = true
-         */
-        List<Product> findByAvailableTrue();
+    List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
 
-        /**
-         * Search products by name or description
-         * JPQL required: multiple fields with LIKE + case-insensitive
-         */
-        @Query("SELECT p FROM Product p WHERE " +
-                        "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-        List<Product> searchProducts(@Param("keyword") String keyword);
-
-        /**
-         * Find products by price range
-         * DSL method - Spring generates: SELECT * FROM products WHERE price BETWEEN ?
-         * AND ?
-         */
-        List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
-
-        // ========== ADVANCED FILTER METHODS WITH PAGINATION ==========
-
-        /**
-         * Find products by category and price range with pagination
-         * FIX: Convert Double to BigDecimal for proper comparison
-         */
-        @Query("SELECT p FROM Product p WHERE " +
-                        "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
-                        "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
-                        "(:maxPrice IS NULL OR p.price <= :maxPrice)")
-        Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
-                        @Param("minPrice") BigDecimal minPrice,
-                        @Param("maxPrice") BigDecimal maxPrice,
-                        Pageable pageable);
-
-        /**
-         * Search products by keyword with pagination
-         */
-        @Query("SELECT p FROM Product p WHERE " +
-                        "(:keyword IS NULL OR :keyword = '' OR " +
-                        "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-        Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
-
-        /**
-         * Filter products by all criteria with pagination
-         * FIX: Convert Double to BigDecimal for proper comparison
-         * FIX: Handle empty strings as NULL
-         */
-        @Query("SELECT p FROM Product p WHERE " +
+    // ── Paginated filter — all criteria ─────────────────────────────
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+                   "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
+                   "(:keyword IS NULL OR :keyword = '' OR " +
+                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
                         "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-                        "(:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
-                        +
-                        "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-        Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
-                        @Param("minPrice") BigDecimal minPrice,
-                        @Param("maxPrice") BigDecimal maxPrice,
-                        @Param("keyword") String keyword,
-                        Pageable pageable);
+                        "(:keyword IS NULL OR :keyword = '' OR " +
+                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                    @Param("minPrice") BigDecimal minPrice,
+                                    @Param("maxPrice") BigDecimal maxPrice,
+                                    @Param("keyword") String keyword,
+                                    Pageable pageable);
+
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+                   "(:maxPrice IS NULL OR p.price <= :maxPrice)",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
+                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+                        "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
+                                              @Param("minPrice") BigDecimal minPrice,
+                                              @Param("maxPrice") BigDecimal maxPrice,
+                                              Pageable pageable);
+
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "(:keyword IS NULL OR :keyword = '' OR " +
+                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
+                        "(:keyword IS NULL OR :keyword = '' OR " +
+                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
 }

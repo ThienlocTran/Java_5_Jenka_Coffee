@@ -17,12 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime; // Kiểm tra Entity của bạn dùng Date hay LocalDateTime nhé
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -122,24 +120,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Build OrderDetails from cart items
+     * Build OrderDetails — price luôn lấy từ DB, không tin cart session
      */
     private List<OrderDetail> buildOrderDetails(Collection<CartItem> cartItems, Order order) {
         List<OrderDetail> orderDetails = new ArrayList<>();
 
         for (CartItem item : cartItems) {
-            OrderDetail detail = new OrderDetail();
-
-            // Fetch product from database to ensure data accuracy
-            Product product = productRepository.findById(item.getProductId())
+            // Fetch product từ DB để lấy giá thật (tránh price tampering từ client)
+            Product product = productRepository.findByIdWithCategory(item.getProductId())
                     .orElseThrow(() -> new IllegalStateException(
                             "Sản phẩm ID " + item.getProductId() + " không tồn tại!"));
 
+            OrderDetail detail = new OrderDetail();
             detail.setProduct(product);
-            detail.setPrice(item.getPrice());
+            detail.setPrice(product.getPrice()); // giá từ DB, không từ cart
             detail.setQuantity(item.getQuantity());
             detail.setOrder(order);
-
             orderDetails.add(detail);
         }
 
@@ -147,26 +143,26 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Deduct inventory from products
+     * Validate stock và deduct inventory — validate tất cả trước, rồi mới save batch
      */
     private void deductInventory(List<OrderDetail> orderDetails) {
+        // Pass 1: validate tất cả trước để tránh partial deduction
         for (OrderDetail detail : orderDetails) {
             Product product = detail.getProduct();
-            Integer requestedQty = detail.getQuantity();
-            Integer currentStock = product.getQuantity();
-
-            // Validate stock availability
-            if (currentStock < requestedQty) {
-                throw new InsufficientStockException(
-                        product.getName(),
-                        requestedQty,
-                        currentStock);
+            int requested = detail.getQuantity();
+            int current = product.getQuantity() != null ? product.getQuantity() : 0;
+            if (current < requested) {
+                throw new InsufficientStockException(product.getName(), requested, current);
             }
-
-            // Deduct stock
-            product.setQuantity(currentStock - requestedQty);
-            productRepository.save(product);
         }
+        // Pass 2: deduct và batch save
+        List<Product> toSave = new ArrayList<>();
+        for (OrderDetail detail : orderDetails) {
+            Product product = detail.getProduct();
+            product.setQuantity(product.getQuantity() - detail.getQuantity());
+            toSave.add(product);
+        }
+        productRepository.saveAll(toSave);
     }
 
     @Override

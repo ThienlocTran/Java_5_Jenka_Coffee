@@ -57,14 +57,14 @@ public class ApiAdminProductController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin sản phẩm thành công", product));
     }
 
-    // POST /api/admin/products  (multipart/form-data – có file upload ảnh)
-    @PostMapping(consumes = { "multipart/form-data" })
+    @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> saveProduct(
             @ModelAttribute Product product,
-            @RequestParam(value = "categoryId") String categoryId,
+            @RequestParam("categoryId") String categoryId,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-
         try {
+            // Prevent mass-assignment: force id=null so JPA always INSERT, never UPDATE
+            product.setId(null);
             Category category = categoryService.findByIdOrThrow(categoryId);
             product.setCategory(category);
             productService.saveProduct(product, file);
