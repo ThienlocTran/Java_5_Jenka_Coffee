@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.*;
@@ -49,11 +51,13 @@ public class Product implements Serializable {
 
     // --- CÁC MỐI QUAN HỆ ---
 
-    @ManyToOne(fetch = FetchType.LAZY) // Mặc định EAGER, nên đổi sang LAZY cho nhẹ
+    @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"}) // Chặn Category↔Product cycle và lỗi proxy
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Categoryid", nullable = false)
-    @ToString.Exclude // Quan trọng: Chặn vòng lặp khi in log
+    @ToString.Exclude
     private Category category;
 
+    @JsonIgnore // Chặn Product↔OrderDetail cycle
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<OrderDetail> orderDetails;

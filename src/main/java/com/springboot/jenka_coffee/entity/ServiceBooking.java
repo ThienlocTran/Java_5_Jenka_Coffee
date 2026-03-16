@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -46,6 +48,7 @@ public class ServiceBooking implements Serializable {
     // --- RELATIONSHIPS ---
 
     // N-1 with Account (nullable for guest bookings)
+    @JsonIgnore // Chặn Account↔ServiceBooking cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "username", insertable = false, updatable = false)
     @ToString.Exclude

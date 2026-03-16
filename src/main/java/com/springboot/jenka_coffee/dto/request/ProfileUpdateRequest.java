@@ -1,13 +1,37 @@
 package com.springboot.jenka_coffee.dto.request;
 
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
+/**
+ * DTO cho PUT /api/profile/update
+ * Hỗ trợ cập nhật thông tin cơ bản VÀ đổi mật khẩu trong cùng 1 request.
+ * newPassword + confirmPassword chỉ cần khi muốn đổi mật khẩu.
+ */
 @Data
 public class ProfileUpdateRequest {
+
+    @NotBlank(message = "Họ và tên không được để trống")
+    @Size(min = 3, max = 100, message = "Họ và tên phải từ 3 đến 100 ký tự")
     private String fullname;
-    private String email;
-    private String phone;
-    private String currentPassword; // Để xác thực khi thay đổi thông tin nhạy cảm
-    private String newPassword;     // Nếu muốn đổi mật khẩu
-    private String confirmPassword; // Xác nhận mật khẩu mới
+
+    @Email(message = "Email không đúng định dạng")
+    @Size(max = 150, message = "Email không được vượt quá 150 ký tự")
+    private String email; // optional
+
+    @Pattern(
+        regexp = "^$|^(0|\\+84)(\\s|\\.)?" +
+                 "((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))" +
+                 "(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$",
+        message = "Số điện thoại không hợp lệ (VD: 0901234567)"
+    )
+    private String phone; // optional
+
+    // Chỉ bắt buộc khi người dùng muốn đổi mật khẩu
+    private String currentPassword;
+
+    @Size(min = 6, max = 100, message = "Mật khẩu mới phải ít nhất 6 ký tự")
+    private String newPassword;     // optional – nếu có thì bắt buộc confirm
+
+    private String confirmPassword; // optional – phải khớp newPassword
 }

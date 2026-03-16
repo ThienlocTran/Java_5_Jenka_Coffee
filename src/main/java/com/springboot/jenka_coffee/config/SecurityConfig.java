@@ -4,9 +4,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.NullSecurityContextRepository;
 
 /**
  * Spring Security Configuration với BCrypt password encoding
@@ -42,7 +44,14 @@ public class SecurityConfig {
                 // Disable logout
                 .logout(logout -> logout.disable())
                 // Disable HTTP Basic
-                .httpBasic(basic -> basic.disable());
+                .httpBasic(basic -> basic.disable())
+                // Use STATELESS so Spring Security never touches HttpSession
+                // This prevents the deferred SecurityContext StackOverflow bug in 6.2.x
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Use NullSecurityContextRepository so Spring Security never reads/writes session
+                .securityContext(ctx -> ctx
+                        .securityContextRepository(new NullSecurityContextRepository()));
 
         return http.build();
     }

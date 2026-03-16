@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -22,6 +24,7 @@ public class Account implements Serializable {
     @Column(name = "Username", length = 50)
     private String username;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn khỏi JSON response
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -54,15 +57,19 @@ public class Account implements Serializable {
 
     // ===== ACTIVATION & PASSWORD RESET FIELDS =====
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn token khỏi JSON
     @Column(name = "ActivationToken", length = 100)
     private String activationToken;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "ActivationTokenExpiry")
     private LocalDateTime activationTokenExpiry;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "ResetToken", length = 100)
     private String resetToken;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "ResetTokenExpiry")
     private LocalDateTime resetTokenExpiry;
 
@@ -70,16 +77,19 @@ public class Account implements Serializable {
     private String activationMethod; // EMAIL or PHONE // MEMBER, SILVER, GOLD, DIAMOND
 
     // Quan hệ 1-N với Order
+    @JsonIgnore // Chặn Account↔Order cycle
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Order> orders;
 
     // Quan hệ 1-N với PointHistory
+    @JsonIgnore // Chặn Account↔PointHistory cycle
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<PointHistory> pointHistories;
 
     // Quan hệ 1-N với ServiceBooking
+    @JsonIgnore // Chặn Account↔ServiceBooking cycle
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<ServiceBooking> serviceBookings;

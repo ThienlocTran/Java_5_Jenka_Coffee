@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -28,8 +29,9 @@ public class Category implements Serializable {
     private String icon; // Tên file icon (VD: May_Pha_Ca_Phe.webp)
 
     // Quan hệ 1-N với Product
+    @JsonIgnore // Chặn vòng lặp vô tận JSON
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
-    @ToString.Exclude // Chặn vòng lặp vô tận
+    @ToString.Exclude
     private List<Product> products;
 
     // --- LOGIC HIBERNATE PROXY ---

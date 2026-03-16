@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -44,6 +45,7 @@ public class Voucher implements Serializable {
     // --- RELATIONSHIPS ---
 
     // 1-N with Order
+    @JsonIgnore // Chặn Voucher↔Order cycle
     @OneToMany(mappedBy = "voucher", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Order> orders;

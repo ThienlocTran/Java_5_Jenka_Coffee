@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -31,12 +33,14 @@ public class OrderDetail implements Serializable {
     // --- QUAN HỆ ---
 
     // N-1 với Order
+    @JsonIgnore // Chặn Order↔OrderDetail cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Orderid")
     @ToString.Exclude
     private Order order;
 
     // N-1 với Product
+    @JsonIgnoreProperties("orderDetails") // Chặn Product↔OrderDetail cycle
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Productid")
     @ToString.Exclude

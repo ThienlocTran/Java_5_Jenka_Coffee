@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
@@ -40,12 +42,14 @@ public class PointHistory implements Serializable {
     // --- RELATIONSHIPS ---
 
     // N-1 with Account
+    @JsonIgnore // Chặn Account↔PointHistory cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "username", insertable = false, updatable = false)
     @ToString.Exclude
     private Account account;
 
     // N-1 with Order (nullable - for non-order points like events)
+    @JsonIgnore // Chặn Order↔PointHistory cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "OrderId", insertable = false, updatable = false)
     @ToString.Exclude
