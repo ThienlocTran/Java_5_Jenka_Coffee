@@ -3,7 +3,6 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.dto.response.OrderStatsDTO;
 import com.springboot.jenka_coffee.dto.response.RevenueReportDTO;
 import com.springboot.jenka_coffee.dto.response.TopCustomerDTO;
-import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.service.ReportService;
 import org.springframework.data.domain.PageRequest;
@@ -39,12 +38,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public OrderStatsDTO getOrderStats() {
-        List<Order> allOrders = orderRepository.findAll();
-
-        long totalOrders = allOrders.size();
-        BigDecimal totalRevenue = allOrders.stream()
-                .map(Order::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long totalOrders = orderRepository.countAllOrders();
+        BigDecimal totalRevenue = orderRepository.sumTotalRevenue();
 
         BigDecimal avgOrderValue = totalOrders > 0
                 ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)

@@ -71,14 +71,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public long countProductsByCategory(String categoryId) {
-        // Đơn giản hóa - trả về 0 nếu ProductRepository chưa có method này
-        try {
-            return productRepository.countByCategoryId(categoryId);
-        } catch (Exception e) {
-            // Log warning và trả về 0 để không crash app
-            System.out.println("WARNING: ProductRepository.countByCategoryId() not implemented yet. Returning 0.");
-            return 0;
-        }
+        return productRepository.countByCategoryId(categoryId);
     }
 
     @Override

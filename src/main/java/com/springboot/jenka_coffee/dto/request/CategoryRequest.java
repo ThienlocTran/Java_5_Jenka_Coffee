@@ -47,14 +47,4 @@ public class CategoryRequest {
         return category;
     }
 
-    /**
-     * Create DTO from Entity (for edit form)
-     */
-    public static CategoryRequest fromEntity(Category category) {
-        CategoryRequest dto = new CategoryRequest();
-        dto.setId(category.getId());
-        dto.setName(category.getName());
-        dto.setIcon(category.getIcon());
-        return dto;
-    }
 }

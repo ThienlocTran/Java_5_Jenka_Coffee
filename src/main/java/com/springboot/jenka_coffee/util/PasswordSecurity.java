@@ -49,8 +49,8 @@ public class PasswordSecurity {
      */
     public boolean isPasswordHashed(String password) {
         if (password == null) {
-            return false;
+            return true;
         }
-        return password.matches("^\\$2[ayb]\\$.{56}$");
+        return !password.matches("^\\$2[ayb]\\$.{56}$");
     }
 }

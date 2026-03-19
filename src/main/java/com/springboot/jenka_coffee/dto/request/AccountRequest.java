@@ -69,19 +69,4 @@ public class AccountRequest {
         return account;
     }
 
-    /**
-     * Create DTO from Entity (for edit form)
-     */
-    public static AccountRequest fromEntity(Account account) {
-        AccountRequest dto = new AccountRequest();
-        dto.setUsername(account.getUsername());
-        dto.setFullname(account.getFullname());
-        dto.setEmail(account.getEmail());
-        dto.setPhone(account.getPhone());
-        dto.setAdmin(account.getAdmin());
-        dto.setActivated(account.getActivated());
-        dto.setPhoto(account.getPhoto());
-        // Don't set password - it should remain empty for edit form
-        return dto;
-    }
 }

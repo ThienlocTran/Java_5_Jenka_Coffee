@@ -22,7 +22,7 @@ public class News implements Serializable {
     @Column(name = "Id")
     private Integer id;
 
-    @Column(name = "Title", length = 255, nullable = false)
+    @Column(name = "Title", nullable = false)
     private String title;
 
     @Column(name = "Content", columnDefinition = "NVARCHAR(MAX)")

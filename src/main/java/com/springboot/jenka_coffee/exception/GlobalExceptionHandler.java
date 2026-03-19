@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,7 +73,7 @@ public class GlobalExceptionHandler {
         String message = bindingResult != null
                 ? bindingResult.getAllErrors().stream()
                         .findFirst()
-                        .map(e -> e.getDefaultMessage())
+                        .map(DefaultMessageSourceResolvable::getDefaultMessage)
                         .orElse("Dữ liệu đầu vào không hợp lệ")
                 : "Dữ liệu đầu vào không hợp lệ";
         logger.warn("Validation error: {}", message);

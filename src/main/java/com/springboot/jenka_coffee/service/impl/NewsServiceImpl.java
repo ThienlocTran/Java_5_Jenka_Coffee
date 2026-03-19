@@ -51,7 +51,7 @@ public class NewsServiceImpl implements NewsService {
     public News saveNews(News news, MultipartFile file) {
         // Handle image upload
         if (file != null && !file.isEmpty()) {
-            String url = uploadService.saveProductImage(file);
+            String url = uploadService.saveNewsImage(file);
             if (url != null) {
                 news.setImage(url);
             }

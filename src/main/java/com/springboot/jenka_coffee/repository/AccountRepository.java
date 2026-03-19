@@ -28,11 +28,6 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         boolean existsByPhone(String phone);
 
         /**
-         * Find account by email
-         */
-        Optional<Account> findByEmail(String email);
-
-        /**
          * Find account by phone number
          */
         Optional<Account> findByPhone(String phone);
@@ -71,19 +66,4 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          */
         Optional<Account> findByResetToken(String token);
 
-        /**
-         * Find all activated accounts only
-         * DSL method - Spring generates: SELECT * FROM accounts WHERE activated = true
-         */
-        List<Account> findByActivatedTrue();
-
-        /**
-         * Search accounts by keyword (searches in username, fullname, email)
-         * JPQL required: multiple fields with LIKE + case-insensitive
-         */
-        @Query("SELECT a FROM Account a WHERE " +
-                        "LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(a.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(a.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-        List<Account> searchAccounts(@Param("keyword") String keyword);
 }

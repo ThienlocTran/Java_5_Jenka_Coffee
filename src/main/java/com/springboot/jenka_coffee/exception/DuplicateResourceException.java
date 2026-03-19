@@ -19,10 +19,4 @@ public class DuplicateResourceException extends RuntimeException {
         this.fieldValue = fieldValue;
     }
 
-    public DuplicateResourceException(String message) {
-        super(message);
-        this.resourceName = null;
-        this.fieldName = null;
-        this.fieldValue = null;
-    }
 }

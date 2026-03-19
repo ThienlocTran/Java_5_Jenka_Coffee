@@ -36,7 +36,16 @@ public class Order implements Serializable {
     private String phone;
 
     @Column(name = "Status")
-    private Integer status = 0; // 0: NEW, 1: CONFIRMED, 2: SHIPPING, 3: CANCELLED, 4: COMPLETED
+    private Integer status = OrderStatus.NEW.getValue(); // 0: NEW, 1: CONFIRMED, 2: SHIPPING, 3: CANCELLED, 4: COMPLETED
+
+    @Getter
+    public enum OrderStatus {
+        NEW(0), CONFIRMED(1), SHIPPING(2), CANCELLED(3), COMPLETED(4);
+
+        private final int value;
+        OrderStatus(int value) { this.value = value; }
+
+    }
 
     @Column(name = "VoucherCode", length = 20)
     private String voucherCode;

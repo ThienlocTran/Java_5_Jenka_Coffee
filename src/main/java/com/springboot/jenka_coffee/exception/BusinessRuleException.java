@@ -15,8 +15,4 @@ public class BusinessRuleException extends RuntimeException {
         this.rule = message;
     }
 
-    public BusinessRuleException(String rule, String message) {
-        super(message);
-        this.rule = rule;
-    }
 }

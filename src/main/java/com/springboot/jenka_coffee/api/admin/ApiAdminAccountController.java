@@ -5,6 +5,9 @@ import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/accounts")
@@ -25,10 +29,17 @@ public class ApiAdminAccountController {
 
     @GetMapping
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<List<Account>>> listAccounts() {
-        List<Account> accounts = accountService.findAll();
-        accounts.forEach(a -> a.setPasswordHash(null));
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", accounts));
+    public ResponseEntity<ApiResponse<Page<Account>>> listAccounts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        List<Account> all = accountService.findAll();
+        all.forEach(a -> a.setPasswordHash(null));
+        // Manual pagination over in-memory list (avoids service interface change)
+        int start = page * size;
+        int end = Math.min(start + size, all.size());
+        List<Account> pageContent = start >= all.size() ? List.of() : all.subList(start, end);
+        Page<Account> result = new PageImpl<>(pageContent, PageRequest.of(page, size), all.size());
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", result));
     }
 
     @GetMapping("/{username}")

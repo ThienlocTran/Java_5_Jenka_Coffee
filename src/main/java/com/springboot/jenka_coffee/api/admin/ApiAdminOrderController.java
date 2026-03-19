@@ -71,7 +71,7 @@ public class ApiAdminOrderController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
         try {
-            orderService.updateStatus(id, 4); // 4 = Cancelled
+            orderService.updateStatus(id, 3); // 3 = CANCELLED
             return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -84,19 +84,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void register(String username, String fullname, String phone, String email, String password) {
-        // 1. Validate username
-        if (dao.existsById(username.trim())) {
-            throw new ValidationException("username", "Tên đăng nhập đã tồn tại!");
-        }
-
-        // 2. Validate duplicate email
-        if (email != null && !email.trim().isEmpty()) {
-            if (dao.existsByEmail(email.trim())) {
-                throw new ValidationException("email", "Email đã được sử dụng!");
-            }
-        }
-
-        // 2. Create new account object
+        // Create new account object — validation (username/email uniqueness) is handled in createAccount
         Account newAccount = new Account();
         newAccount.setUsername(username.trim());
         newAccount.setFullname(fullname.trim());
@@ -156,7 +144,7 @@ public class AccountServiceImpl implements AccountService {
 
         // Hash password before saving
         if (account.getPasswordHash() != null && !account.getPasswordHash().trim().isEmpty()) {
-            if (!passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
                 account.setPasswordHash(passwordSecurity.hashPassword(account.getPasswordHash()));
             }
         }
@@ -186,7 +174,7 @@ public class AccountServiceImpl implements AccountService {
             updatedAccount.setPasswordHash(existingAccount.getPasswordHash());
         } else {
             // Hash new password if it's not already hashed
-            if (!passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
                 updatedAccount.setPasswordHash(passwordSecurity.hashPassword(updatedAccount.getPasswordHash()));
             }
         }

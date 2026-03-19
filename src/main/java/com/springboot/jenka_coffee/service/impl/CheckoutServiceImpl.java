@@ -18,6 +18,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * @deprecated Dùng OrderServiceImpl.checkout() thay thế — class này không được inject vào controller nào.
+ * Giữ lại để tránh compile error, sẽ xóa sau khi refactor hoàn chỉnh.
+ */
 @Service
 public class CheckoutServiceImpl implements CheckoutService {
 

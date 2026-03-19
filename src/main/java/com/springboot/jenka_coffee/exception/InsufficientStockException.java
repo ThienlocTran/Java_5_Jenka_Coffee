@@ -1,8 +1,11 @@
 package com.springboot.jenka_coffee.exception;
 
+import lombok.Getter;
+
 /**
  * Exception thrown when attempting to checkout with insufficient product stock
  */
+@Getter
 public class InsufficientStockException extends RuntimeException {
 
     private final String productName;
@@ -17,15 +20,4 @@ public class InsufficientStockException extends RuntimeException {
         this.availableQuantity = availableQuantity;
     }
 
-    public String getProductName() {
-        return productName;
-    }
-
-    public Integer getRequestedQuantity() {
-        return requestedQuantity;
-    }
-
-    public Integer getAvailableQuantity() {
-        return availableQuantity;
-    }
 }

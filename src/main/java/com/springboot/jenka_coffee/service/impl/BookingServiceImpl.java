@@ -3,15 +3,18 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.entity.ServiceBooking;
 import com.springboot.jenka_coffee.repository.ServiceBookingRepository;
 import com.springboot.jenka_coffee.service.BookingService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BookingServiceImpl implements BookingService {
-    @Autowired
-    private ServiceBookingRepository bookingRepository;
+
+    private final ServiceBookingRepository bookingRepository;
+
+    public BookingServiceImpl(ServiceBookingRepository bookingRepository) {
+        this.bookingRepository = bookingRepository;
+    }
 
     @Override
     public ServiceBooking save(ServiceBooking booking) {
