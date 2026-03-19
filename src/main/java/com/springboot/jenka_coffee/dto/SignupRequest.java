@@ -13,7 +13,6 @@ public class SignupRequest {
 
     @NotBlank(message = "Họ và tên không được để trống")
     @Size(min = 3, max = 100, message = "Họ và tên phải từ 3 đến 100 ký tự")
-    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "Họ và tên chỉ được chứa chữ cái và khoảng trắng")
     private String fullname;
 
     @NotBlank(message = "Số điện thoại không được để trống")

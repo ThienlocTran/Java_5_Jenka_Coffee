@@ -46,6 +46,12 @@ public class ApiAuthController {
         Account account = accountService.authenticate(request.getUsername(), request.getPassword());
 
         if (account == null) {
+            // Phân biệt: tài khoản tồn tại nhưng chưa kích hoạt vs sai thông tin
+            Account existing = accountService.findById(request.getUsername());
+            if (existing != null && !existing.getActivated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email/SMS để kích hoạt."));
+            }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Sai tên đăng nhập hoặc mật khẩu!"));
         }

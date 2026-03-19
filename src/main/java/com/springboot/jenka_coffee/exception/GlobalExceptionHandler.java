@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -41,6 +42,23 @@ public class GlobalExceptionHandler {
         logger.warn("Upload size exceeded: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Kích thước tệp tin tải lên quá lớn! Vui lòng chọn tệp nhỏ hơn 10MB."));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        String friendly;
+        if (msg.contains("phone") || msg.contains("accounts_phone_key")) {
+            friendly = "Số điện thoại này đã được đăng ký. Vui lòng dùng số khác.";
+        } else if (msg.contains("email") || msg.contains("accounts_email_key")) {
+            friendly = "Email này đã được đăng ký. Vui lòng dùng email khác.";
+        } else if (msg.contains("username") || msg.contains("accounts_pkey")) {
+            friendly = "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.";
+        } else {
+            friendly = "Dữ liệu đã tồn tại. Vui lòng kiểm tra lại thông tin.";
+        }
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(friendly));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, org.springframework.validation.BindException.class})

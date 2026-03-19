@@ -111,41 +111,13 @@ public class AccountServiceImpl implements AccountService {
 
         // 3. Set defaults for new user registration
         newAccount.setPasswordHash(password); // Will be hashed in createAccount
-        newAccount.setActivated(false); // ✅ Changed: Start as inactive
+        newAccount.setActivated(true); // Auto-activate: skip email/OTP since SMTP is unavailable
         newAccount.setAdmin(false);
         newAccount.setPoints(0);
         newAccount.setCustomerRank("MEMBER");
 
-        // 4. Determine activation method
-        String activationMethod = (email != null && !email.trim().isEmpty())
-                ? "EMAIL"
-                : "PHONE";
-        newAccount.setActivationMethod(activationMethod);
-
-        // 5. Generate activation token
-        String token = UUID.randomUUID().toString();
-        newAccount.setActivationToken(token);
-        newAccount.setActivationTokenExpiry(LocalDateTime.now().plusHours(24));
-
-        // 6. Call createAccount which handles validation and hashing
+        // 4. Call createAccount which handles validation and hashing
         createAccount(newAccount, null);
-
-        // 7. Send activation
-        if ("EMAIL".equals(activationMethod)) {
-            try {
-                emailService.sendActivationEmail(newAccount.getEmail(), token, fullname);
-            } catch (Exception e) {
-                System.out.println("WARNING: Activation email failed - " + e.getMessage());
-                System.out.println("Activation link: http://localhost:8080/auth/activate/" + token);
-            }
-        } else {
-            String otp = otpService.generateOTP(phone);
-            System.out.println("=== ACTIVATION OTP ===");
-            System.out.println("Phone: " + phone);
-            System.out.println("OTP: " + otp);
-            System.out.println("Valid for 5 minutes");
-            System.out.println("======================");
-        }
     }
 
     @Override
