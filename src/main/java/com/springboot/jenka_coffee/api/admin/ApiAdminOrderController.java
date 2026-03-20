@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -23,31 +21,25 @@ import java.util.stream.Collectors;
 public class ApiAdminOrderController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
 
-    public ApiAdminOrderController(OrderService orderService, OrderRepository orderRepository) {
+    public ApiAdminOrderController(OrderService orderService) {
         this.orderService = orderService;
-        this.orderRepository = orderRepository;
     }
 
     @GetMapping
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrders(
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
         Page<Order> orderPage = orderService.findAll(pageable);
 
-        // JOIN FETCH account to avoid lazy proxy serialization
         List<Long> ids = orderPage.getContent().stream().map(Order::getId).collect(Collectors.toList());
-        List<Order> orders = ids.isEmpty() ? List.of() : orderRepository.findAllWithAccountByIds(ids);
+        List<Order> orders = orderService.findAllWithAccountByIds(ids);
         orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
 
-        List<Map<String, Object>> dtos = orders.stream().map(this::toDto).collect(Collectors.toList());
-
         Map<String, Object> data = new HashMap<>();
-        data.put("items", dtos);
+        data.put("items", orders.stream().map(this::toDto).collect(Collectors.toList()));
         data.put("currentPage", orderPage.getNumber());
         data.put("totalPages", orderPage.getTotalPages());
         data.put("totalItems", orderPage.getTotalElements());
@@ -59,24 +51,14 @@ public class ApiAdminOrderController {
     public ResponseEntity<ApiResponse<Void>> updateOrderStatus(
             @PathVariable Long id,
             @PathVariable int status) {
-        try {
-            orderService.updateStatus(id, status);
-            return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi cập nhật trạng thái: " + e.getMessage()));
-        }
+        orderService.updateStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
-        try {
-            orderService.updateStatus(id, 3); // 3 = CANCELLED
-            return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi hủy đơn hàng: " + e.getMessage()));
-        }
+        orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
+        return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
     }
 
     /** Safe DTO — only scalar fields + account basics, no lazy proxies */
@@ -90,11 +72,11 @@ public class ApiAdminOrderController {
         dto.put("createDate", o.getCreateDate() != null ? o.getCreateDate().toString() : null);
 
         if (o.getAccount() != null) {
-            Map<String, Object> acc = new HashMap<>();
-            acc.put("username", o.getAccount().getUsername());
-            acc.put("fullname", o.getAccount().getFullname());
-            acc.put("phone", o.getAccount().getPhone());
-            dto.put("account", acc);
+            dto.put("account", Map.of(
+                "username", o.getAccount().getUsername(),
+                "fullname", o.getAccount().getFullname(),
+                "phone",    o.getAccount().getPhone() != null ? o.getAccount().getPhone() : ""
+            ));
         } else {
             dto.put("account", null);
         }

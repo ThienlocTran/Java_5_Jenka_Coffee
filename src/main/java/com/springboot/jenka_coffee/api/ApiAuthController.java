@@ -6,8 +6,8 @@ import com.springboot.jenka_coffee.dto.SignupRequest;
 import com.springboot.jenka_coffee.dto.request.ForgotPasswordRequest;
 import com.springboot.jenka_coffee.dto.request.ResetPasswordRequest;
 import com.springboot.jenka_coffee.dto.request.VerifyOtpRequest;
+import com.springboot.jenka_coffee.dto.response.AuthResult;
 import com.springboot.jenka_coffee.entity.Account;
-import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.service.AccountService;
 import com.springboot.jenka_coffee.service.CookieService;
 import jakarta.servlet.http.Cookie;
@@ -43,19 +43,18 @@ public class ApiAuthController {
             HttpSession session,
             HttpServletResponse response) {
 
-        Account account = accountService.authenticate(request.getUsername(), request.getPassword());
+        AuthResult result = accountService.authenticateWithResult(request.getUsername(), request.getPassword());
 
-        if (account == null) {
-            // Phân biệt: tài khoản tồn tại nhưng chưa kích hoạt vs sai thông tin
-            Account existing = accountService.findById(request.getUsername());
-            if (existing != null && !existing.getActivated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email/SMS để kích hoạt."));
-            }
+        if (result.status() == AuthResult.Status.NOT_ACTIVATED) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email/SMS để kích hoạt."));
+        }
+        if (!result.isSuccess()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Sai tên đăng nhập hoặc mật khẩu!"));
         }
 
+        Account account = result.account();
         session.setAttribute("user", account);
 
         if (request.isRemember()) {
@@ -96,32 +95,23 @@ public class ApiAuthController {
     // ============================================================
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody SignupRequest request) {
-        try {
-            accountService.register(
-                    request.getUsername(),
-                    request.getFullname(),
-                    request.getPhone(),
-                    request.getEmail(),
-                    request.getPassword()
-            );
-            return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công! Vui lòng đăng nhập.", null));
-        } catch (ValidationException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
+        accountService.register(
+                request.getUsername(),
+                request.getFullname(),
+                request.getPhone(),
+                request.getEmail(),
+                request.getPassword()
+        );
+        return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công! Vui lòng đăng nhập.", null));
     }
 
     // ============================================================
     // POST /api/auth/activate?token=...
-    // (Query param – token đến từ link email, giữ @RequestParam)
     // ============================================================
     @PostMapping("/activate")
     public ResponseEntity<ApiResponse<Void>> activateAccountFrontend(@RequestParam String token) {
-        try {
-            accountService.activateAccount(token);
-            return ResponseEntity.ok(ApiResponse.success("Tài khoản đã được kích hoạt thành công!", null));
-        } catch (ValidationException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
+        accountService.activateAccount(token);
+        return ResponseEntity.ok(ApiResponse.success("Tài khoản đã được kích hoạt thành công!", null));
     }
 
     // ============================================================
@@ -131,21 +121,12 @@ public class ApiAuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Map<String, String>>> processForgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
-        try {
-            String method = accountService.requestPasswordReset(request.getIdentifier());
-            Map<String, String> data = new HashMap<>();
-            data.put("method", method);
-
-            if ("PHONE".equals(method)) {
-                return ResponseEntity.ok(ApiResponse.success(
-                        "OTP đã được gửi đến số điện thoại đăng ký. Vui lòng kiểm tra và nhập mã.", data));
-            } else {
-                return ResponseEntity.ok(ApiResponse.success(
-                        "Link đặt lại mật khẩu đã được gửi đến email của bạn!", data));
-            }
-        } catch (ValidationException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
+        String method = accountService.requestPasswordReset(request.getIdentifier());
+        Map<String, String> data = Map.of("method", method);
+        String msg = "PHONE".equals(method)
+                ? "OTP đã được gửi đến số điện thoại đăng ký. Vui lòng kiểm tra và nhập mã."
+                : "Link đặt lại mật khẩu đã được gửi đến email của bạn!";
+        return ResponseEntity.ok(ApiResponse.success(msg, data));
     }
 
     // ============================================================
@@ -155,19 +136,12 @@ public class ApiAuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> processResetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
-
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("Mật khẩu xác nhận không khớp!"));
         }
-
-        try {
-            accountService.resetPassword(request.getToken(), request.getNewPassword());
-            return ResponseEntity.ok(
-                    ApiResponse.success("Mật khẩu đã được đặt lại thành công! Vui lòng đăng nhập.", null));
-        } catch (ValidationException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
+        accountService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Mật khẩu đã được đặt lại thành công! Vui lòng đăng nhập.", null));
     }
 
     // ============================================================
@@ -176,13 +150,8 @@ public class ApiAuthController {
     // ============================================================
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<Void>> verifyOTP(@Valid @RequestBody VerifyOtpRequest request) {
-        try {
-            accountService.verifyPhoneOTP(request.getPhone(), request.getOtp());
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Tài khoản đã được kích hoạt thành công! Vui lòng đăng nhập.", null));
-        } catch (ValidationException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
+        accountService.verifyPhoneOTP(request.getPhone(), request.getOtp());
+        return ResponseEntity.ok(ApiResponse.success("Tài khoản đã được kích hoạt thành công! Vui lòng đăng nhập.", null));
     }
 
     // ============================================================

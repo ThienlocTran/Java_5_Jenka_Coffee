@@ -22,9 +22,8 @@ public class ApiCartController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCart() {
         Map<String, Object> data = new HashMap<>();
         data.put("items", cartService.getItems());
-        data.put("totalAmount", cartService.getAmount());
-        data.put("summary", cartService.getCartSummary()); // If CartService provides additional summary like total
-                                                           // items
+        data.put("totalAmount", cartService.getTotal());
+        data.put("summary", cartService.getCartSummary());
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin giỏ hàng thành công", data));
     }
 
@@ -46,7 +45,7 @@ public class ApiCartController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("items", cartService.getItems());
-        data.put("totalAmount", cartService.getAmount());
+        data.put("totalAmount", cartService.getTotal());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật số lượng thành công", data));
     }
 
@@ -56,7 +55,7 @@ public class ApiCartController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("items", cartService.getItems());
-        data.put("totalAmount", cartService.getAmount());
+        data.put("totalAmount", cartService.getTotal());
         return ResponseEntity.ok(ApiResponse.success("Tính lại giỏ hàng thành công", data));
     }
 

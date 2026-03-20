@@ -10,22 +10,18 @@ import java.util.List;
 
 public interface OrderService {
 
-    // Các hàm cơ bản
     Order create(Order order);
     Order findById(Long id);
 
     Page<Order> findByUsername(String username, Pageable pageable);
-    // Hàm Checkout (Quan trọng: Phải có tham số Account)
     Order checkout(CheckoutRequest request, Account account);
-
-    // Hàm hỗ trợ điền form
     CheckoutRequest prepareCheckoutRequest(Account user);
-
-    // --- CÁC HÀM MỚI CHO ADMIN (Nguyên nhân gây lỗi nếu thiếu) ---
-
-    // 1. Cập nhật trạng thái đơn hàng
     Order updateStatus(Long orderId, int status);
-
-    // 2. Lấy danh sách phân trang (Cho Admin)
     Page<Order> findAll(Pageable pageable);
+
+    /**
+     * Find orders with account eagerly loaded (avoids lazy proxy in serialization).
+     * Used by admin controllers — keeps repositories out of controller layer.
+     */
+    List<Order> findAllWithAccountByIds(List<Long> ids);
 }

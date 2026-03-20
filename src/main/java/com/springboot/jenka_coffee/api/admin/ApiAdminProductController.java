@@ -51,9 +51,6 @@ public class ApiAdminProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Product>> getProduct(@PathVariable Integer id) {
         Product product = productService.findById(id);
-        if (product == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Không tìm thấy sản phẩm"));
-        }
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin sản phẩm thành công", product));
     }
 
@@ -62,17 +59,12 @@ public class ApiAdminProductController {
             @ModelAttribute Product product,
             @RequestParam("categoryId") String categoryId,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-        try {
-            // Prevent mass-assignment: force id=null so JPA always INSERT, never UPDATE
-            product.setId(null);
-            Category category = categoryService.findByIdOrThrow(categoryId);
-            product.setCategory(category);
-            productService.saveProduct(product, file);
-            return ResponseEntity.ok(ApiResponse.success("Lưu sản phẩm thành công", product));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi lưu sản phẩm: " + e.getMessage()));
-        }
+        // Prevent mass-assignment: force id=null so JPA always INSERT, never UPDATE
+        product.setId(null);
+        Category category = categoryService.findByIdOrThrow(categoryId);
+        product.setCategory(category);
+        productService.saveProduct(product, file);
+        return ResponseEntity.ok(ApiResponse.success("Lưu sản phẩm thành công", product));
     }
 
     // PUT /api/admin/products/{id}/toggle  (bật/tắt trạng thái sản phẩm)

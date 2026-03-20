@@ -115,12 +115,4 @@ public interface ProductService {
 
     Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
                                                 String keyword, Pageable pageable);
-
-    /**
-     * Delete product and add flash message
-     *
-     * @param id                 Product ID
-     * @param redirectAttributes Redirect attributes for flash message
-     */
-    void deleteProduct(Integer id, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes);
 }

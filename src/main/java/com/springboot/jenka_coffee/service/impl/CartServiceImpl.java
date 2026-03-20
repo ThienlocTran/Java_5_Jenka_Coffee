@@ -78,15 +78,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public double getAmount() {
-        return map.values().stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .doubleValue();
-    }
-
-    @Override
-    public BigDecimal getAmountExact() {
+    public BigDecimal getTotal() {
         return map.values().stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -96,7 +88,7 @@ public class CartServiceImpl implements CartService {
     public Map<String, Object> getCartSummary() {
         Map<String, Object> response = new HashMap<>();
         response.put("count", getCount());
-        response.put("total", getAmount());
+        response.put("total", getTotal());
         response.put("items", getItems());
         return response;
     }

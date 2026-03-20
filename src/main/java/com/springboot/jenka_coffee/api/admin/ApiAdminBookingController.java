@@ -40,17 +40,11 @@ public class ApiAdminBookingController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đặt lịch thành công", data));
     }
 
-    @PostMapping("/update-status/{id}")
+    @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<String>> updateStatus(
             @PathVariable Long id,
             @RequestParam String status) {
-        try {
-            bookingService.updateStatus(id, status);
-            return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công!", "OK"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Không thể cập nhật trạng thái: " + e.getMessage()));
-        }
+        bookingService.updateStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công!", "OK"));
     }
 }

@@ -46,39 +46,25 @@ public class ApiAdminCategoryController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Category>> getCategory(@PathVariable String id) {
-        try {
-            Category category = categoryService.findByIdOrThrow(id);
-            return ResponseEntity.ok(ApiResponse.success("Lấy thông tin danh mục thành công", category));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Không tìm thấy danh mục"));
-        }
+        Category category = categoryService.findByIdOrThrow(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin danh mục thành công", category));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<Category>> createCategory(@Valid @RequestBody CategoryRequest request) {
-        try {
-            if (categoryService.existsById(request.getId().trim())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("ID danh mục đã tồn tại"));
-            }
-            Category category = categoryService.createCategory(request);
-            return ResponseEntity.ok(ApiResponse.success("Thêm mới danh mục thành công", category));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi thêm danh mục: " + e.getMessage()));
+        if (categoryService.existsById(request.getId().trim())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("ID danh mục đã tồn tại"));
         }
+        Category category = categoryService.createCategory(request);
+        return ResponseEntity.ok(ApiResponse.success("Thêm mới danh mục thành công", category));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Category>> updateCategory(
             @PathVariable String id,
             @Valid @RequestBody CategoryRequest request) {
-        try {
-            Category category = categoryService.updateCategory(id, request);
-            return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công", category));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Lỗi khi cập nhật danh mục: " + e.getMessage()));
-        }
+        Category category = categoryService.updateCategory(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công", category));
     }
 
     @DeleteMapping("/{id}")

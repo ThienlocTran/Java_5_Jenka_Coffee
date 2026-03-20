@@ -12,7 +12,6 @@ public interface CartService {
     void clear();
     Collection<CartItem> getItems();
     int getCount();
-    double getAmount();
-    BigDecimal getAmountExact(); // precision-safe version for checkout
+    BigDecimal getTotal();
     Map<String, Object> getCartSummary();
 }

@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 
@@ -107,22 +106,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getProductDetail(Integer productId) {
-        Product item = findById(productId);
-        if (item == null) {
-            return null;
-        }
-
-        // Handle case where product exists but has no category (though data integrity
-        // should prevent this)
-        String categoryId = (item.getCategory() != null) ? item.getCategory().getId() : null;
-        List<Product> similarItems = (categoryId != null)
+        Product item = findById(productId); // throws ResourceNotFoundException if not found
+        String categoryId = item.getCategory() != null ? item.getCategory().getId() : null;
+        List<Product> similarItems = categoryId != null
                 ? getRelatedProducts(categoryId, item.getId())
                 : Collections.emptyList();
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("item", item);
-        result.put("similarItems", similarItems);
-        return result;
+        return Map.of("item", item, "similarItems", similarItems);
     }
 
     @Override
@@ -246,39 +235,5 @@ public class ProductServiceImpl implements ProductService {
     public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
         return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
-    }
-
-    @Override
-    @CacheEvict(value = "categoryCounts", allEntries = true)
-    public void deleteProduct(Integer id,
-            RedirectAttributes redirectAttributes) {
-        log.info("Attempting to delete product with ID: {}", id);
-
-        try {
-            // Lấy thông tin sản phẩm trước khi xóa để hiển thị thông báo
-            Product product = productRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
-
-            String productName = product.getName();
-
-            // Thực hiện xóa
-            productRepository.deleteById(id);
-
-            // Thông báo thành công
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã xóa sản phẩm \"" + productName + "\" thành công!");
-
-            log.info("Successfully deleted product: {} (ID: {})", productName, id);
-
-        } catch (ResourceNotFoundException e) {
-            log.error("Product not found for deletion: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Không tìm thấy sản phẩm cần xóa!");
-
-        } catch (Exception e) {
-            log.error("Error deleting product with ID {}: {}", id, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Không thể xóa sản phẩm. Vui lòng thử lại!");
-        }
     }
 }

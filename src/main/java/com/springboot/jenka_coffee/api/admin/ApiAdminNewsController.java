@@ -6,7 +6,6 @@ import com.springboot.jenka_coffee.service.NewsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,9 +43,6 @@ public class ApiAdminNewsController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<News>> getNewsDetail(@PathVariable Integer id) {
         News news = newsService.findById(id);
-        if (news == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Không tìm thấy tin tức"));
-        }
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tin tức thành công", news));
     }
 
@@ -54,39 +50,19 @@ public class ApiAdminNewsController {
     public ResponseEntity<ApiResponse<News>> saveNews(
             @ModelAttribute News news,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-        try {
-            newsService.saveNews(news, file);
-            return ResponseEntity.ok(ApiResponse.success("Lưu tin tức thành công", news));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi lưu tin tức: " + e.getMessage()));
-        }
+        newsService.saveNews(news, file);
+        return ResponseEntity.ok(ApiResponse.success("Lưu tin tức thành công", news));
     }
 
     @PutMapping("/{id}/toggle")
     public ResponseEntity<ApiResponse<Void>> toggleAvailable(@PathVariable Integer id) {
-        try {
-            newsService.toggleAvailable(id);
-            return ResponseEntity.ok(ApiResponse.success("Thay đổi trạng thái tin tức thành công", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi đổi trạng thái: " + e.getMessage()));
-        }
+        newsService.toggleAvailable(id);
+        return ResponseEntity.ok(ApiResponse.success("Thay đổi trạng thái tin tức thành công", null));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteNews(@PathVariable Integer id) {
-        try {
-            News news = newsService.findById(id);
-            if (news == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("Không tìm thấy tin tức với id: " + id));
-            }
-            newsService.delete(id);
-            return ResponseEntity.ok(ApiResponse.success("Xóa tin tức thành công", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Lỗi khi xóa tin tức: " + e.getMessage()));
-        }
+        newsService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa tin tức thành công", null));
     }
 }

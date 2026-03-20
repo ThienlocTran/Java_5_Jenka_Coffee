@@ -4,7 +4,6 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.exception.InsufficientStockException;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.OrderService;
 import jakarta.servlet.http.HttpSession;
@@ -48,7 +47,7 @@ public class ApiOrderController {
         Map<String, Object> data = new HashMap<>();
         data.put("checkoutRequest", request);
         data.put("cartItems", cartService.getItems());
-        data.put("cartTotal", cartService.getAmount());
+        data.put("cartTotal", cartService.getTotal());
         data.put("cartCount", cartService.getCount());
 
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin thanh toán thành công", data));
@@ -65,20 +64,9 @@ public class ApiOrderController {
                     .body(ApiResponse.error("Vui lòng đăng nhập để thanh toán"));
         }
 
-        try {
-            Order order = orderService.checkout(request, user);
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("orderId", order.getId());
-            return ResponseEntity.ok(ApiResponse.success("Đặt hàng thành công! Mã đơn hàng: #" + order.getId(), data));
-
-        } catch (InsufficientStockException | IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Có lỗi xảy ra khi đặt hàng: " + e.getMessage()));
-        }
+        Order order = orderService.checkout(request, user);
+        Map<String, Object> data = Map.of("orderId", order.getId());
+        return ResponseEntity.ok(ApiResponse.success("Đặt hàng thành công! Mã đơn hàng: #" + order.getId(), data));
     }
 
     @GetMapping

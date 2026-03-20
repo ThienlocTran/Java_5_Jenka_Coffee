@@ -31,7 +31,7 @@ public class Payment implements Serializable {
     private BigDecimal amount;
 
     @Column(name = "paymentMethod", length = 20, nullable = false)
-    private String paymentMethod; // COD, VNPAY, MOMO
+    private String paymentMethod;
 
     @Column(name = "transactionCode", length = 50)
     private String transactionCode;
@@ -40,7 +40,11 @@ public class Payment implements Serializable {
     private LocalDateTime paymentDate = LocalDateTime.now();
 
     @Column(name = "status", length = 20)
-    private String status = "PENDING"; // PENDING, SUCCESS, FAILED
+    private String status = PaymentStatus.PENDING.name();
+
+    public enum PaymentMethod { COD, VNPAY, MOMO }
+
+    public enum PaymentStatus { PENDING, SUCCESS, FAILED }
 
     // --- RELATIONSHIPS ---
 

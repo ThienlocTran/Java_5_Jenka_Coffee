@@ -1,6 +1,9 @@
 package com.springboot.jenka_coffee.service;
 
+import com.springboot.jenka_coffee.dto.response.AuthResult;
 import com.springboot.jenka_coffee.entity.Account;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -9,6 +12,11 @@ public interface AccountService {
     Account findById(String username);
 
     List<Account> findAll();
+
+    /**
+     * Paginated account list — avoids loading entire table into memory.
+     */
+    Page<Account> findAllPaginated(Pageable pageable);
 
     List<Account> getAdministrators();
 
@@ -22,6 +30,12 @@ public interface AccountService {
 
     // Authentication
     Account authenticate(String username, String password);
+
+    /**
+     * Authenticate and return a rich result — avoids N+1 query in controller.
+     * Distinguishes between wrong credentials vs. account not activated.
+     */
+    AuthResult authenticateWithResult(String identifier, String password);
 
     /**
      * Register a new user account with all default values

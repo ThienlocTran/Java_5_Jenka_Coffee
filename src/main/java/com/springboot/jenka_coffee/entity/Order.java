@@ -45,6 +45,12 @@ public class Order implements Serializable {
         private final int value;
         OrderStatus(int value) { this.value = value; }
 
+        public static OrderStatus fromValue(int value) {
+            for (OrderStatus s : values()) {
+                if (s.value == value) return s;
+            }
+            throw new IllegalArgumentException("Unknown order status: " + value);
+        }
     }
 
     @Column(name = "VoucherCode", length = 20)

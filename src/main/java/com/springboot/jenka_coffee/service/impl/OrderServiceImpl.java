@@ -181,6 +181,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order updateStatus(Long orderId, int status) {
+        // Validate status value via enum — throws IllegalArgumentException for invalid values
+        Order.OrderStatus.fromValue(status);
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng!"));
         order.setStatus(status);
@@ -188,7 +190,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public org.springframework.data.domain.Page<Order> findAll(org.springframework.data.domain.Pageable pageable) {
+    public Page<Order> findAll(Pageable pageable) {
         return orderRepository.findAll(pageable);
+    }
+
+    @Override
+    public List<Order> findAllWithAccountByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return orderRepository.findAllWithAccountByIds(ids);
     }
 }

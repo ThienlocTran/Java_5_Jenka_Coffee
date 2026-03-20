@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
+import com.springboot.jenka_coffee.dto.response.AuthResult;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.service.AccountService;
@@ -9,6 +10,8 @@ import com.springboot.jenka_coffee.service.OTPService;
 import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.util.ImageUtils;
 import com.springboot.jenka_coffee.util.PasswordSecurity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,6 +50,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Page<Account> findAllPaginated(Pageable pageable) {
+        return dao.findAll(pageable);
+    }
+
+    @Override
     public List<Account> getAdministrators() {
         // ✅ Delegate to repository - database query instead of in-memory filter
         return dao.findByAdminTrue();
@@ -80,6 +88,15 @@ public class AccountServiceImpl implements AccountService {
             return null;
         }
         return passwordSecurity.verifyPassword(password, account.getPasswordHash()) ? account : null;
+    }
+
+    @Override
+    public AuthResult authenticateWithResult(String identifier, String password) {
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
+        if (account == null) return AuthResult.invalidCredentials();
+        if (!account.getActivated()) return AuthResult.notActivated(account);
+        if (!passwordSecurity.verifyPassword(password, account.getPasswordHash())) return AuthResult.invalidCredentials();
+        return AuthResult.success(account);
     }
 
     @Override
