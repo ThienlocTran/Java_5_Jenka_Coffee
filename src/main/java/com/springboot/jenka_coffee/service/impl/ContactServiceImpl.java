@@ -10,12 +10,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class ContactServiceImpl implements ContactService {
 
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender mailSender;
 
     @Override
     public void sendContactEmail(ContactRequest request) throws Exception {
-        // Logic tạo mail nằm gọn trong Service
+        if (mailSender == null) {
+            // Mail chưa được cấu hình, bỏ qua việc gửi mail
+            return;
+        }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("noreply@jenkacoffee.com");
         message.setTo("admin@jenkacoffee.com");
