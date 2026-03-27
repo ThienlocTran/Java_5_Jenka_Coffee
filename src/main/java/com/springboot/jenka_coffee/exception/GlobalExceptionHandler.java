@@ -80,10 +80,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(message));
     }
 
+    // Static resource paths that should silently return 404 (no logging, no object allocation)
+    private static final String[] SILENT_404_PREFIXES = {
+            "/images/", "/uploads/", "/css/", "/js/", "/static/", "/public/", "/favicon"
+    };
+    private static final String[] SILENT_404_EXTENSIONS = {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".ico",
+            ".css", ".js", ".woff", ".woff2", ".ttf", ".eot", ".map"
+    };
+
     @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
-    public ResponseEntity<ApiResponse<Void>> handleNotFound(Exception ex) {
+    public ResponseEntity<Void> handleNotFound(Exception ex, HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri != null) {
+            String lower = uri.toLowerCase();
+            for (String prefix : SILENT_404_PREFIXES) {
+                if (lower.startsWith(prefix)) {
+                    return ResponseEntity.notFound().build();
+                }
+            }
+            for (String ext : SILENT_404_EXTENSIONS) {
+                if (lower.endsWith(ext)) {
+                    return ResponseEntity.notFound().build();
+                }
+            }
+        }
         logger.warn("Not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Không tìm thấy tài nguyên yêu cầu"));
+        return ResponseEntity.notFound().build();
     }
 
     @ExceptionHandler(Exception.class)
