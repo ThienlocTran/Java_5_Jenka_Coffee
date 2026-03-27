@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,20 +69,26 @@ public class ApiAdminProductController {
     }
 
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PostMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> updateProduct(
             @PathVariable Integer id,
-            @ModelAttribute Product product,
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("price") BigDecimal price,
             @RequestParam("categoryId") String categoryId,
+            @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-        product.setId(id);
+
+        Product existing = productService.findById(id);
+        existing.setName(name);
+        existing.setDescription(description);
+        existing.setPrice(price);
+        existing.setAvailable(available);
+
         Category category = categoryService.findByIdOrThrow(categoryId);
-        product.setCategory(category);
-        // If no new image uploaded, keep existing image
-        if (file == null || file.isEmpty()) {
-            Product existing = productService.findById(id);
-            product.setImage(existing.getImage());
-        }
-        Product saved = productService.saveProduct(product, file);
+        existing.setCategory(category);
+
+        Product saved = productService.saveProduct(existing, file);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm thành công", saved));
     }
 
