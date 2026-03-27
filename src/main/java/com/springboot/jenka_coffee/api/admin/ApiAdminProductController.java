@@ -69,8 +69,7 @@ public class ApiAdminProductController {
     }
 
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
-    @PostMapping(value = "/{id}", consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse<Product>> updateProduct(
+    public ResponseEntity<ApiResponse<Product>> updateProductPut(
             @PathVariable Integer id,
             @RequestParam("name") String name,
             @RequestParam(value = "description", required = false) String description,
@@ -78,16 +77,30 @@ public class ApiAdminProductController {
             @RequestParam("categoryId") String categoryId,
             @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
+        return doUpdate(id, name, description, price, categoryId, available, file);
+    }
 
+    @PostMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<Product>> updateProductPost(
+            @PathVariable Integer id,
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("categoryId") String categoryId,
+            @RequestParam("available") Boolean available,
+            @RequestParam(value = "imageFile", required = false) MultipartFile file) {
+        return doUpdate(id, name, description, price, categoryId, available, file);
+    }
+
+    private ResponseEntity<ApiResponse<Product>> doUpdate(
+            Integer id, String name, String description, BigDecimal price,
+            String categoryId, Boolean available, MultipartFile file) {
         Product existing = productService.findById(id);
         existing.setName(name);
         existing.setDescription(description);
         existing.setPrice(price);
         existing.setAvailable(available);
-
-        Category category = categoryService.findByIdOrThrow(categoryId);
-        existing.setCategory(category);
-
+        existing.setCategory(categoryService.findByIdOrThrow(categoryId));
         Product saved = productService.saveProduct(existing, file);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm thành công", saved));
     }
