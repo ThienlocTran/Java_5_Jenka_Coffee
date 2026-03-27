@@ -55,16 +55,34 @@ public class ApiAdminProductController {
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse<Product>> saveProduct(
+    public ResponseEntity<ApiResponse<Product>> createProduct(
             @ModelAttribute Product product,
             @RequestParam("categoryId") String categoryId,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-        // Prevent mass-assignment: force id=null so JPA always INSERT, never UPDATE
+        // Always INSERT — force id=null to prevent accidental update
         product.setId(null);
         Category category = categoryService.findByIdOrThrow(categoryId);
         product.setCategory(category);
-        productService.saveProduct(product, file);
-        return ResponseEntity.ok(ApiResponse.success("Lưu sản phẩm thành công", product));
+        Product saved = productService.saveProduct(product, file);
+        return ResponseEntity.ok(ApiResponse.success("Thêm sản phẩm thành công", saved));
+    }
+
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<Product>> updateProduct(
+            @PathVariable Integer id,
+            @ModelAttribute Product product,
+            @RequestParam("categoryId") String categoryId,
+            @RequestParam(value = "imageFile", required = false) MultipartFile file) {
+        product.setId(id);
+        Category category = categoryService.findByIdOrThrow(categoryId);
+        product.setCategory(category);
+        // If no new image uploaded, keep existing image
+        if (file == null || file.isEmpty()) {
+            Product existing = productService.findById(id);
+            product.setImage(existing.getImage());
+        }
+        Product saved = productService.saveProduct(product, file);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm thành công", saved));
     }
 
     // PUT /api/admin/products/{id}/toggle  (bật/tắt trạng thái sản phẩm)
