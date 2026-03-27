@@ -3,7 +3,6 @@ package com.springboot.jenka_coffee.service.impl;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.springboot.jenka_coffee.exception.InvalidFileException;
-import com.springboot.jenka_coffee.service.ImageService;
 import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.util.ImageUtils;
 import lombok.SneakyThrows;
@@ -23,12 +22,10 @@ import java.util.UUID;
 public class UploadServiceImpl implements UploadService {
 
     private final Cloudinary cloudinary;
-    private final ImageService imageService;
     private final String uploadDir = "uploads";
 
-    public UploadServiceImpl(Cloudinary cloudinary, ImageService imageService) {
+    public UploadServiceImpl(Cloudinary cloudinary) {
         this.cloudinary = cloudinary;
-        this.imageService = imageService;
 
         // Create upload directory if not exists
         File uploadDirectory = new File(uploadDir);
@@ -39,30 +36,31 @@ public class UploadServiceImpl implements UploadService {
 
     @Override
     public String saveImage(MultipartFile file) {
-        return uploadToCloudinary(file, false, 0, 0.0f);
+        return uploadToCloudinary(file);
     }
 
     @Override
     public String saveProductImage(MultipartFile file) {
-        return uploadToCloudinary(file, true, ImageUtils.ImagePresets.PRODUCT_WIDTH,
-                ImageUtils.ImagePresets.PRODUCT_QUALITY);
+        return uploadToCloudinary(file);
     }
 
     @Override
     public String saveNewsImage(MultipartFile file) {
-        return uploadToCloudinary(file, true, ImageUtils.ImagePresets.NEWS_WIDTH, ImageUtils.ImagePresets.NEWS_QUALITY);
+        return uploadToCloudinary(file);
     }
 
     @Override
     public String saveImageWithCompression(MultipartFile file, int targetWidth, float quality) {
-        return uploadToCloudinary(file, true, targetWidth, quality);
+        // targetWidth/quality ignored — Cloudinary handles optimization server-side
+        return uploadToCloudinary(file);
     }
 
     /**
-     * Internal method to handle upload with optional compression
+     * Upload directly to Cloudinary without any local processing.
+     * Cloudinary handles resize/compression via quality:auto and fetch_format:auto.
      */
     @SneakyThrows
-    private String uploadToCloudinary(MultipartFile file, boolean compress, int targetWidth, float quality) {
+    private String uploadToCloudinary(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             log.warn("Attempted to upload null or empty file");
             return null;
@@ -77,49 +75,31 @@ public class UploadServiceImpl implements UploadService {
 
         File tempFile = null;
         try {
-            // Create temporary file
             tempFile = createTempFile(file);
 
-            // Compress if requested OR if file is larger than 5MB
-            long fiveMB = 5 * 1024 * 1024;
-            boolean forceCompress = tempFile.length() > fiveMB;
-
-            if ((compress || forceCompress) && isImageFile(file)) {
-                int finalWidth = targetWidth > 0 ? targetWidth : ImageUtils.ImagePresets.NEWS_WIDTH;
-                float finalQuality = quality > 0 ? quality : ImageUtils.ImagePresets.NEWS_QUALITY;
-
-                log.info("Compressing image before upload: {} ({}x{}, quality: {}, forced: {})",
-                        file.getOriginalFilename(), finalWidth, finalQuality, forceCompress);
-                imageService.processImage(tempFile, finalWidth, finalQuality);
-            }
-
-            // Upload to Cloudinary
             Map uploadResult = cloudinary.uploader().upload(tempFile, ObjectUtils.asMap(
                     "resource_type", "auto",
-                    "folder", "jenka_coffee", // Organize uploads in folder
+                    "folder", "jenka_coffee",
                     "use_filename", true,
                     "unique_filename", true,
-                    "quality", "auto:good", // Cloudinary auto quality optimization
-                    "fetch_format", "auto" // Auto format selection (WebP when supported)
+                    "quality", "auto:good",
+                    "fetch_format", "auto"
             ));
 
             String secureUrl = (String) uploadResult.get("secure_url");
-            log.info("Successfully uploaded image: {} -> {}", file.getOriginalFilename(), secureUrl);
+            log.info("Uploaded: {} -> {}", file.getOriginalFilename(), secureUrl);
             return secureUrl;
 
         } catch (Exception e) {
             log.error("Failed to upload image: {}", file.getOriginalFilename(), e);
-            if (e instanceof InvalidFileException) {
-                throw e; // Re-throw validation errors
-            }
+            if (e instanceof InvalidFileException) throw e;
             return null;
         } finally {
-            // Clean up temporary file
             if (tempFile != null && tempFile.exists()) {
                 try {
                     Files.delete(tempFile.toPath());
                 } catch (IOException e) {
-                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath(), e);
+                    log.warn("Failed to delete temp file: {}", tempFile.getAbsolutePath());
                 }
             }
         }
@@ -143,13 +123,6 @@ public class UploadServiceImpl implements UploadService {
         return tempFile;
     }
 
-    /**
-     * Check if file is an image based on content type
-     */
-    private boolean isImageFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        return contentType != null && contentType.startsWith("image/");
-    }
 
     @Override
     public String uploadFile(MultipartFile file, String subfolder) throws IOException {

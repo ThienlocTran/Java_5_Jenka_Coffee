@@ -6,7 +6,6 @@ import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
-import com.springboot.jenka_coffee.service.ImageService;
 import com.springboot.jenka_coffee.service.ProfileService;
 import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.util.PasswordSecurity;
@@ -17,9 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -28,7 +24,6 @@ public class ProfileServiceImpl implements ProfileService {
 
     private final AccountRepository accountRepository;
     private final UploadService uploadService;
-    private final ImageService imageService;
     private final PasswordSecurity passwordSecurity;
 
     @Override
@@ -72,45 +67,17 @@ public class ProfileServiceImpl implements ProfileService {
     @Override
     public Account updateAvatar(String username, MultipartFile avatarFile) {
         Account account = getProfile(username);
-        
-        try {
-            // Upload avatar file
-            String avatarPath = uploadService.uploadFile(avatarFile, "avatars");
-            
-            // Process avatar image (resize to 300px width, 0.8 quality for avatars)
-            String fullPath = uploadService.getUploadDir() + "/" + avatarPath;
-            File imageFile = new File(fullPath);
-            
-            if (imageFile.exists()) {
-                imageService.processImage(imageFile, 300, 0.8f);
-                log.info("Processed avatar image: {}", avatarPath);
-            }
-            
-            // Delete old avatar if exists
-            if (StringUtils.hasText(account.getPhoto())) {
-                try {
-                    String oldAvatarPath = uploadService.getUploadDir() + "/" + account.getPhoto();
-                    File oldFile = new File(oldAvatarPath);
-                    if (oldFile.exists()) {
-                        oldFile.delete();
-                        log.info("Deleted old avatar: {}", account.getPhoto());
-                    }
-                } catch (Exception e) {
-                    log.warn("Could not delete old avatar: {}", account.getPhoto(), e);
-                }
-            }
-            
-            // Update account with new avatar path
-            account.setPhoto(avatarPath);
-            Account savedAccount = accountRepository.save(account);
-            
-            log.info("Updated avatar for user: {}", username);
-            return savedAccount;
-            
-        } catch (IOException e) {
-            log.error("Failed to upload avatar for user: {}", username, e);
-            throw new BusinessRuleException("Không thể tải lên ảnh đại diện: " + e.getMessage());
+
+        // Upload directly to Cloudinary — no local resize needed
+        String avatarUrl = uploadService.saveImage(avatarFile);
+        if (avatarUrl == null) {
+            throw new BusinessRuleException("Không thể tải lên ảnh đại diện");
         }
+
+        account.setPhoto(avatarUrl);
+        Account savedAccount = accountRepository.save(account);
+        log.info("Updated avatar for user: {}", username);
+        return savedAccount;
     }
 
     @Override
