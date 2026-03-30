@@ -4,6 +4,6 @@ builder = "NIXPACKS"
 [deploy]
 startCommand = "java -Xms64m -Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Djava.security.egd=file:/dev/./urandom -jar target/jenka_coffee-0.0.1-SNAPSHOT.jar"
 healthcheckPath = "/api/products"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
