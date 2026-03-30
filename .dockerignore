@@ -1,0 +1,10 @@
+target/
+*.log
+*.out
+uploads/
+.git/
+.idea/
+.vscode/
+docs/
+scripts/
+sql-data/

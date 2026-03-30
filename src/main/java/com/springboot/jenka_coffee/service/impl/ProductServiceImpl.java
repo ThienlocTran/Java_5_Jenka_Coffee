@@ -83,11 +83,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> findByCategoryId(String cid) {
-        return productRepository.findByCategoryId(cid);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public List<Product> getRelatedProducts(String categoryId, Integer productId) {
         return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId, PageRequest.of(0, 4));
