@@ -41,18 +41,9 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     List<Object[]> countProductsGroupedByCategory();
 
     // ── Available only ───────────────────────────────────────────────
-    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.available = true")
-    List<Product> findByAvailableTrue();
+    // (findByAvailableTrue removed - unused, use findByAllCriteria instead)
 
-    // ── Search ───────────────────────────────────────────────────────
-    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-           "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-           "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<Product> searchProducts(@Param("keyword") String keyword);
-
-    List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
-
-    // ── Paginated filter — all criteria ─────────────────────────────
+    // ── Search (paginated only) ──────────────────────────────────────
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
                    "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
@@ -72,19 +63,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                                     @Param("maxPrice") BigDecimal maxPrice,
                                     @Param("keyword") String keyword,
                                     Pageable pageable);
-
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
-                   "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
-                   "(:maxPrice IS NULL OR p.price <= :maxPrice)",
-           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
-                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
-                        "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
-                        "(:maxPrice IS NULL OR p.price <= :maxPrice)")
-    Page<Product> findByCategoryAndPriceRange(@Param("categoryId") String categoryId,
-                                              @Param("minPrice") BigDecimal minPrice,
-                                              @Param("maxPrice") BigDecimal maxPrice,
-                                              Pageable pageable);
 
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
                    "(:keyword IS NULL OR :keyword = '' OR " +

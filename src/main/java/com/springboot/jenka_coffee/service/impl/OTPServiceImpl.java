@@ -30,13 +30,6 @@ public class OTPServiceImpl implements OTPService {
         otpStore.put(phone, otpData);
 
         // TODO: Integrate SMS provider (Twilio, AWS SNS, etc.)
-        // For now, just log it
-        System.out.println("=== OTP GENERATED ===");
-        System.out.println("Phone: " + phone);
-        System.out.println("OTP: " + otp);
-        System.out.println("Expires: " + otpData.expiry);
-        System.out.println("====================");
-
         return otp;
     }
 

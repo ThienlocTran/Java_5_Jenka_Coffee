@@ -85,7 +85,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<Product> findByCategoryId(String cid) {
-        // Cách 1: Viết method trong DAO (Khuyên dùng)
         return productRepository.findByCategoryId(cid);
     }
 
@@ -93,14 +92,6 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public List<Product> getRelatedProducts(String categoryId, Integer productId) {
         return productRepository.findTop4ByCategoryIdAndIdNot(categoryId, productId, PageRequest.of(0, 4));
-    }
-
-    @Override
-    public List<Product> filterProducts(String categoryId) {
-        if (categoryId != null && !categoryId.isEmpty()) {
-            return findByCategoryId(categoryId);
-        }
-        return findAll();
     }
 
     @Override
@@ -182,15 +173,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<Product> filterProductsPaginated(String categoryId, Pageable pageable) {
-        if (categoryId == null || categoryId.trim().isEmpty()) {
-            return productRepository.findAll(pageable);
-        }
-        return productRepository.findByCategoryId(categoryId, pageable);
-    }
-
-    @Override
     @Cacheable("categoryCounts")
     public Map<String, Long> getCategoryCounts() {
         Map<String, Long> counts = new HashMap<>();
@@ -219,21 +201,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-            Pageable pageable) {
-        return productRepository.findByCategoryAndPriceRange(categoryId, minPrice, maxPrice, pageable);
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+            String keyword, Pageable pageable) {
+        return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
         return productRepository.searchProductsPaginated(keyword, pageable);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-            String keyword, Pageable pageable) {
-        return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
     }
 }

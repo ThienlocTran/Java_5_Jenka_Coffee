@@ -18,8 +18,8 @@ public class ImageUtils {
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
             "jpg", "jpeg", "png", "gif", "webp");
 
-    // Max file size (20MB) to allow server compression
-    private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
+    // Max file size (5MB)
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     /**
      * Validate if uploaded file is a valid image
@@ -91,7 +91,7 @@ public class ImageUtils {
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            return "Kích thước file quá lớn. Vui lòng chọn file dưới 20MB để hệ thống tự động nén.";
+            return "Kích thước file quá lớn. Vui lòng chọn file dưới 5MB.";
         }
 
         String contentType = file.getContentType();
@@ -124,8 +124,5 @@ public class ImageUtils {
 
         public static final int NEWS_WIDTH = 1200;
         public static final float NEWS_QUALITY = 0.85f;
-
-        public static final int THUMBNAIL_WIDTH = 300;
-        public static final float THUMBNAIL_QUALITY = 0.75f;
     }
 }

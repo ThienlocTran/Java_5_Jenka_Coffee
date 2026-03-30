@@ -44,13 +44,14 @@ public class PasswordSecurity {
     }
 
     /**
-     * Check if password is already hashed (BCrypt format)
+     * Check if password is already hashed (BCrypt format).
      * BCrypt hashes start with $2a$, $2b$, or $2y$
+     * Returns true if the string IS a BCrypt hash (should NOT be hashed again).
      */
     public boolean isPasswordHashed(String password) {
         if (password == null) {
-            return true;
+            return false;
         }
-        return !password.matches("^\\$2[ayb]\\$.{56}$");
+        return password.matches("^\\$2[ayb]\\$.{56}$");
     }
 }

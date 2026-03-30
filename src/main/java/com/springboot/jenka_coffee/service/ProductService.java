@@ -1,22 +1,18 @@
 package com.springboot.jenka_coffee.service;
 
-import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.web.multipart.MultipartFile;
-
 public interface ProductService {
     List<Product> findAll();
 
     Product findById(Integer id);
-
-    List<Product> findByCategoryId(String cid); // Lọc mã theo loại
 
     Product create(Product product);
 
@@ -28,91 +24,16 @@ public interface ProductService {
 
     List<Product> getRelatedProducts(String categoryId, Integer productId);
 
-    List<Product> filterProducts(String categoryId);
-
     Map<String, Object> getProductDetail(Integer productId);
 
-    /**
-     * Get stock status based on quantity
-     * 
-     * @param quantity Product quantity
-     * @return StockStatus enum (IN_STOCK, LOW_STOCK, OUT_OF_STOCK)
-     */
-    StockStatus getStockStatus(Integer quantity);
-
-    /**
-     * Get human-readable stock message
-     * 
-     * @param quantity Product quantity
-     * @return Display message for UI
-     */
-    String getStockMessage(Integer quantity);
-
-    // ========== PAGINATION METHODS ==========
-
-    /**
-     * Find all products with pagination
-     * 
-     * @param pageable Pagination parameters
-     * @return Page of products
-     */
     Page<Product> findAllPaginated(Pageable pageable);
 
-    /**
-     * Filter products by category with pagination
-     * 
-     * @param categoryId Category ID (nullable)
-     * @param pageable   Pagination parameters
-     * @return Page of filtered products
-     */
-    Page<Product> filterProductsPaginated(String categoryId, Pageable pageable);
-
-    /**
-     * Get product count for each category
-     * 
-     * @return Map of categoryId -> product count
-     */
     Map<String, Long> getCategoryCounts();
 
-    /**
-     * Toggle product availability (soft delete)
-     */
     void toggleAvailable(Integer id);
-
-    // ========== ADVANCED FILTER & PAGINATION METHODS ==========
-
-    /**
-     * Filter products by category and price range with pagination
-     * 
-     * @param categoryId Category ID (nullable)
-     * @param minPrice   Minimum price (nullable)
-     * @param maxPrice   Maximum price (nullable)
-     * @param pageable   Pagination parameters
-     * @return Page of filtered products
-     */
-    Page<Product> filterProductsAdvanced(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
-
-    /**
-     * Search products by keyword with pagination
-     * 
-     * @param keyword  Search keyword (nullable)
-     * @param pageable Pagination parameters
-     * @return Page of products matching keyword
-     */
-    Page<Product> searchProductsPaginated(String keyword, Pageable pageable);
-
-    /**
-     * Filter products by multiple criteria with pagination
-     * 
-     * @param categoryId Category ID (nullable)
-     * @param minPrice   Minimum price (nullable)
-     * @param maxPrice   Maximum price (nullable)
-     * @param keyword    Search keyword (nullable)
-     * @param pageable   Pagination parameters
-     * @return Page of filtered products
-     */
- 
 
     Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
                                                 String keyword, Pageable pageable);
+
+    Page<Product> searchProductsPaginated(String keyword, Pageable pageable);
 }
