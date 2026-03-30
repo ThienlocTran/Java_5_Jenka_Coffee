@@ -1,6 +1,5 @@
 package com.springboot.jenka_coffee.service.impl;
 
-import com.springboot.jenka_coffee.dto.response.StockStatus;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
@@ -140,28 +139,6 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
-    }
-
-    @Override
-    public StockStatus getStockStatus(Integer quantity) {
-        if (quantity == null || quantity == 0) {
-            return StockStatus.OUT_OF_STOCK;
-        } else if (quantity < 10) {
-            return StockStatus.LOW_STOCK;
-        } else {
-            return StockStatus.IN_STOCK;
-        }
-    }
-
-    @Override
-    public String getStockMessage(Integer quantity) {
-        if (quantity == null || quantity == 0) {
-            return "Hết hàng";
-        } else if (quantity < 10) {
-            return "Chỉ còn lại " + quantity + " sản phẩm!";
-        } else {
-            return "Còn hàng";
-        }
     }
 
     // ========== PAGINATION METHODS ==========

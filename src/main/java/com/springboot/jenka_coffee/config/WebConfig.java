@@ -24,9 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/css/**").addResourceLocations("classpath:/static/css/");
-        registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
-        registry.addResourceHandler("/images/**").addResourceLocations("classpath:/static/images/");
+        // Only serve local uploads folder (avatars uploaded before Cloudinary migration)
         registry.addResourceHandler("/uploads/**").addResourceLocations("file:uploads/");
     }
 }

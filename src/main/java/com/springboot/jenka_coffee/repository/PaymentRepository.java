@@ -9,12 +9,5 @@ import java.util.List;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    // Tìm tất cả payment theo OrderId
     List<Payment> findByOrderId(Long orderId);
-
-    // Tìm payment theo status
-    List<Payment> findByStatus(String status);
-
-    // Tìm payment theo phương thức thanh toán
-    List<Payment> findByPaymentMethod(String paymentMethod);
 }

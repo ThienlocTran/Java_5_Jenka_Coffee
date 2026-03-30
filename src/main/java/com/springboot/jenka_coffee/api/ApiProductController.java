@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Product;
-import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,9 +20,8 @@ public class ApiProductController {
     private final ProductService productService;
 
 
-    public ApiProductController(ProductService productService, CategoryService categoryService) {
+    public ApiProductController(ProductService productService) {
         this.productService = productService;
-
     }
 
     @GetMapping
