@@ -46,14 +46,4 @@ public class WebConfig implements WebMvcConfigurer {
             context.setCookieProcessor(processor);
         });
     }
-
-    /**
-     * Ensure JSESSIONID has Secure flag (required for SameSite=None)
-     */
-    @Bean
-    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> sessionCookieCustomizer() {
-        return factory -> factory.addContextCustomizers(context ->
-            context.getSessionCookieConfig().setSecure(true)
-        );
-    }
 }
