@@ -2,6 +2,8 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Order;
+import com.springboot.jenka_coffee.entity.OrderDetail;
+import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,9 +23,18 @@ import java.util.stream.Collectors;
 public class ApiAdminOrderController {
 
     private final OrderService orderService;
+    private final OrderRepository orderRepository;
 
-    public ApiAdminOrderController(OrderService orderService) {
+    public ApiAdminOrderController(OrderService orderService, OrderRepository orderRepository) {
         this.orderService = orderService;
+        this.orderRepository = orderRepository;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(@PathVariable Long id) {
+        Order order = orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + id));
+        return ResponseEntity.ok(ApiResponse.success("OK", toDetailDto(order)));
     }
 
     @GetMapping
@@ -80,6 +91,28 @@ public class ApiAdminOrderController {
         } else {
             dto.put("account", null);
         }
+        return dto;
+    }
+
+    /** Detail DTO — includes order items with product info */
+    private Map<String, Object> toDetailDto(Order o) {
+        Map<String, Object> dto = toDto(o);
+
+        List<Map<String, Object>> items = o.getOrderDetails() == null ? List.of() :
+            o.getOrderDetails().stream().map(d -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", d.getId());
+                item.put("quantity", d.getQuantity());
+                item.put("price", d.getPrice());
+                if (d.getProduct() != null) {
+                    item.put("productId", d.getProduct().getId());
+                    item.put("productName", d.getProduct().getName());
+                    item.put("productImage", d.getProduct().getImage());
+                }
+                return item;
+            }).collect(Collectors.toList());
+
+        dto.put("orderDetails", items);
         return dto;
     }
 }

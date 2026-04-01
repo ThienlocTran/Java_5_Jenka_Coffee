@@ -52,6 +52,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.account WHERE o.id IN :ids")
     List<Order> findAllWithAccountByIds(@Param("ids") List<Long> ids);
 
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.account LEFT JOIN FETCH o.orderDetails d LEFT JOIN FETCH d.product WHERE o.id = :id")
+    java.util.Optional<Order> findByIdWithDetails(@Param("id") Long id);
+
     // ===== AGGREGATE STATS =====
 
     @Query("SELECT COUNT(o) FROM Order o")

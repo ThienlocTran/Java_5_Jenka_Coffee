@@ -2,12 +2,15 @@ package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.service.CartService;
+import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/cart")
 public class ApiCartController {
@@ -19,7 +22,8 @@ public class ApiCartController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCart() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCart(HttpSession session) {
+        log.info("[CART GET] sessionId={}, cartSize={}", session.getId(), cartService.getCount());
         Map<String, Object> data = new HashMap<>();
         data.put("items", cartService.getItems());
         data.put("totalAmount", cartService.getTotal());
@@ -28,8 +32,11 @@ public class ApiCartController {
     }
 
     @PostMapping("/add/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> addToCart(@PathVariable("id") Integer id) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> addToCart(
+            @PathVariable("id") Integer id, HttpSession session) {
+        log.info("[CART ADD] sessionId={}, productId={}", session.getId(), id);
         cartService.add(id);
+        log.info("[CART ADD] after add, cartSize={}", cartService.getCount());
 
         Map<String, Object> data = new HashMap<>();
         data.put("summary", cartService.getCartSummary());
