@@ -149,11 +149,14 @@ public class ProductServiceImpl implements ProductService {
     public Map<String, Long> getCategoryCounts() {
         Map<String, Long> counts = new HashMap<>();
         List<Object[]> results = productRepository.countProductsGroupedByCategory();
+        long total = 0L;
         for (Object[] result : results) {
             String categoryId = (String) result[0];
             Long count = (Long) result[1];
             counts.put(categoryId, count);
+            total += count;
         }
+        counts.put("ALL", total);
         return counts;
     }
 

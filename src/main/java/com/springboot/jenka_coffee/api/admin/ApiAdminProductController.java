@@ -112,6 +112,66 @@ public class ApiAdminProductController {
         return ResponseEntity.ok(ApiResponse.success("Đổi trạng thái sản phẩm thành công", null));
     }
 
+    // PATCH /api/admin/products/{id}/quantity  (cập nhật tồn kho)
+    @PatchMapping("/{id}/quantity")
+    public ResponseEntity<ApiResponse<Void>> updateQuantity(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Integer> body) {
+        Integer qty = body.get("quantity");
+        if (qty == null || qty < 0) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Số lượng không hợp lệ"));
+        }
+        Product product = productService.findById(id);
+        product.setQuantity(qty);
+        productService.update(product);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật tồn kho thành công", null));
+    }
+
+    // GET /api/admin/products/inventory  (danh sách tồn kho)
+    @GetMapping("/inventory")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getInventory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("quantity").ascending());
+        Page<Product> productPage;
+
+        if (keyword != null && !keyword.isBlank()) {
+            productPage = productService.searchProductsPaginated(keyword, pageable);
+        } else {
+            productPage = productService.findAllPaginated(pageable);
+        }
+
+        // Filter by stock status nếu có
+        var items = productPage.getContent().stream()
+            .filter(p -> {
+                if ("out".equals(status)) return p.getQuantity() == null || p.getQuantity() == 0;
+                if ("low".equals(status)) return p.getQuantity() != null && p.getQuantity() > 0 && p.getQuantity() <= 5;
+                return true;
+            })
+            .map(p -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", p.getId());
+                item.put("name", p.getName());
+                item.put("image", p.getImage());
+                item.put("categoryName", p.getCategory() != null ? p.getCategory().getName() : "");
+                item.put("price", p.getPrice());
+                item.put("quantity", p.getQuantity() != null ? p.getQuantity() : 0);
+                item.put("available", p.getAvailable());
+                return item;
+            }).toList();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("items", items);
+        data.put("currentPage", productPage.getNumber());
+        data.put("totalPages", productPage.getTotalPages());
+        data.put("totalItems", productPage.getTotalElements());
+
+        return ResponseEntity.ok(ApiResponse.success("OK", data));
+    }
+
     // DELETE /api/admin/products/{id}
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Integer id) {

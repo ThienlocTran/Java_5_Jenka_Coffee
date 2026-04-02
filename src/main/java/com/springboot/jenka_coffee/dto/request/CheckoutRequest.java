@@ -25,7 +25,7 @@ public class CheckoutRequest {
     private String phone;
 
     @NotBlank(message = "{CheckoutRequest.address.NotBlank}")
-    @Size(min = 10, max = 255, message = "{CheckoutRequest.address.Size}")
+    @Size(min = 3, max = 255, message = "{CheckoutRequest.address.Size}")
     private String address;
 
     @NotBlank(message = "{CheckoutRequest.province.NotBlank}")

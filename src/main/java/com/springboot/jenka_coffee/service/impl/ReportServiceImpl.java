@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.response.DashboardCountsDTO;
 import com.springboot.jenka_coffee.dto.response.OrderStatsDTO;
 import com.springboot.jenka_coffee.dto.response.RevenueReportDTO;
 import com.springboot.jenka_coffee.dto.response.TopCustomerDTO;
+import com.springboot.jenka_coffee.dto.response.TopProductDTO;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.repository.OrderRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,16 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public List<TopCustomerDTO> getTopCustomers(int limit) {
         return orderRepository.getTopCustomers(PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<TopProductDTO> getTopProducts(int limit) {
+        return orderRepository.getTopProducts(PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<RevenueReportDTO> getRevenueByDateRange(LocalDateTime from, LocalDateTime to) {
+        return orderRepository.getRevenueByDateRange(from, to);
     }
 
     @Override

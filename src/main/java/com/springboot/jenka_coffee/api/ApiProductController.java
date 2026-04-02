@@ -30,13 +30,21 @@ public class ApiProductController {
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
             @RequestParam(value = "maxPrice", required = false) Double maxPriceDouble,
             @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "sort", defaultValue = "newest") String sort,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "12") int size) {
 
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
 
-        Pageable pageable = PageRequest.of(page, size);
+        org.springframework.data.domain.Sort sortOrder = switch (sort) {
+            case "price_asc"  -> org.springframework.data.domain.Sort.by("price").ascending();
+            case "price_desc" -> org.springframework.data.domain.Sort.by("price").descending();
+            case "name_asc"   -> org.springframework.data.domain.Sort.by("name").ascending();
+            default           -> org.springframework.data.domain.Sort.by("id").descending(); // newest
+        };
+
+        Pageable pageable = PageRequest.of(page, size, sortOrder);
         Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, minPrice, maxPrice,
                 keyword, pageable);
 

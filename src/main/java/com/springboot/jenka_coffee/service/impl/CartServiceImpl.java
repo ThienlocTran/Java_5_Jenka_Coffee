@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.response.CartItem;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.ProductService;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.SessionScope;
 
@@ -16,19 +17,23 @@ import java.util.Map;
 @SessionScope
 public class CartServiceImpl implements CartService {
 
-    private final ProductService productService;
+    private final ObjectProvider<ProductService> productServiceProvider;
 
     private final Map<Integer, CartItem> map = new HashMap<>();
 
-    public CartServiceImpl(ProductService productService) {
-        this.productService = productService;
+    public CartServiceImpl(ObjectProvider<ProductService> productServiceProvider) {
+        this.productServiceProvider = productServiceProvider;
+    }
+
+    private ProductService productService() {
+        return productServiceProvider.getObject();
     }
 
     @Override
     public void add(Integer productId) {
         CartItem item = map.get(productId);
         if (item == null) {
-            Product product = productService.findById(productId);
+            Product product = productService().findById(productId);
             if (product != null) {
                 item = new CartItem();
                 item.setProductId(product.getId());
@@ -72,9 +77,8 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public int getCount() {
-        return map.values().stream()
-                .mapToInt(CartItem::getQuantity)
-                .sum();
+        // Trả về số loại sản phẩm (distinct), không phải tổng số lượng
+        return map.size();
     }
 
     @Override

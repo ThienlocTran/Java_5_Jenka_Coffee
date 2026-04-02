@@ -62,4 +62,35 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o")
     java.math.BigDecimal sumTotalRevenue();
+
+    // ===== TOP PRODUCTS =====
+    @Query("SELECT new com.springboot.jenka_coffee.dto.response.TopProductDTO(" +
+            "d.product.id, d.product.name, d.product.category.name, SUM(d.quantity), SUM(d.price * d.quantity)) " +
+            "FROM OrderDetail d " +
+            "GROUP BY d.product.id, d.product.name, d.product.category.name " +
+            "ORDER BY SUM(d.quantity) DESC")
+    List<com.springboot.jenka_coffee.dto.response.TopProductDTO> getTopProducts(Pageable pageable);
+
+    // ===== REVENUE BY PERIOD =====
+    @Query("SELECT new com.springboot.jenka_coffee.dto.response.RevenueReportDTO(" +
+            "EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate), SUM(o.totalAmount), COUNT(o)) " +
+            "FROM Order o " +
+            "WHERE o.createDate >= :from AND o.createDate <= :to " +
+            "GROUP BY EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate) " +
+            "ORDER BY EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate)")
+    List<RevenueReportDTO> getRevenueByDateRange(
+            @Param("from") java.time.LocalDateTime from,
+            @Param("to") java.time.LocalDateTime to);
+
+    @Query("SELECT new com.springboot.jenka_coffee.dto.response.RevenueReportDTO(" +
+            "EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate), SUM(o.totalAmount), COUNT(o)) " +
+            "FROM Order o " +
+            "WHERE o.createDate >= :from AND o.createDate <= :to " +
+            "GROUP BY EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate), " +
+            "EXTRACT(DAY FROM o.createDate) " +
+            "ORDER BY EXTRACT(YEAR FROM o.createDate), EXTRACT(MONTH FROM o.createDate), " +
+            "EXTRACT(DAY FROM o.createDate)")
+    List<RevenueReportDTO> getDailyRevenueByDateRange(
+            @Param("from") java.time.LocalDateTime from,
+            @Param("to") java.time.LocalDateTime to);
 }
