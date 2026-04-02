@@ -8,6 +8,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class EmailServiceImpl implements EmailService {
@@ -102,6 +103,56 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
         } catch (MessagingException e) {
             throw new RuntimeException("Không thể gửi email đặt lại mật khẩu", e);
+        }
+    }
+
+    @Override
+    @Async
+    public void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
+                                          String phone, String address, java.math.BigDecimal total) {
+        try {
+            // HTML-escape tất cả user-controlled fields để chống HTML injection
+            String safeName    = HtmlUtils.htmlEscape(customerName != null ? customerName : "Khách");
+            String safePhone   = HtmlUtils.htmlEscape(phone != null ? phone : "");
+            String safeAddress = HtmlUtils.htmlEscape(address != null ? address : "");
+            String formatted   = total != null ? String.format("%,.0f", total.doubleValue()) + " ₫" : "N/A";
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(adminEmail);
+            helper.setSubject("[Jenka Coffee] Đơn hàng mới #" + orderId);
+
+            String html = """
+                    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+                      <div style="background:#dc3545;padding:20px 24px;">
+                        <h2 style="color:#fff;margin:0;font-size:20px;">🛒 Đơn hàng mới #%d</h2>
+                      </div>
+                      <div style="padding:24px;">
+                        <p style="margin:0 0 16px;color:#333;">Có khách vừa đặt hàng trên <strong>Jenka Coffee</strong>. Chi tiết:</p>
+                        <table style="width:100%%;border-collapse:collapse;font-size:14px;">
+                          <tr><td style="padding:8px 0;color:#666;width:140px;">Mã đơn hàng</td><td style="padding:8px 0;font-weight:bold;color:#212529;">#%d</td></tr>
+                          <tr style="background:#f9f9f9;"><td style="padding:8px 6px;color:#666;">Khách hàng</td><td style="padding:8px 6px;font-weight:bold;color:#212529;">%s</td></tr>
+                          <tr><td style="padding:8px 0;color:#666;">Số điện thoại</td><td style="padding:8px 0;color:#212529;">%s</td></tr>
+                          <tr style="background:#f9f9f9;"><td style="padding:8px 6px;color:#666;">Địa chỉ</td><td style="padding:8px 6px;color:#212529;">%s</td></tr>
+                          <tr><td style="padding:8px 0;color:#666;">Tổng tiền</td><td style="padding:8px 0;font-weight:bold;color:#dc3545;font-size:16px;">%s</td></tr>
+                        </table>
+                        <div style="margin-top:24px;text-align:center;">
+                          <a href="%s/admin/order/detail/%d" style="background:#dc3545;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">
+                            Xem chi tiết đơn hàng
+                          </a>
+                        </div>
+                      </div>
+                      <div style="background:#f8f9fa;padding:12px 24px;text-align:center;font-size:12px;color:#999;">
+                        Jenka Coffee — Hương vị cà phê đích thực
+                      </div>
+                    </div>
+                    """.formatted(orderId, orderId, safeName, safePhone, safeAddress, formatted, baseUrl, orderId);
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Không thể gửi email thông báo đơn hàng", e);
         }
     }
 }
