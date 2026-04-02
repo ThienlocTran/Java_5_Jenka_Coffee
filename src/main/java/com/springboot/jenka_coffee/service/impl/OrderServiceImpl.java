@@ -10,6 +10,7 @@ import com.springboot.jenka_coffee.exception.InsufficientStockException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CartService;
+import com.springboot.jenka_coffee.service.EmailService;
 import com.springboot.jenka_coffee.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,13 +29,19 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final CartService cartService;
+    private final EmailService emailService;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username}")
+    private String adminEmail;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             ProductRepository productRepository,
-                            CartService cartService) {
+                            CartService cartService,
+                            EmailService emailService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -87,6 +94,21 @@ public class OrderServiceImpl implements OrderService {
 
         // STEP 4: Clear cart after successful transaction
         cartService.clear();
+
+        // STEP 5: Notify admin via email (async — không block response)
+        try {
+            String customerName = account != null ? account.getFullname() : "Khách";
+            emailService.sendNewOrderNotification(
+                    adminEmail,
+                    savedOrder.getId(),
+                    customerName,
+                    savedOrder.getPhone(),
+                    savedOrder.getAddress(),
+                    savedOrder.getTotalAmount()
+            );
+        } catch (Exception e) {
+            // Không để lỗi mail block đơn hàng đã tạo thành công
+        }
 
         return savedOrder;
     }

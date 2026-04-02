@@ -22,4 +22,10 @@ public interface EmailService {
      * @param fullname User's full name
      */
     void sendPasswordResetEmail(String to, String token, String fullname);
+
+    /**
+     * Notify admin when a new order is placed
+     */
+    void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
+                                   String phone, String address, java.math.BigDecimal total);
 }

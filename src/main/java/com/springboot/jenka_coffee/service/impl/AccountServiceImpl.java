@@ -368,7 +368,7 @@ public class AccountServiceImpl implements AccountService {
                 account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
                 dao.save(account);
 
-                emailService.sendPasswordResetEmail(account.getEmail(), account.getFullname(), resetToken);
+                emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
                 return "EMAIL";
             } catch (Exception e) {
                 log.warn("Email sending failed for {}: {}", account.getEmail(), e.getMessage());
