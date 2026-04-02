@@ -4,8 +4,10 @@ import com.springboot.jenka_coffee.dto.response.DashboardCountsDTO;
 import com.springboot.jenka_coffee.dto.response.OrderStatsDTO;
 import com.springboot.jenka_coffee.dto.response.RevenueReportDTO;
 import com.springboot.jenka_coffee.dto.response.TopCustomerDTO;
+import com.springboot.jenka_coffee.dto.response.TopProductDTO;
 import com.springboot.jenka_coffee.entity.Order;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ReportService {
@@ -14,13 +16,15 @@ public interface ReportService {
 
     List<RevenueReportDTO> getYearlyRevenue();
 
+    List<RevenueReportDTO> getRevenueByDateRange(LocalDateTime from, LocalDateTime to);
+
     List<TopCustomerDTO> getTopCustomers(int limit);
+
+    List<TopProductDTO> getTopProducts(int limit);
 
     OrderStatsDTO getOrderStats();
 
-    /** Aggregate counts for dashboard summary cards (orders, products, customers) */
     DashboardCountsDTO getDashboardCounts();
 
-    /** Recent N orders with account eagerly loaded — avoids lazy proxy in controller */
     List<Order> getRecentOrders(int limit);
 }
