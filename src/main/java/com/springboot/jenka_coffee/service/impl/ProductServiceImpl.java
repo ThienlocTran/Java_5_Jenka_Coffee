@@ -136,6 +136,16 @@ public class ProductServiceImpl implements ProductService {
         log.info("Successfully deleted product with ID: {}", id);
     }
 
+    @Override
+    @Transactional
+    public void updateQuantity(Integer id, Integer quantity) {
+        if (!productRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Product not found with id: " + id);
+        }
+        productRepository.updateQuantityById(id, quantity);
+        log.info("Updated quantity for product ID {} to {}", id, quantity);
+    }
+
     // ========== PAGINATION METHODS ==========
 
     @Override

@@ -121,9 +121,8 @@ public class ApiAdminProductController {
         if (qty == null || qty < 0) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Số lượng không hợp lệ"));
         }
-        Product product = productService.findById(id);
-        product.setQuantity(qty);
-        productService.update(product);
+        // Dùng query trực tiếp — tránh load/save toàn bộ entity
+        productService.updateQuantity(id, qty);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật tồn kho thành công", null));
     }
 

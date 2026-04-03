@@ -18,6 +18,8 @@ public interface ProductService {
 
     Product update(Product product);
 
+    void updateQuantity(Integer id, Integer quantity);
+
     void delete(Integer id);
 
     Product saveProduct(Product product, MultipartFile file);
