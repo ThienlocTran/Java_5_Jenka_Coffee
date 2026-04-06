@@ -151,4 +151,95 @@ public class EmailServiceImpl implements EmailService {
             throw new RuntimeException("Không thể gửi email thông báo đơn hàng", e);
         }
     }
+
+    @Override
+    @Async
+    public void sendBookingConfirmation(String customerName, String phone, String bookingDate, String description) {
+        final String ADMIN = "tranthienloc21102005@gmail.com";
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(ADMIN);
+            helper.setSubject("[Jenka Coffee] Lịch hẹn sửa chữa mới từ: " + HtmlUtils.htmlEscape(customerName));
+
+            String safeName = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
+            String safePhone = HtmlUtils.htmlEscape(phone != null ? phone : "");
+            String safeDate = HtmlUtils.htmlEscape(bookingDate != null ? bookingDate : "");
+            String safeDesc = HtmlUtils.htmlEscape(description != null ? description : "Không có mô tả");
+
+            String html = """
+                    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+                      <div style="background:#dc3545;padding:20px 24px;">
+                        <h2 style="color:#fff;margin:0;font-size:20px;">🔧 Lịch hẹn sửa chữa mới</h2>
+                      </div>
+                      <div style="padding:24px;">
+                        <table style="width:100%%;border-collapse:collapse;font-size:14px;">
+                          <tr><td style="padding:8px 0;color:#666;width:140px;">Khách hàng</td><td style="padding:8px 0;font-weight:bold;">%s</td></tr>
+                          <tr style="background:#f9f9f9;"><td style="padding:8px 6px;color:#666;">Số điện thoại</td><td style="padding:8px 6px;">%s</td></tr>
+                          <tr><td style="padding:8px 0;color:#666;">Ngày giờ hẹn</td><td style="padding:8px 0;">%s</td></tr>
+                          <tr style="background:#f9f9f9;"><td style="padding:8px 6px;color:#666;">Mô tả lỗi</td><td style="padding:8px 6px;">%s</td></tr>
+                        </table>
+                        <div style="margin-top:20px;text-align:center;">
+                          <a href="%s/admin/booking" style="background:#dc3545;color:#fff;padding:10px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">
+                            Xem lịch hẹn
+                          </a>
+                        </div>
+                      </div>
+                      <div style="background:#f8f9fa;padding:12px 24px;text-align:center;font-size:12px;color:#999;">
+                        Jenka Coffee — Hương vị cà phê đích thực
+                      </div>
+                    </div>
+                    """.formatted(safeName, safePhone, safeDate, safeDesc, baseUrl);
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Không thể gửi email thông báo lịch hẹn", e);
+        }
+    }
+
+    @Override
+    @Async
+    public void sendContactConfirmation(String toEmail, String customerName, String subject) {
+        final String ADMIN = "tranthienloc21102005@gmail.com";
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(ADMIN);
+            helper.setSubject("[Jenka Coffee] Tin nhắn liên hệ mới từ: " + HtmlUtils.htmlEscape(customerName));
+
+            String safeName = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
+            String safeSubject = HtmlUtils.htmlEscape(subject != null ? subject : "");
+
+            String html = """
+                    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+                      <div style="background:#0d6efd;padding:20px 24px;">
+                        <h2 style="color:#fff;margin:0;font-size:20px;">✉️ Tin nhắn liên hệ mới</h2>
+                      </div>
+                      <div style="padding:24px;">
+                        <p style="color:#333;">Có khách hàng vừa gửi tin nhắn liên hệ trên <strong>Jenka Coffee</strong>.</p>
+                        <table style="width:100%%;border-collapse:collapse;font-size:14px;">
+                          <tr><td style="padding:8px 0;color:#666;width:140px;">Khách hàng</td><td style="padding:8px 0;font-weight:bold;">%s</td></tr>
+                          <tr style="background:#f9f9f9;"><td style="padding:8px 6px;color:#666;">Tiêu đề</td><td style="padding:8px 6px;">%s</td></tr>
+                        </table>
+                        <div style="margin-top:20px;text-align:center;">
+                          <a href="%s/admin/contacts" style="background:#0d6efd;color:#fff;padding:10px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">
+                            Xem tin nhắn
+                          </a>
+                        </div>
+                      </div>
+                      <div style="background:#f8f9fa;padding:12px 24px;text-align:center;font-size:12px;color:#999;">
+                        Jenka Coffee — Hương vị cà phê đích thực
+                      </div>
+                    </div>
+                    """.formatted(safeName, safeSubject, baseUrl);
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Không thể gửi email thông báo liên hệ", e);
+        }
+    }
 }

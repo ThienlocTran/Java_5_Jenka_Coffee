@@ -4,13 +4,10 @@ import com.springboot.jenka_coffee.dto.request.ContactRequest;
 import com.springboot.jenka_coffee.entity.Contact;
 import com.springboot.jenka_coffee.repository.ContactRepository;
 import com.springboot.jenka_coffee.service.ContactService;
+import com.springboot.jenka_coffee.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -18,20 +15,16 @@ import org.springframework.stereotype.Service;
 public class ContactServiceImpl implements ContactService {
 
     private final ContactRepository contactRepository;
+    private final EmailService emailService;
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
-
-    @Value("${spring.mail.username:}")
-    private String adminEmail;
-
-    public ContactServiceImpl(ContactRepository contactRepository) {
+    public ContactServiceImpl(ContactRepository contactRepository, EmailService emailService) {
         this.contactRepository = contactRepository;
+        this.emailService = emailService;
     }
 
     @Override
     public void sendContactEmail(ContactRequest request) {
-        // Lưu vào DB trước — không phụ thuộc vào mail
+        // Lưu vào DB trước
         Contact contact = new Contact();
         contact.setFullName(request.getFullName());
         contact.setEmail(request.getEmail());
@@ -39,22 +32,11 @@ public class ContactServiceImpl implements ContactService {
         contact.setMessage(request.getMessage());
         contactRepository.save(contact);
 
-        // Gửi mail thông báo cho admin — fail không ảnh hưởng
-        if (mailSender != null && !adminEmail.isBlank()) {
-            try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setTo(adminEmail);
-                message.setSubject("[Jenka Coffee] Liên hệ mới từ: " + request.getFullName());
-                message.setText(
-                    "Họ tên: " + request.getFullName() + "\n" +
-                    "Email: " + request.getEmail() + "\n\n" +
-                    "Tiêu đề: " + request.getSubject() + "\n" +
-                    "Nội dung:\n" + request.getMessage()
-                );
-                mailSender.send(message);
-            } catch (Exception e) {
-                log.warn("Không thể gửi email thông báo liên hệ: {}", e.getMessage());
-            }
+        // Gửi HTML email thông báo admin (async)
+        try {
+            emailService.sendContactConfirmation(request.getEmail(), request.getFullName(), request.getSubject());
+        } catch (Exception e) {
+            log.warn("Không thể gửi email thông báo liên hệ: {}", e.getMessage());
         }
     }
 

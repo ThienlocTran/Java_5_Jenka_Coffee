@@ -28,4 +28,8 @@ public interface EmailService {
      */
     void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
                                    String phone, String address, java.math.BigDecimal total);
+
+    void sendBookingConfirmation(String customerName, String phone, String bookingDate, String description);
+
+    void sendContactConfirmation(String toEmail, String customerName, String subject);
 }
