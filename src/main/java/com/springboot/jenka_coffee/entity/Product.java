@@ -40,7 +40,7 @@ public class Product implements Serializable {
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
-    @Column(name = "createDate")
+    @Column(name = "createDate", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
     @Column(name = "Available")

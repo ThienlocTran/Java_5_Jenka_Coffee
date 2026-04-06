@@ -32,12 +32,12 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     long countByCategoryId(String categoryId);
 
-    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.category.id = :categoryId AND p.id <> :id")
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.category.id = :categoryId AND p.id <> :id AND p.available = true")
     List<Product> findTop4ByCategoryIdAndIdNot(@Param("categoryId") String categoryId, @Param("id") Integer id,
                                                Pageable pageable);
 
     // ── Category counts ──────────────────────────────────────────────
-    @Query("SELECT p.category.id, COUNT(p) FROM Product p GROUP BY p.category.id")
+    @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.available = true GROUP BY p.category.id")
     List<Object[]> countProductsGroupedByCategory();
 
     @org.springframework.data.jpa.repository.Modifying
@@ -53,6 +53,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
+                   "p.available = true AND " +
                    "(:keyword IS NULL OR :keyword = '' OR " +
                    " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                    " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
@@ -60,6 +61,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                         "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
+                        "p.available = true AND " +
                         "(:keyword IS NULL OR :keyword = '' OR " +
                         " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
@@ -70,10 +72,12 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                                     Pageable pageable);
 
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "p.available = true AND " +
                    "(:keyword IS NULL OR :keyword = '' OR " +
                    " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                    " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
            countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
+                        "p.available = true AND " +
                         "(:keyword IS NULL OR :keyword = '' OR " +
                         " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")

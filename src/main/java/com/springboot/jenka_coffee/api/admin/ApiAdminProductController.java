@@ -64,6 +64,9 @@ public class ApiAdminProductController {
         product.setId(null);
         Category category = categoryService.findByIdOrThrow(categoryId);
         product.setCategory(category);
+        if (product.getPrice() != null) {
+            product.setPrice(product.getPrice().setScale(0, java.math.RoundingMode.HALF_UP));
+        }
         Product saved = productService.saveProduct(product, file);
         return ResponseEntity.ok(ApiResponse.success("Thêm sản phẩm thành công", saved));
     }
@@ -98,7 +101,7 @@ public class ApiAdminProductController {
         Product existing = productService.findById(id);
         existing.setName(name);
         existing.setDescription(description);
-        existing.setPrice(price);
+        existing.setPrice(price != null ? price.setScale(0, java.math.RoundingMode.HALF_UP) : price);
         existing.setAvailable(available);
         existing.setCategory(categoryService.findByIdOrThrow(categoryId));
         Product saved = productService.saveProduct(existing, file);

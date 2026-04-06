@@ -46,15 +46,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
 
-        // --- XỬ LÝ ẢNH VỚI NÉN ---
         if (file != null && !file.isEmpty()) {
             try {
-                // Sử dụng saveProductImage để tự động nén ảnh với preset cho sản phẩm
                 String imageUrl = uploadService.saveProductImage(file);
                 if (imageUrl != null) {
                     product.setImage(imageUrl);
@@ -64,15 +63,14 @@ public class ProductServiceImpl implements ProductService {
                 }
             } catch (Exception e) {
                 log.error("Error uploading product image: {}", e.getMessage(), e);
-                // Không throw exception, chỉ log lỗi để không block việc lưu product
             }
         }
-        // Nếu không có ảnh mới, giữ nguyên ảnh cũ (từ hidden input trong form)
 
-        // --- LƯU VÀO DATABASE ---
         Product savedProduct = productRepository.save(product);
         log.info("Successfully saved product with ID: {}", savedProduct.getId());
-        return savedProduct;
+        // Reload với JOIN FETCH để category không còn là lazy proxy
+        return productRepository.findByIdWithCategory(savedProduct.getId())
+                .orElse(savedProduct);
     }
 
     @Override

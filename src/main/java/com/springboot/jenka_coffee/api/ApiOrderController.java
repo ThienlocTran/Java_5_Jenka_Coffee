@@ -65,6 +65,8 @@ public class ApiOrderController {
         }
 
         Order order = orderService.checkout(request, user);
+        // postCheckout chạy SAU khi transaction commit — cart clear + email không ảnh hưởng rollback
+        orderService.postCheckout(order, user);
         Map<String, Object> data = Map.of("orderId", order.getId());
         return ResponseEntity.ok(ApiResponse.success("Đặt hàng thành công! Mã đơn hàng: #" + order.getId(), data));
     }
