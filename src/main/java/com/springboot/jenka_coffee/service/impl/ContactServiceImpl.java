@@ -24,20 +24,25 @@ public class ContactServiceImpl implements ContactService {
 
     @Override
     public void sendContactEmail(ContactRequest request) {
-        // Lưu vào DB trước
+        // Sanitize input trước khi lưu — ngăn Stored XSS trong admin panel
         Contact contact = new Contact();
-        contact.setFullName(request.getFullName());
-        contact.setEmail(request.getEmail());
-        contact.setSubject(request.getSubject());
-        contact.setMessage(request.getMessage());
+        contact.setFullName(stripHtml(request.getFullName()));
+        contact.setEmail(request.getEmail()); // email đã validate format
+        contact.setSubject(stripHtml(request.getSubject()));
+        contact.setMessage(stripHtml(request.getMessage()));
         contactRepository.save(contact);
 
-        // Gửi HTML email thông báo admin (async)
         try {
-            emailService.sendContactConfirmation(request.getEmail(), request.getFullName(), request.getSubject());
+            emailService.sendContactConfirmation(request.getEmail(), contact.getFullName(), contact.getSubject());
         } catch (Exception e) {
-            log.warn("Không thể gửi email thông báo liên hệ: {}", e.getMessage());
+            log.warn("Không thể gửi email thông báo liên hệ");
         }
+    }
+
+    /** Strip HTML tags — ngăn Stored XSS */
+    private String stripHtml(String input) {
+        if (input == null) return null;
+        return input.replaceAll("<[^>]*>", "").trim();
     }
 
     @Override

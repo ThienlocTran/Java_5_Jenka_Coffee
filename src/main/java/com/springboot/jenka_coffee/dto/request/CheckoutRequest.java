@@ -43,6 +43,10 @@ public class CheckoutRequest {
     @Size(max = 500, message = "{CheckoutRequest.note.Size}")
     private String note;
 
+    /** Mã giảm giá (tùy chọn) */
+    @Size(max = 20)
+    private String voucherCode;
+
     @AssertTrue(message = "{CheckoutRequest.agreeTerms.AssertTrue}")
     private boolean agreeTerms;
 }

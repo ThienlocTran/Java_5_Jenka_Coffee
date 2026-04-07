@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 @SpringBootApplication
 @EnableCaching
+@org.springframework.scheduling.annotation.EnableScheduling
 public class JenkaCoffeeApplication {
 
     private static final Logger log = LoggerFactory.getLogger(JenkaCoffeeApplication.class);

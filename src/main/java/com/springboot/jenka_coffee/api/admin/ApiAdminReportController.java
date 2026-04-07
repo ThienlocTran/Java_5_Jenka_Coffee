@@ -42,7 +42,8 @@ public class ApiAdminReportController {
     @GetMapping("/customers/top")
     public ResponseEntity<ApiResponse<List<TopCustomerDTO>>> getTopCustomers(
             @RequestParam(value = "limit", defaultValue = "10") int limit) {
-
+        // Giới hạn cứng tránh query toàn bộ DB
+        limit = Math.min(Math.max(limit, 1), 100);
         List<TopCustomerDTO> report = reportService.getTopCustomers(limit);
         return ResponseEntity.ok(ApiResponse.success("Lấy báo cáo khách hàng VIP thành công", report));
     }

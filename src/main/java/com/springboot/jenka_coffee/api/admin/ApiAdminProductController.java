@@ -36,6 +36,10 @@ public class ApiAdminProductController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
+        // Giới hạn cứng — tránh OOM
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
         Page<Product> productPage = productService.findAllPaginated(pageable);
 

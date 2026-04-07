@@ -34,6 +34,10 @@ public class ApiProductController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "12") int size) {
 
+        // Giới hạn cứng — tránh OOM khi client gửi size=999999
+        size = Math.min(Math.max(size, 1), 50);
+        page = Math.max(page, 0);
+
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
 

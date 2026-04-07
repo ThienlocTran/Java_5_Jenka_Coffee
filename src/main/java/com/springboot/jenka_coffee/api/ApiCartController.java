@@ -2,9 +2,9 @@ package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.service.CartService;
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,22 +22,22 @@ public class ApiCartController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCart(HttpSession session) {
-        log.info("[CART GET] sessionId={}, cartSize={}", session.getId(), cartService.getCount());
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCart(
+            @AuthenticationPrincipal String username) {
+        log.debug("[CART GET] user={}, size={}", username, cartService.getCount());
         Map<String, Object> data = new HashMap<>();
-        data.put("items", cartService.getItems());
+        data.put("items",       cartService.getItems());
         data.put("totalAmount", cartService.getTotal());
-        data.put("summary", cartService.getCartSummary());
+        data.put("summary",     cartService.getCartSummary());
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin giỏ hàng thành công", data));
     }
 
     @PostMapping("/add/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> addToCart(
-            @PathVariable("id") Integer id, HttpSession session) {
-        log.info("[CART ADD] sessionId={}, productId={}", session.getId(), id);
+            @PathVariable("id") Integer id,
+            @AuthenticationPrincipal String username) {
+        log.debug("[CART ADD] user={}, productId={}", username, id);
         cartService.add(id);
-        log.info("[CART ADD] after add, cartSize={}", cartService.getCount());
-
         Map<String, Object> data = new HashMap<>();
         data.put("summary", cartService.getCartSummary());
         return ResponseEntity.ok(ApiResponse.success("Đã thêm sản phẩm vào giỏ hàng", data));
@@ -47,11 +47,9 @@ public class ApiCartController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateCartItem(
             @PathVariable("id") Integer id,
             @RequestParam("qty") int qty) {
-
         cartService.update(id, qty);
-
         Map<String, Object> data = new HashMap<>();
-        data.put("items", cartService.getItems());
+        data.put("items",       cartService.getItems());
         data.put("totalAmount", cartService.getTotal());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật số lượng thành công", data));
     }
@@ -59,11 +57,10 @@ public class ApiCartController {
     @DeleteMapping("/remove/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> removeFromCart(@PathVariable("id") Integer id) {
         cartService.remove(id);
-
         Map<String, Object> data = new HashMap<>();
-        data.put("items", cartService.getItems());
+        data.put("items",       cartService.getItems());
         data.put("totalAmount", cartService.getTotal());
-        return ResponseEntity.ok(ApiResponse.success("Tính lại giỏ hàng thành công", data));
+        return ResponseEntity.ok(ApiResponse.success("Đã xóa sản phẩm khỏi giỏ hàng", data));
     }
 
     @DeleteMapping("/clear")

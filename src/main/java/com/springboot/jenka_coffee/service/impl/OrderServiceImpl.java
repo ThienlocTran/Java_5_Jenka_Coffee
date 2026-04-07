@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.springboot.jenka_coffee.entity.Voucher;
+import com.springboot.jenka_coffee.service.VoucherService;
+
 @Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -35,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartService cartService;
     private final EmailService emailService;
     private final EntityManager entityManager;
+    private final VoucherService voucherService;
 
     @org.springframework.beans.factory.annotation.Value("${spring.mail.username}")
     private String adminEmail;
@@ -43,12 +47,14 @@ public class OrderServiceImpl implements OrderService {
                             ProductRepository productRepository,
                             CartService cartService,
                             EmailService emailService,
-                            EntityManager entityManager) {
+                            EntityManager entityManager,
+                            VoucherService voucherService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
         this.emailService = emailService;
         this.entityManager = entityManager;
+        this.voucherService = voucherService;
     }
 
     @Override
@@ -138,6 +144,34 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = orderDetails.stream()
                 .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // ── Áp dụng Voucher (nếu có) ────────────────────────────────────────
+        Voucher appliedVoucher = null;
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            appliedVoucher = voucherService.validateForCheckout(request.getVoucherCode(), totalAmount);
+
+            // Nếu scope = SPECIFIC, kiểm tra ít nhất 1 sản phẩm trong cart được áp dụng
+            if ("SPECIFIC".equals(appliedVoucher.getScope())) {
+                boolean hasApplicable = orderDetails.stream()
+                        .anyMatch(d -> appliedVoucher.isApplicableToProduct(d.getProduct().getId()));
+                if (!hasApplicable) {
+                    throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                            "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng!");
+                }
+                // Tính discount chỉ trên các sản phẩm được áp dụng
+                BigDecimal applicableSubtotal = orderDetails.stream()
+                        .filter(d -> appliedVoucher.isApplicableToProduct(d.getProduct().getId()))
+                        .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal discount = appliedVoucher.calculateDiscount(applicableSubtotal);
+                totalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
+            } else {
+                BigDecimal discount = appliedVoucher.calculateDiscount(totalAmount);
+                totalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
+            }
+            order.setVoucherCode(appliedVoucher.getCode());
+        }
+
         order.setTotalAmount(totalAmount);
 
         // STEP 5: Trừ tồn kho trên locked entities — batch save
@@ -150,10 +184,16 @@ public class OrderServiceImpl implements OrderService {
         // STEP 6: Save order (cascade save OrderDetails)
         Order savedOrder = orderRepository.save(order);
 
-        log.info("Checkout success: orderId={}, account={}, total={}",
+        // STEP 7: Trừ lượt dùng voucher (pessimistic lock trong VoucherService)
+        if (appliedVoucher != null) {
+            voucherService.consumeVoucher(appliedVoucher.getCode());
+        }
+
+        log.info("Checkout success: orderId={}, account={}, total={}, voucher={}",
                 savedOrder.getId(),
                 account != null ? account.getUsername() : "guest",
-                totalAmount);
+                totalAmount,
+                appliedVoucher != null ? appliedVoucher.getCode() : "none");
 
         return savedOrder;
     }

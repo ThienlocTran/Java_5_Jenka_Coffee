@@ -354,8 +354,11 @@ public class AccountServiceImpl implements AccountService {
     public String requestPasswordReset(String identifier) {
         Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
 
+        // VULN-003 FIX: Silent fail — không tiết lộ user có/không tồn tại
+        // Luôn trả về cùng message dù user tồn tại hay không
         if (account == null) {
-            throw new ValidationException("Không tìm thấy tài khoản!");
+            log.info("Password reset requested for non-existent identifier (masked for security)");
+            return "EMAIL"; // Fake return — timing consistent
         }
 
         boolean hasEmail = account.getEmail() != null && !account.getEmail().trim().isEmpty();
@@ -367,23 +370,19 @@ public class AccountServiceImpl implements AccountService {
                 account.setResetToken(resetToken);
                 account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
                 dao.save(account);
-
                 emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
                 return "EMAIL";
             } catch (Exception e) {
-                log.warn("Email sending failed for {}: {}", account.getEmail(), e.getMessage());
-                if (!hasPhone) {
-                    throw new ValidationException("Không thể gửi email đặt lại mật khẩu. Vui lòng liên hệ admin!");
-                }
+                log.warn("Email sending failed (masked for security)");
+                if (!hasPhone) return "EMAIL"; // Silent fail
             }
         }
 
         if (hasPhone) {
             otpService.generateOTP(account.getPhone());
             return "PHONE";
-        } else {
-            throw new ValidationException("Tài khoản không có email hoặc số điện thoại!");
         }
+        return "EMAIL"; // Silent fail
     }
 
     @Override
