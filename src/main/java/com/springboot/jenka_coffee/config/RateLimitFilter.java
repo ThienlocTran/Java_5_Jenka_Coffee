@@ -35,6 +35,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Map<String, Bucket> forgotBuckets       = new ConcurrentHashMap<>();
     private final Map<String, Bucket> signupBuckets       = new ConcurrentHashMap<>();
     private final Map<String, Bucket> otpBuckets          = new ConcurrentHashMap<>();
+    // VULN-043 FIX: Rate limit cho booking và contact — ngăn email bomb
+    private final Map<String, Bucket> bookingBuckets      = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> contactBuckets      = new ConcurrentHashMap<>();
 
     // Dọn dẹp bucket cũ mỗi 10 phút để tránh map phình to
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600_000)
@@ -43,6 +46,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         forgotBuckets.clear();
         signupBuckets.clear();
         otpBuckets.clear();
+        bookingBuckets.clear();
+        contactBuckets.clear();
     }
 
     @Override
@@ -67,7 +72,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         } else if (path.startsWith("/api/auth/signup")) {
             bucket = signupBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
         } else if (path.startsWith("/api/auth/verify-otp")) {
-            bucket = otpBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            // VULN-064 FIX: 10 req/5 phút — chặt hơn để ngăn burst brute force OTP
+            bucket = otpBuckets.computeIfAbsent(ip, k -> buildBucket(10, Duration.ofMinutes(5)));
+        } else if (path.startsWith("/api/booking/submit")) {
+            // VULN-043 FIX: 3 booking per 10 phút per IP — ngăn email bomb
+            bucket = bookingBuckets.computeIfAbsent(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
+        } else if (path.startsWith("/api/contact/send")) {
+            // VULN-043 FIX: 5 contact per 30 phút per IP
+            bucket = contactBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {

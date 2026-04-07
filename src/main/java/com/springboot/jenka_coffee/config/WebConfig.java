@@ -63,7 +63,11 @@ public class WebConfig implements WebMvcConfigurer {
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> cookieSameSiteCustomizer() {
         return factory -> factory.addContextCustomizers(context -> {
             Rfc6265CookieProcessor processor = new Rfc6265CookieProcessor();
-            processor.setSameSiteCookies(SameSiteCookies.NONE.getValue());
+            // VULN-053 FIX: SameSite=Lax thay vì None — giảm CSRF risk
+            // SameSite=None + CSRF disabled = vulnerable nếu CORS misconfigured
+            // SameSite=Lax: cookie gửi khi navigate đến site, không gửi cross-site POST
+            // Trade-off: cross-origin cookie không tự gửi → frontend dùng Authorization header fallback
+            processor.setSameSiteCookies(SameSiteCookies.LAX.getValue());
             context.setCookieProcessor(processor);
         });
     }

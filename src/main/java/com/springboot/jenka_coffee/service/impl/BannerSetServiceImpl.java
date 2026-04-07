@@ -116,6 +116,8 @@ public class BannerSetServiceImpl implements BannerSetService {
     private String safeGet(List<String> list, int i) {
         if (list == null || i >= list.size()) return null;
         String v = list.get(i);
-        return (v != null && !v.isBlank()) ? v : null;
+        if (v == null || v.isBlank()) return null;
+        // VULN-067 FIX: Strip HTML tags khỏi title/subtitle — ngăn Stored XSS trên homepage
+        return v.replaceAll("<[^>]*>", "").trim();
     }
 }

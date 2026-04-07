@@ -36,7 +36,17 @@ public class ApiAdminBannerController {
             @RequestParam(value = "titles", required = false) List<String> titles,
             @RequestParam(value = "subtitles", required = false) List<String> subtitles) {
 
-        BannerSet saved = bannerSetService.create(name, effect, images, titles, subtitles);
+        // VULN-069 FIX: Validate name và effect
+        if (name == null || name.isBlank() || name.length() > 100) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Tên banner không hợp lệ (tối đa 100 ký tự)"));
+        }
+        if (!effect.matches("^(fade|slide|zoom|kenburns|none)$")) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Hiệu ứng không hợp lệ"));
+        }
+        // Strip HTML từ name
+        String safeName = name.replaceAll("<[^>]*>", "").trim();
+
+        BannerSet saved = bannerSetService.create(safeName, effect, images, titles, subtitles);
         return ResponseEntity.ok(ApiResponse.success("Tạo bộ banner thành công", saved));
     }
 

@@ -21,6 +21,10 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    // VULN-061 FIX: Admin email từ env var — không hardcode trong source code
+    @Value("${app.admin.email:${spring.mail.username}}")
+    private String adminNotifyEmail;
+
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -61,7 +65,8 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email kích hoạt", e);
+            // VULN-068 FIX: Không chain exception — tránh SMTP config leak
+            throw new RuntimeException("Không thể gửi email kích hoạt");
         }
     }
 
@@ -102,7 +107,8 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email đặt lại mật khẩu", e);
+            // VULN-068 FIX: Generic message — không expose SMTP details
+            throw new RuntimeException("Không thể gửi email đặt lại mật khẩu");
         }
     }
     @Override
@@ -119,6 +125,11 @@ public class EmailServiceImpl implements EmailService {
             String formatted = total != null
                     ? String.format("%,.0f", total.doubleValue()) + " ₫"
                     : "N/A";
+
+            // VULN-066 FIX: Escape tất cả user-controlled fields trước khi inject vào HTML
+            String safeName    = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
+            String safePhone   = HtmlUtils.htmlEscape(phone != null ? phone : "");
+            String safeAddress = HtmlUtils.htmlEscape(address != null ? address : "");
 
             String html = """
                     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;">
@@ -144,24 +155,25 @@ public class EmailServiceImpl implements EmailService {
                         Jenka Coffee — Hương vị cà phê đích thực
                       </div>
                     </div>
-                    """.formatted(orderId, orderId, customerName, phone, address, formatted, baseUrl, orderId);
+                    """.formatted(orderId, orderId, safeName, safePhone, safeAddress, formatted, baseUrl, orderId);
 
             helper.setText(html, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email thông báo đơn hàng", e);
+            // VULN-068 FIX: Không chain exception — tránh SMTP details leak
+            throw new RuntimeException("Không thể gửi email thông báo đơn hàng");
         }
     }
 
     @Override
     @Async
     public void sendBookingConfirmation(String customerName, String phone, String bookingDate, String description) {
-        final String ADMIN = "tranthienloc21102005@gmail.com";
+        // VULN-061 FIX: Dùng adminNotifyEmail thay vì hardcode
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
-            helper.setTo(ADMIN);
+            helper.setTo(adminNotifyEmail);
             helper.setSubject("[Jenka Coffee] Lịch hẹn sửa chữa mới từ: " + HtmlUtils.htmlEscape(customerName));
 
             String safeName = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
@@ -196,19 +208,19 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(html, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email thông báo lịch hẹn", e);
+            throw new RuntimeException("Không thể gửi email thông báo lịch hẹn");
         }
     }
 
     @Override
     @Async
     public void sendContactConfirmation(String toEmail, String customerName, String subject) {
-        final String ADMIN = "tranthienloc21102005@gmail.com";
+        // VULN-061 FIX: Dùng adminNotifyEmail thay vì hardcode
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
-            helper.setTo(ADMIN);
+            helper.setTo(adminNotifyEmail);
             helper.setSubject("[Jenka Coffee] Tin nhắn liên hệ mới từ: " + HtmlUtils.htmlEscape(customerName));
 
             String safeName = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
@@ -240,7 +252,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(html, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email thông báo liên hệ", e);
+            throw new RuntimeException("Không thể gửi email thông báo liên hệ");
         }
     }
 }

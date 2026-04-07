@@ -22,6 +22,7 @@ public class BookingRequest {
     private String phone;
 
     @Future(message = "Ngày hẹn phải là ngày trong tương lai")
+    @NotNull(message = "Vui lòng chọn ngày hẹn")
     private LocalDate bookingDate;
 
     @Size(max = 500, message = "Mô tả tối đa 500 ký tự")

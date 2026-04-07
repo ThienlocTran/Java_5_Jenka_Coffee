@@ -60,7 +60,9 @@ public class ApiAuthController {
         addTokenCookie(response, "refresh_token", refreshToken, 604800);     // 7 ngày
 
         Map<String, Object> data = buildUserData(account);
-        data.put("accessToken", accessToken); // cũng trả về body để frontend có thể dùng nếu cần
+        // VULN-062 FIX: Không trả accessToken trong response body
+        // Token đã nằm trong httpOnly cookie — không cần expose trong JSON
+        // data.put("accessToken", accessToken);  ← REMOVED
 
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
     }
@@ -94,7 +96,7 @@ public class ApiAuthController {
         addTokenCookie(response, "access_token", newAccessToken, 86400);
 
         Map<String, Object> data = buildUserData(account);
-        data.put("accessToken", newAccessToken);
+        // VULN-062 FIX: Không trả token trong body — cookie đã đủ
         return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
     }
 
@@ -113,13 +115,13 @@ public class ApiAuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<Map<String, String>>> forgotPassword(
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
-        String method = accountService.requestPasswordReset(request.getIdentifier());
-        String msg = "PHONE".equals(method)
-                ? "OTP đã được gửi đến số điện thoại đăng ký."
-                : "Link đặt lại mật khẩu đã được gửi đến email của bạn!";
-        return ResponseEntity.ok(ApiResponse.success(msg, Map.of("method", method)));
+        // VULN-063 FIX: Không trả 'method' field — tránh account profiling
+        // Luôn trả về cùng message dù user tồn tại hay không
+        accountService.requestPasswordReset(request.getIdentifier());
+        return ResponseEntity.ok(ApiResponse.success(
+                "Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn khôi phục mật khẩu.", null));
     }
 
     @PostMapping("/reset-password")
@@ -165,25 +167,21 @@ public class ApiAuthController {
     }
 
     private void addTokenCookie(HttpServletResponse res, String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);   // HTTPS only
-        cookie.setPath("/");
-        cookie.setMaxAge(maxAge);
-        // SameSite=None cần thiết cho cross-origin (Vercel → Railway)
+        // VULN-053 FIX: SameSite=Lax thay vì None — giảm CSRF risk
+        // Cross-origin (Vercel → Railway): frontend dùng Authorization header từ JwtAuthFilter
         res.addHeader("Set-Cookie",
             name + "=" + value +
             "; Max-Age=" + maxAge +
             "; Path=/" +
             "; HttpOnly" +
             "; Secure" +
-            "; SameSite=None");
+            "; SameSite=Lax");
     }
 
     private void clearTokenCookies(HttpServletResponse res) {
         for (String name : new String[]{"access_token", "refresh_token"}) {
             res.addHeader("Set-Cookie",
-                name + "=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None");
+                name + "=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax");
         }
     }
 

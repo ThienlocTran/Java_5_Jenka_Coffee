@@ -164,10 +164,14 @@ public class OrderServiceImpl implements OrderService {
                         .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 BigDecimal discount = appliedVoucher.calculateDiscount(applicableSubtotal);
-                totalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
+                totalAmount = totalAmount.subtract(discount)
+                        .max(new BigDecimal("1000")); // VULN-047 FIX: minimum 1.000đ
             } else {
                 BigDecimal discount = appliedVoucher.calculateDiscount(totalAmount);
-                totalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
+                // VULN-047 FIX: Không cho phép đơn hàng = 0đ sau giảm giá
+                // Tối thiểu 1.000đ để tránh free order exploit
+                totalAmount = totalAmount.subtract(discount)
+                        .max(new BigDecimal("1000"));
             }
             order.setVoucherCode(appliedVoucher.getCode());
         }
@@ -245,6 +249,10 @@ public class OrderServiceImpl implements OrderService {
         order.setPhone(request.getPhone());
         order.setCreateDate(LocalDateTime.now());
         order.setStatus(0); // NEW
+        // VULN-058 FIX: Sanitize note — strip HTML tags trước khi lưu
+        if (request.getNote() != null && !request.getNote().isBlank()) {
+            order.setNote(request.getNote().replaceAll("<[^>]*>", "").trim());
+        }
         return order;
     }
 

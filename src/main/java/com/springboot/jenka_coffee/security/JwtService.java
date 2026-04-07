@@ -26,6 +26,17 @@ public class JwtService {
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-ms}") long expirationMs,
             @Value("${app.jwt.refresh-expiration-ms}") long refreshExpirationMs) {
+        // VULN-038 FIX: Fail fast nếu secret không được cấu hình hoặc quá ngắn
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                "JWT_SECRET environment variable is not set! " +
+                "Generate with: openssl rand -hex 64");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException(
+                "JWT_SECRET is too short (minimum 32 characters for HS256). " +
+                "Generate with: openssl rand -hex 64");
+        }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
         this.refreshExpirationMs = refreshExpirationMs;

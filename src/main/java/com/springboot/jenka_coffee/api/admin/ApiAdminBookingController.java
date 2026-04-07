@@ -19,6 +19,9 @@ public class ApiAdminBookingController {
 
     private final BookingService bookingService;
 
+    // VULN-052 FIX: Enum whitelist cho booking status
+    private enum BookingStatus { PENDING, CONFIRMED, COMPLETED, CANCELLED }
+
     public ApiAdminBookingController(BookingService bookingService) {
         this.bookingService = bookingService;
     }
@@ -27,6 +30,10 @@ public class ApiAdminBookingController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> listBookings(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
+        // VULN-055 FIX: Giới hạn page size tránh Memory DoS
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<ServiceBooking> bookingPage = bookingService.findAll(pageable);
@@ -44,7 +51,16 @@ public class ApiAdminBookingController {
     public ResponseEntity<ApiResponse<String>> updateStatus(
             @PathVariable Long id,
             @RequestParam String status) {
-        bookingService.updateStatus(id, status);
+
+        // VULN-052 FIX: Validate status theo enum whitelist — không cho phép free-text
+        try {
+            BookingStatus.valueOf(status.toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Trạng thái không hợp lệ. Chỉ chấp nhận: PENDING, CONFIRMED, COMPLETED, CANCELLED"));
+        }
+
+        bookingService.updateStatus(id, status.toUpperCase().trim());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công!", "OK"));
     }
 }

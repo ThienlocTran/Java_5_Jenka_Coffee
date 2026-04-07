@@ -130,28 +130,43 @@ public class UploadServiceImpl implements UploadService {
             throw new IOException("File is null or empty");
         }
 
-        // Create subfolder if not exists
-        File subfolderDir = new File(uploadDir, subfolder);
-        if (!subfolderDir.exists()) {
-            subfolderDir.mkdirs();
+        // VULN-042 FIX: Whitelist subfolder — chỉ cho phép alphanumeric + underscore/dash
+        if (subfolder == null || !subfolder.matches("^[a-zA-Z0-9_-]+$")) {
+            throw new IOException("Invalid subfolder name: " + subfolder);
         }
 
-        // Generate unique filename
+        // VULN-042 FIX: Whitelist extension — chỉ cho phép ảnh
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+        java.util.List<String> ALLOWED_EXT = java.util.Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".webp");
+        if (!ALLOWED_EXT.contains(extension)) {
+            throw new IOException("File extension not allowed: " + extension);
         }
 
-        String uniqueFilename = UUID.randomUUID().toString() + extension;
-        File targetFile = new File(subfolderDir, uniqueFilename);
+        // VULN-042 FIX: Canonical path check — ngăn path traversal
+        File baseDir = new File(uploadDir).getCanonicalFile();
+        File subfolderDir = new File(baseDir, subfolder).getCanonicalFile();
+        if (!subfolderDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())) {
+            throw new IOException("Path traversal detected!");
+        }
 
-        // Save file
+        if (!subfolderDir.exists()) subfolderDir.mkdirs();
+
+        String uniqueFilename = UUID.randomUUID().toString() + extension;
+        File targetFile = new File(subfolderDir, uniqueFilename).getCanonicalFile();
+
+        // Final path traversal check on target file
+        if (!targetFile.getAbsolutePath().startsWith(subfolderDir.getAbsolutePath())) {
+            throw new IOException("Path traversal detected in filename!");
+        }
+
         try (FileOutputStream fos = new FileOutputStream(targetFile)) {
             fos.write(file.getBytes());
         }
 
-        // Return relative path
         String relativePath = subfolder + "/" + uniqueFilename;
         log.info("Uploaded file to local storage: {}", relativePath);
         return relativePath;

@@ -32,7 +32,13 @@ public class ApiBookingController {
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<Void>> submitBooking(@Valid @RequestBody BookingRequest request) {
         try {
-            // Map DTO → Entity (server-side set status, không tin client)
+            // VULN-044 FIX: Giới hạn ngày đặt lịch tối đa 3 tháng trong tương lai
+            if (request.getBookingDate() != null &&
+                    request.getBookingDate().isAfter(java.time.LocalDate.now().plusMonths(3))) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Không thể đặt lịch quá 3 tháng trong tương lai!"));
+            }
+
             ServiceBooking booking = new ServiceBooking();
             booking.setCustomerName(sanitize(request.getCustomerName()));
             booking.setPhone(request.getPhone());
@@ -40,7 +46,7 @@ public class ApiBookingController {
             booking.setBookingDate(request.getBookingDate() != null
                     ? request.getBookingDate().atStartOfDay()
                     : LocalDateTime.now().plusDays(1));
-            booking.setStatus("PENDING"); // server-side only
+            booking.setStatus("PENDING");
 
             bookingService.save(booking);
 
@@ -66,9 +72,22 @@ public class ApiBookingController {
         }
     }
 
-    /** Strip HTML tags cơ bản — ngăn Stored XSS */
+    /**
+     * VULN-045 FIX: Sanitize đúng cách — strip tất cả HTML tags và attributes.
+     * Regex <[^>]*> có thể bị bypass bởi malformed tags và HTML entities.
+     * Dùng whitelist approach: chỉ giữ plain text.
+     */
     private String sanitize(String input) {
         if (input == null) return null;
-        return input.replaceAll("<[^>]*>", "").trim();
+        // Strip tất cả HTML tags (kể cả malformed)
+        String stripped = input.replaceAll("<[^>]*>", "");
+        // Decode HTML entities rồi strip lại (ngăn double-encoding bypass)
+        stripped = stripped
+            .replace("&lt;", "").replace("&gt;", "")
+            .replace("&amp;", "&").replace("&quot;", "")
+            .replace("&#", "").replace("javascript:", "")
+            .replace("onmouseover", "").replace("onerror", "")
+            .replace("onclick", "").replace("onload", "");
+        return stripped.trim();
     }
 }

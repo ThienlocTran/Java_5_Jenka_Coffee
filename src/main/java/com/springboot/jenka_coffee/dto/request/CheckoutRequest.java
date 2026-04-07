@@ -37,9 +37,12 @@ public class CheckoutRequest {
     @NotBlank(message = "{CheckoutRequest.ward.NotBlank}")
     private String ward;
 
+    // VULN-050 FIX: Whitelist payment method — không cho phép giá trị tùy ý
     @NotBlank(message = "{CheckoutRequest.paymentMethod.NotBlank}")
+    @Pattern(regexp = "^(cod|bank|momo)$", message = "Phương thức thanh toán không hợp lệ")
     private String paymentMethod;
 
+    // VULN-058 FIX: note có size limit — sanitize XSS trong service
     @Size(max = 500, message = "{CheckoutRequest.note.Size}")
     private String note;
 
