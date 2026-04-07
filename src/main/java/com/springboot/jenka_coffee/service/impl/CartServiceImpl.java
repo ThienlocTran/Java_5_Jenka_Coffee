@@ -38,11 +38,13 @@ public class CartServiceImpl implements CartService {
         return productServiceProvider.getObject();
     }
 
-    /** Lấy username từ JWT SecurityContext */
+    /** VULN-024 FIX: Không cho anonymous dùng cart — yêu cầu đăng nhập.
+     *  Trước đây tất cả anonymous dùng chung key "anonymous" → cart poisoning. */
     private String currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return "anonymous";
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Vui lòng đăng nhập để sử dụng giỏ hàng!");
         }
         return auth.getName();
     }

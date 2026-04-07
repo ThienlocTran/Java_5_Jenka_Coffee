@@ -62,7 +62,6 @@ public class SecurityConfig {
                     "/api/contact/**",
                     "/api/bookings",
                     "/api/booking/**",
-                    "/api/vouchers/check",
                     "/api/error",
                     "/uploads/**").permitAll()
                 // Admin — phải có ROLE_ADMIN

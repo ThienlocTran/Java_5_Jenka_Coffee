@@ -74,12 +74,23 @@ public class Voucher implements Serializable {
     public boolean isApplicableToProduct(Integer productId) {
         if ("ALL".equals(scope)) return true;
         if (applicableProductIds == null || applicableProductIds.isBlank()) return false;
-        // Parse "[1,2,5]" → check contains
-        String clean = applicableProductIds.replaceAll("[\\[\\]\\s]", "");
-        for (String id : clean.split(",")) {
-            if (id.equals(String.valueOf(productId))) return true;
+        // VULN-021 FIX: Dùng proper JSON parsing thay vì string split thủ công
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.List<Integer> ids = mapper.readValue(applicableProductIds,
+                    mapper.getTypeFactory().constructCollectionType(java.util.List.class, Integer.class));
+            return ids.contains(productId);
+        } catch (Exception e) {
+            // Fallback: parse thủ công nếu JSON malformed
+            String clean = applicableProductIds.replaceAll("[\\[\\]\\s]", "");
+            if (clean.isBlank()) return false;
+            for (String id : clean.split(",")) {
+                try {
+                    if (Integer.parseInt(id.trim()) == productId) return true;
+                } catch (NumberFormatException ignored) { /* skip malformed entries */ }
+            }
+            return false;
         }
-        return false;
     }
 
     /** Tính số tiền giảm thực tế dựa trên subtotal */

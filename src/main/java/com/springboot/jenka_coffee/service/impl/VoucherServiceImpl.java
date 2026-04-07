@@ -72,8 +72,9 @@ public class VoucherServiceImpl implements VoucherService {
         if (v.getExpirationDate().isBefore(LocalDateTime.now())) {
             throw new BusinessRuleException("Mã giảm giá đã hết hạn!");
         }
-        // quantity = 0 nghĩa là không giới hạn
-        if (v.getQuantity() != null && v.getQuantity() > 0 && v.getQuantity() <= 0) {
+        // VULN-019 FIX: quantity = 0 → không giới hạn; quantity > 0 → còn lượt; quantity < 0 → hết
+        // Logic cũ: (quantity > 0 && quantity <= 0) → NEVER TRUE → bug!
+        if (v.getQuantity() != null && v.getQuantity() != 0 && v.getQuantity() <= 0) {
             throw new BusinessRuleException("Mã giảm giá đã hết lượt sử dụng!");
         }
         if (v.getMinOrderAmount() != null && orderSubtotal.compareTo(v.getMinOrderAmount()) < 0) {
@@ -86,18 +87,26 @@ public class VoucherServiceImpl implements VoucherService {
     @Override
     @Transactional
     public void consumeVoucher(String voucherCode) {
-        // Pessimistic lock — tránh race condition khi nhiều user dùng cùng lúc
+        // VULN-019 FIX: Pessimistic lock TRƯỚC khi check quantity — đóng race condition window
         Voucher v = entityManager.find(Voucher.class, voucherCode.toUpperCase().trim(),
                 LockModeType.PESSIMISTIC_WRITE);
         if (v == null) return;
-        // Chỉ trừ nếu quantity > 0 (0 = không giới hạn)
-        if (v.getQuantity() != null && v.getQuantity() > 0) {
+
+        // Re-validate sau khi lock (fresh data, không stale)
+        if (v.getExpirationDate().isBefore(LocalDateTime.now())) {
+            throw new BusinessRuleException("Mã giảm giá đã hết hạn!");
+        }
+        if (!Boolean.TRUE.equals(v.getActive())) {
+            throw new BusinessRuleException("Mã giảm giá không còn hiệu lực!");
+        }
+
+        // quantity = 0 → không giới hạn, không trừ
+        if (v.getQuantity() != null && v.getQuantity() != 0) {
             if (v.getQuantity() <= 0) {
                 throw new BusinessRuleException("Mã giảm giá đã hết lượt sử dụng!");
             }
             v.setQuantity(v.getQuantity() - 1);
-            // Tự động deactivate khi hết lượt
-            if (v.getQuantity() == 0) v.setActive(false);
+            if (v.getQuantity() == 0) v.setActive(false); // auto-deactivate
             entityManager.merge(v);
         }
     }

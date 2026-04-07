@@ -6,6 +6,7 @@ import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.service.ProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -32,7 +33,7 @@ public class ApiProfileController {
 
     @PutMapping
     public ResponseEntity<ApiResponse<Account>> updateProfile(
-            @RequestBody ProfileUpdateRequest request,
+            @Valid @RequestBody ProfileUpdateRequest request,
             @AuthenticationPrincipal String username) {
         if (username == null) return unauthorized();
         try {

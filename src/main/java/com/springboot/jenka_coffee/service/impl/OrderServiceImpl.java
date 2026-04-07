@@ -184,6 +184,16 @@ public class OrderServiceImpl implements OrderService {
         // STEP 6: Save order (cascade save OrderDetails)
         Order savedOrder = orderRepository.save(order);
 
+        // STEP 6b: VULN-023 FIX — Tạo Payment record (audit trail)
+        com.springboot.jenka_coffee.entity.Payment payment = new com.springboot.jenka_coffee.entity.Payment();
+        payment.setOrderId(savedOrder.getId());
+        payment.setAmount(totalAmount);
+        payment.setPaymentMethod(
+            request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "COD");
+        payment.setStatus(com.springboot.jenka_coffee.entity.Payment.PaymentStatus.PENDING.name());
+        payment.setPaymentDate(LocalDateTime.now());
+        entityManager.persist(payment);
+
         // STEP 7: Trừ lượt dùng voucher (pessimistic lock trong VoucherService)
         if (appliedVoucher != null) {
             voucherService.consumeVoucher(appliedVoucher.getCode());
@@ -251,10 +261,34 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order updateStatus(Long orderId, int status) {
-        Order.OrderStatus.fromValue(status);
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng!"));
+
+        // VULN-022 FIX: State machine validation — chỉ cho phép transition hợp lệ
+        Order.OrderStatus from = Order.OrderStatus.fromValue(order.getStatus());
+        Order.OrderStatus to;
+        try {
+            to = Order.OrderStatus.fromValue(status);
+        } catch (IllegalArgumentException e) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Trạng thái đơn hàng không hợp lệ: " + status);
+        }
+
+        boolean validTransition = switch (from) {
+            case NEW       -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
+            case CONFIRMED -> to == Order.OrderStatus.SHIPPING  || to == Order.OrderStatus.CANCELLED;
+            case SHIPPING  -> to == Order.OrderStatus.COMPLETED || to == Order.OrderStatus.CANCELLED;
+            // Terminal states — không được chuyển
+            case CANCELLED, COMPLETED -> false;
+        };
+
+        if (!validTransition) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Không thể chuyển trạng thái từ " + from.name() + " sang " + to.name());
+        }
+
         order.setStatus(status);
+        log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());
         return orderRepository.save(order);
     }
 

@@ -157,11 +157,15 @@ public class ProfileServiceImpl implements ProfileService {
         if (!passwordSecurity.verifyPassword(currentPassword, account.getPasswordHash())) {
             throw new ValidationException("Mật khẩu hiện tại không đúng");
         }
-        
-        // Hash and set new password
+
+        // VULN-029 FIX: Không cho phép đặt lại mật khẩu giống mật khẩu cũ
+        if (passwordSecurity.verifyPassword(newPassword, account.getPasswordHash())) {
+            throw new ValidationException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
+        }
+
         String hashedPassword = passwordSecurity.hashPassword(newPassword);
         account.setPasswordHash(hashedPassword);
-        
-        log.info("Changed password for user: {}", account.getUsername());
+
+        log.warn("SECURITY: Password changed for user '{}'", account.getUsername());
     }
 }

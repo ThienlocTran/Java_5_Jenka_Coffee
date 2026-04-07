@@ -42,6 +42,10 @@ public class ApiAdminOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
+        // VULN-032 FIX: Giới hạn page size tránh Memory DoS
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
         Page<Order> orderPage = orderService.findAll(pageable);
 
@@ -62,8 +66,17 @@ public class ApiAdminOrderController {
     public ResponseEntity<ApiResponse<Void>> updateOrderStatus(
             @PathVariable Long id,
             @PathVariable int status) {
-        orderService.updateStatus(id, status);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        // VULN-027 FIX: Validate range trước khi gọi service
+        if (status < 0 || status > 4) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Trạng thái đơn hàng không hợp lệ (0-4)"));
+        }
+        try {
+            orderService.updateStatus(id, status);
+            return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")

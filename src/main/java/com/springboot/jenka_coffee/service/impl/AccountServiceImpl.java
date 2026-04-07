@@ -299,12 +299,15 @@ public class AccountServiceImpl implements AccountService {
         
         // Hash and save new password (reuse existing logic)
         account.setPasswordHash(passwordSecurity.hashPassword(newPassword.trim()));
-        
+
         // Clear any existing reset tokens
         account.setResetToken(null);
         account.setResetTokenExpiry(null);
-        
-        return dao.save(account);
+
+        Account saved = dao.save(account);
+        // VULN-026 FIX: Audit log bắt buộc
+        log.warn("SECURITY AUDIT: Admin reset password for user '{}' at {}", username, java.time.LocalDateTime.now());
+        return saved;
     }
 
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET IMPLEMENTATION =====
