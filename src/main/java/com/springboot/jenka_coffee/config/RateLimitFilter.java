@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -14,47 +16,35 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Rate limiter per IP cho các endpoint nhạy cảm.
- * Dùng Bucket4j in-memory — không cần Redis.
- *
- * Giới hạn:
- *   - /api/auth/login          : 10 req/phút per IP  (chống brute force)
- *   - /api/auth/forgot-password: 5  req/phút per IP  (chống spam email)
- *   - /api/auth/signup         : 5  req/phút per IP  (chống tạo tài khoản hàng loạt)
- *   - /api/auth/verify-otp     : 5  req/phút per IP  (chống brute force OTP)
+ * Rate limiter per IP — dùng Caffeine Cache với TTL tự động.
+ * VULN-H02 FIX: Thay ConcurrentHashMap + periodic clear bằng sliding window.
+ * Caffeine tự evict entry sau khi không được access trong TTL → không reset toàn bộ.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    // Map<IP, Bucket> — tự cleanup khi bucket hết token và không được dùng
-    private final Map<String, Bucket> loginBuckets        = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> forgotBuckets       = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> signupBuckets       = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> otpBuckets          = new ConcurrentHashMap<>();
-    // VULN-043 FIX: Rate limit cho booking và contact — ngăn email bomb
-    private final Map<String, Bucket> bookingBuckets      = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> contactBuckets      = new ConcurrentHashMap<>();
+    // Caffeine cache: tự evict sau 5 phút không access — sliding window thực sự
+    private final Cache<String, Bucket> loginBuckets   = buildCache(Duration.ofMinutes(5));
+    private final Cache<String, Bucket> forgotBuckets  = buildCache(Duration.ofMinutes(5));
+    private final Cache<String, Bucket> signupBuckets  = buildCache(Duration.ofMinutes(5));
+    private final Cache<String, Bucket> otpBuckets     = buildCache(Duration.ofMinutes(5));
+    private final Cache<String, Bucket> bookingBuckets = buildCache(Duration.ofMinutes(15));
+    private final Cache<String, Bucket> contactBuckets = buildCache(Duration.ofMinutes(35));
 
-    // Dọn dẹp bucket cũ mỗi 10 phút để tránh map phình to
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600_000)
-    public void evictOldBuckets() {
-        loginBuckets.clear();
-        forgotBuckets.clear();
-        signupBuckets.clear();
-        otpBuckets.clear();
-        bookingBuckets.clear();
-        contactBuckets.clear();
+    private Cache<String, Bucket> buildCache(Duration ttl) {
+        return Caffeine.newBuilder()
+                .expireAfterAccess(ttl)
+                .maximumSize(100_000) // giới hạn tổng entries tránh OOM
+                .build();
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest req,
                                     HttpServletResponse res,
                                     FilterChain chain) throws ServletException, IOException {
-        String path = req.getRequestURI();
+        String path   = req.getRequestURI();
         String method = req.getMethod();
 
         if (!"POST".equalsIgnoreCase(method)) {
@@ -62,31 +52,29 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        String ip = getClientIp(req);
+        String ip     = getClientIp(req);
         Bucket bucket = null;
 
         if (path.startsWith("/api/auth/login")) {
-            bucket = loginBuckets.computeIfAbsent(ip, k -> buildBucket(10, Duration.ofMinutes(1)));
+            bucket = loginBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(1)));
         } else if (path.startsWith("/api/auth/forgot-password")) {
-            bucket = forgotBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            bucket = forgotBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
         } else if (path.startsWith("/api/auth/signup")) {
-            bucket = signupBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
         } else if (path.startsWith("/api/auth/verify-otp")) {
             // VULN-064 FIX: 10 req/5 phút — chặt hơn để ngăn burst brute force OTP
-            bucket = otpBuckets.computeIfAbsent(ip, k -> buildBucket(10, Duration.ofMinutes(5)));
+            bucket = otpBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(5)));
         } else if (path.startsWith("/api/booking/submit")) {
-            // VULN-043 FIX: 3 booking per 10 phút per IP — ngăn email bomb
-            bucket = bookingBuckets.computeIfAbsent(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
+            bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
         } else if (path.startsWith("/api/contact/send")) {
-            // VULN-043 FIX: 5 contact per 30 phút per IP
-            bucket = contactBuckets.computeIfAbsent(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
+            bucket = contactBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {
             res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             res.setContentType(MediaType.APPLICATION_JSON_VALUE);
             res.setCharacterEncoding("UTF-8");
-            res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.\"}");
+            res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Quá nhiều yêu cầu. Vui lòng thử lại sau.\"}");
             return;
         }
 
@@ -94,36 +82,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private Bucket buildBucket(int capacity, Duration refillDuration) {
-        Bandwidth limit = Bandwidth.classic(capacity,
-                Refill.intervally(capacity, refillDuration));
+        Bandwidth limit = Bandwidth.classic(capacity, Refill.intervally(capacity, refillDuration));
         return Bucket.builder().addLimit(limit).build();
     }
 
-    /** VULN-002 FIX: Chỉ trust X-Forwarded-For khi request đến từ trusted proxy IP.
-     *  Ngăn attacker spoof header để bypass rate limit. */
+    /** VULN-002 FIX: Chỉ trust X-Forwarded-For khi đến từ trusted proxy */
     private String getClientIp(HttpServletRequest req) {
         String remoteAddr = req.getRemoteAddr();
-
-        // Chỉ tin X-Forwarded-For nếu request đến từ trusted proxy (Railway/Vercel load balancer)
         if (isTrustedProxy(remoteAddr)) {
             String forwarded = req.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank()) {
-                return forwarded.split(",")[0].trim();
-            }
+            if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
             String realIp = req.getHeader("X-Real-IP");
             if (realIp != null && !realIp.isBlank()) return realIp;
         }
-
         return remoteAddr;
     }
 
-    /**
-     * Whitelist IP ranges của Railway/Vercel internal load balancers.
-     * Các request từ internet trực tiếp sẽ dùng remoteAddr thật.
-     */
     private boolean isTrustedProxy(String ip) {
         if (ip == null) return false;
-        // Private network ranges (RFC 1918) — internal load balancers
         return ip.startsWith("10.")
                 || ip.startsWith("172.16.") || ip.startsWith("172.17.")
                 || ip.startsWith("172.18.") || ip.startsWith("172.19.")

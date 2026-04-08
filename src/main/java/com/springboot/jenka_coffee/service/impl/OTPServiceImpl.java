@@ -30,10 +30,9 @@ public class OTPServiceImpl implements OTPService {
 
     @Override
     public boolean verifyOTP(String phone, String otp) {
-        // VULN-004 FIX: Giới hạn số lần thử — max 5 attempts
         AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
         if (attempts.count.get() >= MAX_ATTEMPTS) {
-            otpStore.remove(phone); // Vô hiệu hóa OTP sau khi vượt giới hạn
+            otpStore.remove(phone);
             throw new ValidationException("Quá nhiều lần thử sai. OTP đã bị khóa. Vui lòng yêu cầu mã mới!");
         }
 
@@ -46,13 +45,18 @@ public class OTPServiceImpl implements OTPService {
             return false;
         }
 
-        if (stored.otp.equals(otp)) {
+        // VULN-H03 FIX: Constant-time comparison — ngăn timing side-channel attack
+        boolean match = java.security.MessageDigest.isEqual(
+                stored.otp.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                otp.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        if (match) {
             otpStore.remove(phone);
             attemptStore.remove(phone);
             return true;
         }
 
-        attempts.count.incrementAndGet(); // Tăng failed attempts
+        attempts.count.incrementAndGet();
         return false;
     }
 

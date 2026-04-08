@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.security;
 
+import com.springboot.jenka_coffee.repository.AccountRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -14,17 +15,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Đọc JWT từ Authorization header HOẶC httpOnly cookie "access_token".
- * Nếu hợp lệ → set Authentication vào SecurityContext.
- */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final AccountRepository accountRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, AccountRepository accountRepository) {
         this.jwtService = jwtService;
+        this.accountRepository = accountRepository;
     }
 
     @Override
@@ -36,6 +35,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (token != null && jwtService.isValid(token) && jwtService.isAccessToken(token)) {
             String username = jwtService.extractUsername(token);
             boolean isAdmin = jwtService.isAdmin(token);
+
+            // VULN-M01 FIX: Verify account còn active trong DB
+            // Ngăn stolen token tiếp tục hoạt động sau khi admin khóa tài khoản
+            // Dùng existsBy query nhẹ — không load toàn bộ entity
+            boolean isActive = accountRepository.existsByUsernameAndActivatedTrue(username);
+            if (!isActive) {
+                chain.doFilter(req, res);
+                return;
+            }
 
             List<SimpleGrantedAuthority> authorities = isAdmin
                     ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"))
@@ -49,14 +57,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 
-    /** Ưu tiên: Authorization header → cookie "access_token" */
     private String extractToken(HttpServletRequest req) {
-        // 1. Authorization: Bearer <token>
         String header = req.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
-        // 2. httpOnly cookie (fallback cho browser)
         if (req.getCookies() != null) {
             for (Cookie c : req.getCookies()) {
                 if ("access_token".equals(c.getName())) return c.getValue();

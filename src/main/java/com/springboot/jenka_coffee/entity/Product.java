@@ -62,6 +62,12 @@ public class Product implements Serializable {
     @ToString.Exclude
     private List<OrderDetail> orderDetails;
 
+    @JsonIgnore // Không serialize images trong Product response - dùng API riêng để lấy
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC, id ASC")
+    @ToString.Exclude
+    private List<ProductImage> images;
+
     // Đoạn code tránh Lazy của Hibernate nè
 
     @Override

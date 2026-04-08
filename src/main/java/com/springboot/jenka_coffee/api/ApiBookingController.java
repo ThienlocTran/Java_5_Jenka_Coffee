@@ -73,21 +73,15 @@ public class ApiBookingController {
     }
 
     /**
-     * VULN-045 FIX: Sanitize đúng cách — strip tất cả HTML tags và attributes.
-     * Regex <[^>]*> có thể bị bypass bởi malformed tags và HTML entities.
-     * Dùng whitelist approach: chỉ giữ plain text.
+     * VULN-M03 FIX: Dùng OWASP Java HTML Sanitizer thay vì custom regex.
+     * Custom regex có thể bị bypass bởi malformed tags, double encoding, event handlers.
      */
+    private static final org.owasp.html.PolicyFactory SANITIZE_POLICY =
+            org.owasp.html.Sanitizers.FORMATTING.and(org.owasp.html.Sanitizers.LINKS);
+
     private String sanitize(String input) {
         if (input == null) return null;
-        // Strip tất cả HTML tags (kể cả malformed)
-        String stripped = input.replaceAll("<[^>]*>", "");
-        // Decode HTML entities rồi strip lại (ngăn double-encoding bypass)
-        stripped = stripped
-            .replace("&lt;", "").replace("&gt;", "")
-            .replace("&amp;", "&").replace("&quot;", "")
-            .replace("&#", "").replace("javascript:", "")
-            .replace("onmouseover", "").replace("onerror", "")
-            .replace("onclick", "").replace("onload", "");
-        return stripped.trim();
+        // Strip tất cả HTML — chỉ giữ plain text
+        return SANITIZE_POLICY.sanitize(input).trim();
     }
 }

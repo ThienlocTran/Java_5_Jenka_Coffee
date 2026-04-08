@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.api;
 
+import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.News;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.repository.NewsRepository;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Dynamic Sitemap XML — được Googlebot crawl để index toàn bộ sản phẩm & tin tức
@@ -39,8 +41,8 @@ public class ApiSitemapController {
     public ResponseEntity<String> sitemap() {
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n");
-        xml.append("        xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n");
+        xml.append("<urlset xmlns=\"https://www.sitemaps.org/schemas/sitemap/0.9\"\n");
+        xml.append("        xmlns:image=\"https://www.google.com/schemas/sitemap-image/1.1\">\n");
 
         String today = LocalDateTime.now().format(W3C_DATE);
 
@@ -53,7 +55,7 @@ public class ApiSitemapController {
 
         // ── Danh mục sản phẩm ───────────────────────────────────────────
         try {
-            List<com.springboot.jenka_coffee.entity.Category> categories = categoryRepository.findAll();
+            List<Category> categories = categoryRepository.findAll();
             for (com.springboot.jenka_coffee.entity.Category c : categories) {
                 addUrl(xml, SITE_URL + "/category/" + c.getId(), "0.85", "weekly", today);
             }

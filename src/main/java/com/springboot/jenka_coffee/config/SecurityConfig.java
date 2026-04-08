@@ -42,12 +42,17 @@ public class SecurityConfig {
                     .includeSubDomains(true)
                     .maxAgeInSeconds(31536000))
                 .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    // VULN-L03 FIX: Bỏ 'unsafe-inline' cho script-src
+                    // Vue SPA build output dùng external JS files — không cần inline scripts
+                    // style-src vẫn cần 'unsafe-inline' vì Vue inject CSS động
                     "default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline'; " +
+                    "script-src 'self'; " +
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
-                    "img-src 'self' data: https://res.cloudinary.com https://ui-avatars.com; " +
+                    "img-src 'self' data: https://res.cloudinary.com https://ui-avatars.com https://images.unsplash.com; " +
                     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-                    "connect-src 'self'"
+                    "connect-src 'self' https://java5jenkacoffee-production.up.railway.app; " +
+                    "frame-src https://www.google.com; " +
+                    "object-src 'none'"
                 ))
             )
             .authorizeHttpRequests(auth -> auth
@@ -62,6 +67,7 @@ public class SecurityConfig {
                     "/api/contact/**",
                     "/api/bookings",
                     "/api/booking/**",
+                    "/api/visitors/**",
                     "/api/error",
                     "/uploads/**").permitAll()
                 // Admin — phải có ROLE_ADMIN

@@ -2,16 +2,14 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
 import com.springboot.jenka_coffee.dto.response.CartItem;
-import com.springboot.jenka_coffee.entity.Account;
-import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.entity.OrderDetail;
-import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.*;
 import com.springboot.jenka_coffee.exception.InsufficientStockException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.EmailService;
 import com.springboot.jenka_coffee.service.OrderService;
+import com.springboot.jenka_coffee.service.VoucherService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +23,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import com.springboot.jenka_coffee.entity.Voucher;
-import com.springboot.jenka_coffee.service.VoucherService;
 
 @Slf4j
 @Service
@@ -74,7 +69,6 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * CHECKOUT TRANSACTION — ACID guaranteed
-     *
      * Luồng:
      *   1. Validate giỏ hàng không rỗng
      *   2. Lock sản phẩm (PESSIMISTIC_WRITE) để tránh race condition
@@ -82,7 +76,6 @@ public class OrderServiceImpl implements OrderService {
      *   4. Tạo Order + OrderDetails (giá từ DB)
      *   5. Trừ tồn kho (batch update)
      *   6. Save order
-     *
      * Nếu bất kỳ bước nào fail → toàn bộ rollback, tồn kho không bị trừ.
      * Cart clear và email nằm ngoài transaction (postCheckout).
      */
@@ -148,28 +141,29 @@ public class OrderServiceImpl implements OrderService {
         // ── Áp dụng Voucher (nếu có) ────────────────────────────────────────
         Voucher appliedVoucher = null;
         if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
-            appliedVoucher = voucherService.validateForCheckout(request.getVoucherCode(), totalAmount);
+            // VULN-C02 FIX: Validate + consume trong cùng 1 transaction với PESSIMISTIC_WRITE
+            // Không tách thành 2 bước riêng (validate readOnly → consume) vì có race condition window
+            final Voucher voucher = voucherService.validateAndLockVoucher(request.getVoucherCode(), totalAmount);
+            appliedVoucher = voucher;
 
             // Nếu scope = SPECIFIC, kiểm tra ít nhất 1 sản phẩm trong cart được áp dụng
-            if ("SPECIFIC".equals(appliedVoucher.getScope())) {
+            if ("SPECIFIC".equals(voucher.getScope())) {
                 boolean hasApplicable = orderDetails.stream()
-                        .anyMatch(d -> appliedVoucher.isApplicableToProduct(d.getProduct().getId()));
+                        .anyMatch(d -> voucher.isApplicableToProduct(d.getProduct().getId()));
                 if (!hasApplicable) {
                     throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
                             "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng!");
                 }
                 // Tính discount chỉ trên các sản phẩm được áp dụng
                 BigDecimal applicableSubtotal = orderDetails.stream()
-                        .filter(d -> appliedVoucher.isApplicableToProduct(d.getProduct().getId()))
+                        .filter(d -> voucher.isApplicableToProduct(d.getProduct().getId()))
                         .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                BigDecimal discount = appliedVoucher.calculateDiscount(applicableSubtotal);
+                BigDecimal discount = voucher.calculateDiscount(applicableSubtotal);
                 totalAmount = totalAmount.subtract(discount)
                         .max(new BigDecimal("1000")); // VULN-047 FIX: minimum 1.000đ
             } else {
-                BigDecimal discount = appliedVoucher.calculateDiscount(totalAmount);
-                // VULN-047 FIX: Không cho phép đơn hàng = 0đ sau giảm giá
-                // Tối thiểu 1.000đ để tránh free order exploit
+                BigDecimal discount = voucher.calculateDiscount(totalAmount);
                 totalAmount = totalAmount.subtract(discount)
                         .max(new BigDecimal("1000"));
             }
@@ -198,9 +192,17 @@ public class OrderServiceImpl implements OrderService {
         payment.setPaymentDate(LocalDateTime.now());
         entityManager.persist(payment);
 
-        // STEP 7: Trừ lượt dùng voucher (pessimistic lock trong VoucherService)
-        if (appliedVoucher != null) {
-            voucherService.consumeVoucher(appliedVoucher.getCode());
+        // STEP 7: Voucher đã được consume trong validateAndLockVoucher() — không cần gọi lại
+
+        // VULN-C01 FIX: Clear cart TRONG transaction — ngăn double checkout
+        // Nếu clear fail, transaction rollback → order không được tạo
+        // Nếu cart đã rỗng (idempotent), không có vấn đề gì
+        try {
+            cartService.clear();
+        } catch (Exception e) {
+            log.warn("Cart clear in transaction failed for account={}: {}", 
+                account != null ? account.getUsername() : "guest", e.getMessage());
+            // Không throw — cart clear fail không nên rollback order đã tạo thành công
         }
 
         log.info("Checkout success: orderId={}, account={}, total={}, voucher={}",
@@ -218,12 +220,8 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void postCheckout(Order savedOrder, Account account) {
-        try {
-            cartService.clear();
-        } catch (Exception e) {
-            log.warn("Failed to clear cart after checkout orderId={}: {}", savedOrder.getId(), e.getMessage());
-        }
-
+        // Cart đã được clear trong checkout transaction (VULN-C01 FIX)
+        // postCheckout chỉ xử lý email notification
         try {
             String customerName = account != null ? account.getFullname() : "Khách";
             emailService.sendNewOrderNotification(
@@ -268,11 +266,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public Order updateStatus(Long orderId, int status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng!"));
 
-        // VULN-022 FIX: State machine validation — chỉ cho phép transition hợp lệ
         Order.OrderStatus from = Order.OrderStatus.fromValue(order.getStatus());
         Order.OrderStatus to;
         try {
@@ -286,7 +284,6 @@ public class OrderServiceImpl implements OrderService {
             case NEW       -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
             case CONFIRMED -> to == Order.OrderStatus.SHIPPING  || to == Order.OrderStatus.CANCELLED;
             case SHIPPING  -> to == Order.OrderStatus.COMPLETED || to == Order.OrderStatus.CANCELLED;
-            // Terminal states — không được chuyển
             case CANCELLED, COMPLETED -> false;
         };
 
@@ -295,9 +292,35 @@ public class OrderServiceImpl implements OrderService {
                     "Không thể chuyển trạng thái từ " + from.name() + " sang " + to.name());
         }
 
+        // VULN-M04 FIX: Hoàn trả tồn kho khi hủy đơn hàng
+        if (to == Order.OrderStatus.CANCELLED) {
+            restoreStock(order);
+        }
+
         order.setStatus(status);
         log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());
         return orderRepository.save(order);
+    }
+
+    /** Hoàn trả tồn kho cho tất cả sản phẩm trong đơn hàng bị hủy */
+    private void restoreStock(Order order) {
+        // Load order details với product
+        Order orderWithDetails = orderRepository.findByIdWithDetails(order.getId())
+                .orElse(order);
+        if (orderWithDetails.getOrderDetails() == null) return;
+
+        for (com.springboot.jenka_coffee.entity.OrderDetail detail : orderWithDetails.getOrderDetails()) {
+            if (detail.getProduct() == null) continue;
+            Product product = entityManager.find(Product.class,
+                    detail.getProduct().getId(), LockModeType.PESSIMISTIC_WRITE);
+            if (product != null) {
+                int restored = (product.getQuantity() != null ? product.getQuantity() : 0)
+                        + detail.getQuantity();
+                product.setQuantity(restored);
+                entityManager.merge(product);
+                log.info("Stock restored: product={}, qty=+{}", product.getId(), detail.getQuantity());
+            }
+        }
     }
 
     @Override

@@ -37,7 +37,17 @@ public class ApiVoucherController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Vui lòng nhập mã giảm giá!"));
         }
 
-        BigDecimal subtotal = new BigDecimal(body.getOrDefault("subtotal", "0").toString());
+        // VULN-M05 FIX: Validate subtotal range — ngăn BigDecimal injection
+        BigDecimal subtotal;
+        try {
+            subtotal = new BigDecimal(body.getOrDefault("subtotal", "0").toString());
+            if (subtotal.compareTo(BigDecimal.ZERO) < 0 ||
+                    subtotal.compareTo(new BigDecimal("100000000000")) > 0) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Giá trị đơn hàng không hợp lệ!"));
+            }
+        } catch (NumberFormatException | ArithmeticException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Giá trị đơn hàng không hợp lệ!"));
+        }
         Voucher v = voucherService.checkVoucher(code, subtotal);
         BigDecimal discount = v.calculateDiscount(subtotal);
 

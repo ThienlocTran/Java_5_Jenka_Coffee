@@ -86,8 +86,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional
-    public void consumeVoucher(String voucherCode) {
-        // VULN-019 FIX: Pessimistic lock TRƯỚC khi check quantity — đóng race condition window
+    public void consumeVoucher(String voucherCode) {        // VULN-019 FIX: Pessimistic lock TRƯỚC khi check quantity — đóng race condition window
         Voucher v = entityManager.find(Voucher.class, voucherCode.toUpperCase().trim(),
                 LockModeType.PESSIMISTIC_WRITE);
         if (v == null) return;
@@ -115,5 +114,42 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional(readOnly = true)
     public Voucher checkVoucher(String code, BigDecimal subtotal) {
         return validateForCheckout(code, subtotal);
+    }
+
+    /**
+     * VULN-C02 FIX: Validate + PESSIMISTIC_WRITE lock + consume trong 1 transaction.
+     * Gọi từ checkout() — đảm bảo không có race condition window.
+     */
+    @Override
+    @Transactional
+    public Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal) {
+        // Acquire PESSIMISTIC_WRITE lock ngay từ đầu — không có window giữa validate và consume
+        Voucher v = entityManager.find(
+                Voucher.class,
+                voucherCode.toUpperCase().trim(),
+                LockModeType.PESSIMISTIC_WRITE);
+
+        if (v == null || !Boolean.TRUE.equals(v.getActive())) {
+            throw new BusinessRuleException("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
+        }
+        if (v.getExpirationDate().isBefore(java.time.LocalDateTime.now())) {
+            throw new BusinessRuleException("Mã giảm giá đã hết hạn!");
+        }
+        if (v.getQuantity() != null && v.getQuantity() != 0 && v.getQuantity() <= 0) {
+            throw new BusinessRuleException("Mã giảm giá đã hết lượt sử dụng!");
+        }
+        if (v.getMinOrderAmount() != null && orderSubtotal.compareTo(v.getMinOrderAmount()) < 0) {
+            throw new BusinessRuleException(
+                    "Đơn hàng tối thiểu " + v.getMinOrderAmount().toPlainString() + "đ để dùng mã này!");
+        }
+
+        // Consume ngay trong cùng lock — không có race condition
+        if (v.getQuantity() != null && v.getQuantity() != 0) {
+            v.setQuantity(v.getQuantity() - 1);
+            if (v.getQuantity() == 0) v.setActive(false);
+            entityManager.merge(v);
+        }
+
+        return v;
     }
 }

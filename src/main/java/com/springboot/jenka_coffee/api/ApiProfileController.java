@@ -67,7 +67,7 @@ public class ApiProfileController {
 
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-            @RequestBody ProfileUpdateRequest request,
+            @Valid @RequestBody ProfileUpdateRequest request,
             @AuthenticationPrincipal String username) {
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Vui lòng đăng nhập"));

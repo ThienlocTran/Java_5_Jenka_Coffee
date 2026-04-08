@@ -2,9 +2,11 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductImage;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
+import com.springboot.jenka_coffee.repository.ProductImageRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,13 +32,16 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final UploadService uploadService;
     private final CategoryRepository categoryRepository;
+    private final ProductImageRepository productImageRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
             UploadService uploadService,
-            CategoryRepository categoryRepository) {
+            CategoryRepository categoryRepository,
+            ProductImageRepository productImageRepository) {
         this.productRepository = productRepository;
         this.uploadService = uploadService;
         this.categoryRepository = categoryRepository;
+        this.productImageRepository = productImageRepository;
     }
 
     @Override
@@ -73,6 +78,43 @@ public class ProductServiceImpl implements ProductService {
                 .orElse(savedProduct);
     }
 
+    @Transactional
+    public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        int order = 0;
+        for (MultipartFile file : imageFiles) {
+            if (file != null && !file.isEmpty()) {
+                try {
+                    String imageUrl = uploadService.saveProductImage(file);
+                    if (imageUrl != null) {
+                        ProductImage productImage = new ProductImage();
+                        productImage.setProduct(product);
+                        productImage.setImageUrl(imageUrl);
+                        productImage.setDisplayOrder(order++);
+                        productImage.setIsPrimary(order == 1); // First image is primary
+                        productImageRepository.save(productImage);
+                        log.info("Saved product image: {} for product ID: {}", imageUrl, productId);
+                    }
+                } catch (Exception e) {
+                    log.error("Error uploading product image: {}", e.getMessage(), e);
+                }
+            }
+        }
+    }
+
+    @Transactional
+    public void deleteProductImage(Integer imageId) {
+        productImageRepository.deleteById(imageId);
+        log.info("Deleted product image with ID: {}", imageId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductImage> getProductImages(Integer productId) {
+        return productImageRepository.findByProductIdOrderByDisplayOrderAscIdAsc(productId);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Product findById(Integer id) {
@@ -89,7 +131,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getProductDetail(Integer productId) {
-        Product item = findById(productId); // throws ResourceNotFoundException if not found
+        // Không cần fetch images ở đây - frontend sẽ gọi API /products/{id}/images riêng
+        Product item = findById(productId);
         String categoryId = item.getCategory() != null ? item.getCategory().getId() : null;
         List<Product> similarItems = categoryId != null
                 ? getRelatedProducts(categoryId, item.getId())

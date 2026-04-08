@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Cart lưu in-memory per username — tương thích với JWT stateless.
  * Thay thế @SessionScope (không hoạt động với stateless JWT).
- *
  * Trade-off: cart mất khi server restart. Acceptable cho quy mô hiện tại.
  * Production scale: chuyển sang Redis hoặc bảng CartItems trong DB.
  */
@@ -27,8 +26,19 @@ public class CartServiceImpl implements CartService {
 
     private final ObjectProvider<ProductService> productServiceProvider;
 
-    // Map<username, Map<productId, CartItem>>
-    private final ConcurrentHashMap<String, Map<Integer, CartItem>> userCarts = new ConcurrentHashMap<>();
+    // Map<username, CartEntry> — CartEntry có timestamp để TTL eviction
+    private final ConcurrentHashMap<String, CartEntry> userCarts = new ConcurrentHashMap<>();
+
+    private static final int MAX_CARTS = 5000;          // giới hạn tổng số cart
+    private static final long CART_TTL_MS = 3_600_000L; // 1 giờ không hoạt động → xóa
+
+    private static class CartEntry {
+        final Map<Integer, CartItem> items = new java.util.HashMap<>();
+        volatile long lastAccess = System.currentTimeMillis();
+
+        void touch() { lastAccess = System.currentTimeMillis(); }
+        boolean isExpired() { return System.currentTimeMillis() - lastAccess > CART_TTL_MS; }
+    }
 
     public CartServiceImpl(ObjectProvider<ProductService> productServiceProvider) {
         this.productServiceProvider = productServiceProvider;
@@ -51,7 +61,20 @@ public class CartServiceImpl implements CartService {
 
     /** Lấy cart của user hiện tại, tạo mới nếu chưa có */
     private Map<Integer, CartItem> cart() {
-        return userCarts.computeIfAbsent(currentUser(), k -> new HashMap<>());
+        // VULN-M06 FIX: Giới hạn tổng số cart để tránh memory exhaustion
+        String user = currentUser();
+        CartEntry entry = userCarts.computeIfAbsent(user, k -> {
+            if (userCarts.size() >= MAX_CARTS) {
+                // Xóa 1 entry cũ nhất khi đầy
+                userCarts.entrySet().stream()
+                        .min(java.util.Comparator.comparingLong(e -> e.getValue().lastAccess))
+                        .map(java.util.Map.Entry::getKey)
+                        .ifPresent(userCarts::remove);
+            }
+            return new CartEntry();
+        });
+        entry.touch(); // cập nhật lastAccess
+        return entry.items;
     }
 
     @Override
@@ -70,6 +93,11 @@ public class CartServiceImpl implements CartService {
                 map.put(productId, item);
             }
         } else {
+            // FVULN-003 FIX: Giới hạn max 99 per item
+            if (item.getQuantity() >= 99) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Số lượng tối đa mỗi sản phẩm là 99!");
+            }
             item.setQuantity(item.getQuantity() + 1);
         }
     }
@@ -81,7 +109,10 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void update(Integer productId, int qty) {
+        // FVULN-003 FIX: Validate qty — ngăn bypass qua API trực tiếp
         if (qty <= 0) { cart().remove(productId); return; }
+        if (qty > 99) throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                "Số lượng tối đa mỗi sản phẩm là 99!");
         CartItem item = cart().get(productId);
         if (item != null) item.setQuantity(qty);
     }
@@ -118,13 +149,11 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * Dọn dẹp cart của user không hoạt động — tránh RAM phình to.
-     * Chạy mỗi 2 giờ, xóa cart của anonymous và cart rỗng.
+     * VULN-M06 FIX: Evict theo TTL thực sự — không chỉ xóa cart rỗng.
+     * Chạy mỗi 30 phút, xóa cart không hoạt động quá 1 giờ.
      */
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 7_200_000)
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 1_800_000)
     public void evictStaleCarts() {
-        userCarts.entrySet().removeIf(e ->
-            "anonymous".equals(e.getKey()) || e.getValue().isEmpty()
-        );
+        userCarts.entrySet().removeIf(e -> e.getValue().isExpired() || e.getValue().items.isEmpty());
     }
 }

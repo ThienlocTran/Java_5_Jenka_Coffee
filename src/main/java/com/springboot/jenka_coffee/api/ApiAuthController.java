@@ -30,6 +30,10 @@ public class ApiAuthController {
     private final AccountService accountService;
     private final JwtService jwtService;
 
+    // VULN-L02 FIX: Detect production vs local để set Secure flag đúng
+    @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:default}")
+    private String activeProfile;
+
     public ApiAuthController(AccountService accountService, JwtService jwtService) {
         this.accountService = accountService;
         this.jwtService = jwtService;
@@ -43,8 +47,9 @@ public class ApiAuthController {
         AuthResult result = accountService.authenticateWithResult(request.getUsername(), request.getPassword());
 
         if (result.status() == AuthResult.Status.NOT_ACTIVATED) {
+            // VULN-C03 FIX: Cùng message với INVALID_CREDENTIALS — không leak user existence
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Tài khoản chưa được kích hoạt."));
+                    .body(ApiResponse.error("Sai tên đăng nhập hoặc mật khẩu!"));
         }
         if (!result.isSuccess()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -60,9 +65,10 @@ public class ApiAuthController {
         addTokenCookie(response, "refresh_token", refreshToken, 604800);     // 7 ngày
 
         Map<String, Object> data = buildUserData(account);
-        // VULN-062 FIX: Không trả accessToken trong response body
-        // Token đã nằm trong httpOnly cookie — không cần expose trong JSON
-        // data.put("accessToken", accessToken);  ← REMOVED
+        // Trả token trong body để frontend dùng cho Authorization header fallback
+        // (cần thiết cho dev cross-origin: localhost:5173 → localhost:8080)
+        // Frontend lưu vào sessionStorage (tự xóa khi đóng tab), không phải localStorage
+        data.put("accessToken", accessToken);
 
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
     }
@@ -96,7 +102,7 @@ public class ApiAuthController {
         addTokenCookie(response, "access_token", newAccessToken, 86400);
 
         Map<String, Object> data = buildUserData(account);
-        // VULN-062 FIX: Không trả token trong body — cookie đã đủ
+        data.put("accessToken", newAccessToken);
         return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
     }
 
@@ -167,21 +173,25 @@ public class ApiAuthController {
     }
 
     private void addTokenCookie(HttpServletResponse res, String name, String value, int maxAge) {
-        // VULN-053 FIX: SameSite=Lax thay vì None — giảm CSRF risk
-        // Cross-origin (Vercel → Railway): frontend dùng Authorization header từ JwtAuthFilter
+        // VULN-L02 FIX: Chỉ set Secure flag trên HTTPS (production)
+        // Trên HTTP localhost, Secure flag khiến browser không gửi cookie
+        boolean isProduction = !"default".equals(activeProfile) && !"local".equals(activeProfile);
+        String secureFlag = isProduction ? "; Secure" : "";
         res.addHeader("Set-Cookie",
             name + "=" + value +
             "; Max-Age=" + maxAge +
             "; Path=/" +
             "; HttpOnly" +
-            "; Secure" +
+            secureFlag +
             "; SameSite=Lax");
     }
 
     private void clearTokenCookies(HttpServletResponse res) {
+        boolean isProduction = !"default".equals(activeProfile) && !"local".equals(activeProfile);
+        String secureFlag = isProduction ? "; Secure" : "";
         for (String name : new String[]{"access_token", "refresh_token"}) {
             res.addHeader("Set-Cookie",
-                name + "=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax");
+                name + "=; Max-Age=0; Path=/; HttpOnly" + secureFlag + "; SameSite=Lax");
         }
     }
 

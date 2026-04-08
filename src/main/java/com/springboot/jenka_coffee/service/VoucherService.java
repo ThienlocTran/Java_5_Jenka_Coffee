@@ -21,6 +21,12 @@ public interface VoucherService {
     Voucher validateForCheckout(String voucherCode, BigDecimal orderSubtotal);
 
     /**
+     * VULN-C02 FIX: Validate + acquire PESSIMISTIC_WRITE lock + consume trong 1 bước.
+     * Ngăn race condition giữa validate và consume.
+     */
+    Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal);
+
+    /**
      * Trừ 1 lượt dùng (quantity > 0). Dùng pessimistic lock để tránh race condition.
      */
     void consumeVoucher(String voucherCode);

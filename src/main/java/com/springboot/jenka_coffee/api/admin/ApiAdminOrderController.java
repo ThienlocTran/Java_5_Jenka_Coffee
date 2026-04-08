@@ -79,10 +79,24 @@ public class ApiAdminOrderController {
         }
     }
 
-    @DeleteMapping("/{id}")
+    /**
+     * VULN-M04 FIX: Đổi từ DELETE sang POST /cancel — đúng REST semantics.
+     * DELETE nên xóa record, không phải cancel. Dùng POST /cancel để rõ ràng hơn.
+     */
+    @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
-        orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
-        return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
+        try {
+            orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
+            return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /** Giữ lại DELETE để backward compatible với frontend hiện tại */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> cancelOrderLegacy(@PathVariable Long id) {
+        return cancelOrder(id);
     }
 
     /** Safe DTO — only scalar fields + account basics, no lazy proxies */
