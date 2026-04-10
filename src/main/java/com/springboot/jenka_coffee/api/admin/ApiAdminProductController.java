@@ -3,19 +3,23 @@ package com.springboot.jenka_coffee.api.admin;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductImage;
 import com.springboot.jenka_coffee.service.CategoryService;
 import com.springboot.jenka_coffee.service.ProductService;
+import com.springboot.jenka_coffee.service.impl.ProductServiceImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,9 +36,14 @@ public class ApiAdminProductController {
 
     // GET /api/admin/products?page=0&size=10
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> listProducts(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
+
+        // Giới hạn cứng — tránh OOM
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
         Page<Product> productPage = productService.findAllPaginated(pageable);
@@ -50,6 +59,7 @@ public class ApiAdminProductController {
 
     // GET /api/admin/products/{id}
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Product>> getProduct(@PathVariable Integer id) {
         Product product = productService.findById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin sản phẩm thành công", product));
@@ -64,6 +74,9 @@ public class ApiAdminProductController {
         product.setId(null);
         Category category = categoryService.findByIdOrThrow(categoryId);
         product.setCategory(category);
+        if (product.getPrice() != null) {
+            product.setPrice(product.getPrice().setScale(0, java.math.RoundingMode.HALF_UP));
+        }
         Product saved = productService.saveProduct(product, file);
         return ResponseEntity.ok(ApiResponse.success("Thêm sản phẩm thành công", saved));
     }
@@ -98,7 +111,7 @@ public class ApiAdminProductController {
         Product existing = productService.findById(id);
         existing.setName(name);
         existing.setDescription(description);
-        existing.setPrice(price);
+        existing.setPrice(price != null ? price.setScale(0, java.math.RoundingMode.HALF_UP) : price);
         existing.setAvailable(available);
         existing.setCategory(categoryService.findByIdOrThrow(categoryId));
         Product saved = productService.saveProduct(existing, file);
@@ -121,14 +134,14 @@ public class ApiAdminProductController {
         if (qty == null || qty < 0) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Số lượng không hợp lệ"));
         }
-        Product product = productService.findById(id);
-        product.setQuantity(qty);
-        productService.update(product);
+        // Dùng query trực tiếp — tránh load/save toàn bộ entity
+        productService.updateQuantity(id, qty);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật tồn kho thành công", null));
     }
 
     // GET /api/admin/products/inventory  (danh sách tồn kho)
     @GetMapping("/inventory")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getInventory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -185,6 +198,62 @@ public class ApiAdminProductController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Lỗi khi xóa sản phẩm: " + e.getMessage()));
+        }
+    }
+
+    // ========== PRODUCT IMAGES ENDPOINTS ==========
+
+    // POST /api/admin/products/{id}/images - Upload nhiều ảnh cho sản phẩm
+    @PostMapping(value = "/{id}/images", consumes = {"multipart/form-data"})
+    public ResponseEntity<ApiResponse<Void>> uploadProductImages(
+            @PathVariable Integer id,
+            @RequestParam("images") List<MultipartFile> images) {
+        try {
+            if (images == null || images.isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Vui lòng chọn ít nhất 1 ảnh"));
+            }
+            ((ProductServiceImpl) productService).saveProductImages(id, images);
+            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi upload ảnh: " + e.getMessage()));
+        }
+    }
+
+    // GET /api/admin/products/{id}/images - Lấy danh sách ảnh của sản phẩm
+    @GetMapping("/{id}/images")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<List<ProductImage>>> getProductImages(@PathVariable Integer id) {
+        try {
+            List<ProductImage> images = ((ProductServiceImpl) productService).getProductImages(id);
+            return ResponseEntity.ok(ApiResponse.success("Lấy danh sách ảnh thành công", images));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi lấy danh sách ảnh: " + e.getMessage()));
+        }
+    }
+
+    // DELETE /api/admin/products/images/{imageId} - Xóa 1 ảnh
+    @DeleteMapping("/images/{imageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteProductImage(@PathVariable Integer imageId) {
+        try {
+            ((ProductServiceImpl) productService).deleteProductImage(imageId);
+            return ResponseEntity.ok(ApiResponse.success("Xóa ảnh thành công", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi xóa ảnh: " + e.getMessage()));
+        }
+    }
+    
+    // POST /api/admin/products/migrate-slugs - Generate slug cho tất cả sản phẩm
+    @PostMapping("/migrate-slugs")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateProductSlugs() {
+        try {
+            Map<String, Object> result = ((ProductServiceImpl) productService).generateSlugsForAllProducts();
+            return ResponseEntity.ok(ApiResponse.success("Migration hoàn tất", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi migrate slugs: " + e.getMessage()));
         }
     }
 }

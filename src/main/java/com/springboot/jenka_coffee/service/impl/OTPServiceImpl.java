@@ -1,76 +1,88 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.service.OTPService;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * In-memory OTP service implementation
- * For production, consider using Redis for distributed caching
- */
 @Service
 public class OTPServiceImpl implements OTPService {
 
-    private final Map<String, OTPData> otpStore = new ConcurrentHashMap<>();
-    private final Random random = new Random();
-    private static final int OTP_LENGTH = 6;
+    private final Map<String, OTPData>     otpStore     = new ConcurrentHashMap<>();
+    private final Map<String, AttemptData> attemptStore = new ConcurrentHashMap<>();
+
     private static final int OTP_EXPIRY_MINUTES = 5;
+    private static final int MAX_ATTEMPTS       = 5;
 
     @Override
     public String generateOTP(String phone) {
-        // Generate 6-digit OTP
-        String otp = String.format("%06d", random.nextInt(1000000));
-
-        // Store with expiry
-        OTPData otpData = new OTPData(otp, LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES));
-        otpStore.put(phone, otpData);
-
-        // TODO: Integrate SMS provider (Twilio, AWS SNS, etc.)
+        String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+        otpStore.put(phone, new OTPData(otp, LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES)));
+        attemptStore.remove(phone); // reset attempts khi tạo OTP mới
         return otp;
     }
 
     @Override
     public boolean verifyOTP(String phone, String otp) {
-        OTPData storedData = otpStore.get(phone);
-
-        if (storedData == null) {
-            return false; // No OTP found
+        AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
+        if (attempts.count.get() >= MAX_ATTEMPTS) {
+            otpStore.remove(phone);
+            throw new ValidationException("Quá nhiều lần thử sai. OTP đã bị khóa. Vui lòng yêu cầu mã mới!");
         }
 
-        if (storedData.expiry.isBefore(LocalDateTime.now())) {
-            otpStore.remove(phone); // Remove expired OTP
+        OTPData stored = otpStore.get(phone);
+        if (stored == null) return false;
+
+        if (stored.expiry.isBefore(LocalDateTime.now())) {
+            otpStore.remove(phone);
+            attemptStore.remove(phone);
             return false;
         }
 
-        if (storedData.otp.equals(otp)) {
-            otpStore.remove(phone); // Remove used OTP
+        // VULN-H03 FIX: Constant-time comparison — ngăn timing side-channel attack
+        boolean match = java.security.MessageDigest.isEqual(
+                stored.otp.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                otp.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        if (match) {
+            otpStore.remove(phone);
+            attemptStore.remove(phone);
             return true;
         }
 
+        attempts.count.incrementAndGet();
         return false;
     }
 
     @Override
     public String resendOTP(String phone) {
-        // Remove old OTP and generate new one
         otpStore.remove(phone);
+        attemptStore.remove(phone);
         return generateOTP(phone);
     }
 
-    /**
-     * Inner class to store OTP with expiry time
-     */
-    private static class OTPData {
-        String otp;
-        LocalDateTime expiry;
+    /** Dọn dẹp OTP và attempt data hết hạn mỗi 10 phút */
+    @Scheduled(fixedDelay = 600_000)
+    public void evictExpired() {
+        LocalDateTime now = LocalDateTime.now();
+        otpStore.entrySet().removeIf(e -> e.getValue().expiry.isBefore(now));
+        // Xóa attempt data của các phone không còn OTP
+        attemptStore.keySet().removeIf(phone -> !otpStore.containsKey(phone));
+    }
 
-        OTPData(String otp, LocalDateTime expiry) {
-            this.otp = otp;
-            this.expiry = expiry;
-        }
+    private static class OTPData {
+        final String otp;
+        final LocalDateTime expiry;
+        OTPData(String otp, LocalDateTime expiry) { this.otp = otp; this.expiry = expiry; }
+    }
+
+    private static class AttemptData {
+        final AtomicInteger count = new AtomicInteger(0);
     }
 }

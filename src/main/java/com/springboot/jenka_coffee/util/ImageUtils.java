@@ -22,32 +22,53 @@ public class ImageUtils {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     /**
-     * Validate if uploaded file is a valid image
+     * Validate if uploaded file is a valid image.
+     * VULN-041 FIX: Thêm magic bytes check — không tin Content-Type header từ client.
      */
     public static boolean isValidImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return false;
-        }
+        if (file == null || file.isEmpty()) return false;
+        if (file.getSize() > MAX_FILE_SIZE) return false;
 
-        // Check file size
-        if (file.getSize() > MAX_FILE_SIZE) {
-            return false;
-        }
-
-        // Check content type
+        // Check content type (client-controlled, but first filter)
         String contentType = file.getContentType();
-        if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-            return false;
-        }
+        if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) return false;
 
         // Check file extension
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
+        if (originalFilename == null) return false;
+        String extension = getFileExtension(originalFilename);
+        if (!SUPPORTED_EXTENSIONS.contains(extension.toLowerCase())) return false;
+
+        // VULN-041 FIX: Magic bytes validation — verify actual file format
+        try {
+            byte[] header = new byte[12];
+            int read = file.getInputStream().read(header);
+            if (read < 4) return false;
+            return isValidImageMagicBytes(header);
+        } catch (java.io.IOException e) {
             return false;
         }
+    }
 
-        String extension = getFileExtension(originalFilename);
-        return SUPPORTED_EXTENSIONS.contains(extension.toLowerCase());
+    /**
+     * Verify file magic bytes — cannot be spoofed by Content-Type header.
+     */
+    private static boolean isValidImageMagicBytes(byte[] header) {
+        // JPEG: FF D8 FF
+        if (header[0] == (byte)0xFF && header[1] == (byte)0xD8 && header[2] == (byte)0xFF)
+            return true;
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (header[0] == (byte)0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47)
+            return true;
+        // GIF: 47 49 46 38 (GIF8)
+        if (header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38)
+            return true;
+        // WebP: 52 49 46 46 ?? ?? ?? ?? 57 45 42 50 (RIFF....WEBP)
+        if (header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+                && header.length >= 12 && header[8] == 0x57 && header[9] == 0x45
+                && header[10] == 0x42 && header[11] == 0x50)
+            return true;
+        return false;
     }
 
     /**

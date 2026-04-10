@@ -5,6 +5,7 @@ import com.springboot.jenka_coffee.dto.request.AccountRequest;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.service.AccountService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/accounts")
+@Slf4j
 public class ApiAdminAccountController {
 
     private final AccountService accountService;
@@ -45,17 +47,20 @@ public class ApiAdminAccountController {
             @Valid @ModelAttribute AccountRequest request,
             @RequestParam(value = "photoFile", required = false) MultipartFile photoFile) {
         try {
-            // username is required for create — validate manually since DTO is shared with update
             if (request.getUsername() == null || request.getUsername().isBlank()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(ApiResponse.error("Tên đăng nhập không được để trống"));
+                return ResponseEntity.badRequest().body(ApiResponse.error("Tên đăng nhập không được để trống"));
             }
-            Account account = accountService.createAccount(request.toEntity(), photoFile);
+            Account entity = request.toEntity();
+            // VULN-057 FIX: Chỉ super-admin (username="admin") mới được tạo admin account
+            // Admin thường không thể tự tạo admin khác → ngăn horizontal privilege escalation
+            // Nếu muốn cho phép tạo admin, cần thêm SUPER_ADMIN role riêng
+            entity.setAdmin(false); // Force false — admin flag chỉ set qua DB hoặc super-admin endpoint
+            Account account = accountService.createAccount(entity, photoFile);
             account.setPasswordHash(null);
             return ResponseEntity.ok(ApiResponse.success("Thêm tài khoản mới thành công", account));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Lỗi khi thêm tài khoản: " + e.getMessage()));
+            log.error("Create account error", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Lỗi khi thêm tài khoản. Vui lòng thử lại!"));
         }
     }
 
@@ -65,12 +70,20 @@ public class ApiAdminAccountController {
             @Valid @ModelAttribute AccountRequest request,
             @RequestParam(value = "photoFile", required = false) MultipartFile photoFile) {
         try {
-            Account account = accountService.updateAccount(username, request.toEntity(), photoFile);
+            Account entity = request.toEntity();
+            // VULN-H01 FIX: Không cho phép thay đổi admin flag qua update endpoint
+            // Admin flag chỉ được set qua DB hoặc super-admin endpoint riêng
+            entity.setAdmin(false);
+            Account account = accountService.updateAccount(username, entity, photoFile);
             account.setPasswordHash(null);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật tài khoản thành công", account));
+        } catch (com.springboot.jenka_coffee.exception.ValidationException |
+                 com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Lỗi khi cập nhật tài khoản: " + e.getMessage()));
+            log.error("Update account error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 
@@ -79,9 +92,12 @@ public class ApiAdminAccountController {
         try {
             accountService.deleteOrThrow(username);
             return ResponseEntity.ok(ApiResponse.success("Xóa tài khoản thành công", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Không thể xóa tài khoản: " + e.getMessage()));
+            log.error("Delete account error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 
@@ -92,9 +108,12 @@ public class ApiAdminAccountController {
             account.setPasswordHash(null);
             String status = account.getActivated() ? "kích hoạt" : "vô hiệu hóa";
             return ResponseEntity.ok(ApiResponse.success("Đã " + status + " tài khoản thành công!", account));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Lỗi: " + e.getMessage()));
+            log.error("Toggle status error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 
@@ -103,8 +122,12 @@ public class ApiAdminAccountController {
         try {
             accountService.lockAccount(username);
             return ResponseEntity.ok(ApiResponse.success("Đã khóa tài khoản thành công!", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+            log.error("Lock account error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 
@@ -113,27 +136,33 @@ public class ApiAdminAccountController {
         try {
             accountService.unlockAccount(username);
             return ResponseEntity.ok(ApiResponse.success("Đã mở khóa tài khoản thành công!", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+            log.error("Unlock account error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 
-    // PUT /api/admin/accounts/{username}/reset-password
-    // Body JSON: { "newPassword": "..." }
     @PutMapping("/{username}/reset-password")
     public ResponseEntity<ApiResponse<Void>> adminResetPassword(
             @PathVariable String username,
             @RequestBody Map<String, String> body) {
         String newPassword = body.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Mật khẩu mới không được để trống"));
+            return ResponseEntity.badRequest().body(ApiResponse.error("Mật khẩu mới không được để trống"));
         }
         try {
             accountService.adminResetPassword(username, newPassword);
             return ResponseEntity.ok(ApiResponse.success("Đã reset mật khẩu thành công!", null));
+        } catch (com.springboot.jenka_coffee.exception.ValidationException |
+                 com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+            log.error("Admin reset password error for {}", username, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Có lỗi xảy ra. Vui lòng thử lại!"));
         }
     }
 

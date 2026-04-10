@@ -12,4 +12,6 @@ public interface ServiceBookingRepository extends JpaRepository<ServiceBooking, 
     List<ServiceBooking> findByUsername(String username);
 
     List<ServiceBooking> findByStatus(String status);
+
+    long countByStatus(String status);
 }

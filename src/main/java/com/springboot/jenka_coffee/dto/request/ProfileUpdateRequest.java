@@ -11,13 +11,13 @@ import lombok.Data;
 @Data
 public class ProfileUpdateRequest {
 
-    @NotBlank(message = "Họ và tên không được để trống")
-    @Size(min = 3, max = 100, message = "Họ và tên phải từ 3 đến 100 ký tự")
+    // fullname KHÔNG bắt buộc — cho phép update chỉ phone/email mà không cần gửi fullname
+    @Size(min = 2, max = 100, message = "Họ và tên phải từ 2 đến 100 ký tự")
     private String fullname;
 
     @Email(message = "Email không đúng định dạng")
     @Size(max = 150, message = "Email không được vượt quá 150 ký tự")
-    private String email; // optional
+    private String email;
 
     @Pattern(
         regexp = "^$|^(0|\\+84)(\\s|\\.)?" +
@@ -25,13 +25,12 @@ public class ProfileUpdateRequest {
                  "(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$",
         message = "Số điện thoại không hợp lệ (VD: 0901234567)"
     )
-    private String phone; // optional
+    private String phone;
 
-    // Chỉ bắt buộc khi người dùng muốn đổi mật khẩu
     private String currentPassword;
 
     @Size(min = 6, max = 100, message = "Mật khẩu mới phải ít nhất 6 ký tự")
-    private String newPassword;     // optional – nếu có thì bắt buộc confirm
+    private String newPassword;
 
-    private String confirmPassword; // optional – phải khớp newPassword
+    private String confirmPassword;
 }

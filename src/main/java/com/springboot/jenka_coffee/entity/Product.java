@@ -30,6 +30,9 @@ public class Product implements Serializable {
     @Column(name = "Name", length = 200, nullable = false)
     private String name;
 
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
     @Column(name = "Image")
     private String image;
 
@@ -40,7 +43,7 @@ public class Product implements Serializable {
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
-    @Column(name = "createDate")
+    @Column(name = "createDate", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
     @Column(name = "Available")
@@ -61,6 +64,12 @@ public class Product implements Serializable {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<OrderDetail> orderDetails;
+
+    @JsonIgnore // Không serialize images trong Product response - dùng API riêng để lấy
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC, id ASC")
+    @ToString.Exclude
+    private List<ProductImage> images;
 
     // Đoạn code tránh Lazy của Hibernate nè
 

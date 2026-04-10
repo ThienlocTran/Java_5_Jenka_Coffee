@@ -59,6 +59,10 @@ public class Order implements Serializable {
     @Column(name = "totalAmount", precision = 18, scale = 2)
     private BigDecimal totalAmount;
 
+    // VULN-058 FIX: note field — lưu ghi chú đơn hàng (đã sanitize trước khi save)
+    @Column(name = "note", length = 500)
+    private String note;
+
     // --- QUAN HỆ ---
 
     // N-1 với Account

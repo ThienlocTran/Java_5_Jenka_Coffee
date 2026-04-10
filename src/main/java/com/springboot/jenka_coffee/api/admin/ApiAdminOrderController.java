@@ -42,6 +42,10 @@ public class ApiAdminOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
+        // VULN-032 FIX: Giới hạn page size tránh Memory DoS
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
         Page<Order> orderPage = orderService.findAll(pageable);
 
@@ -62,14 +66,37 @@ public class ApiAdminOrderController {
     public ResponseEntity<ApiResponse<Void>> updateOrderStatus(
             @PathVariable Long id,
             @PathVariable int status) {
-        orderService.updateStatus(id, status);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        // VULN-027 FIX: Validate range trước khi gọi service
+        if (status < 0 || status > 4) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Trạng thái đơn hàng không hợp lệ (0-4)"));
+        }
+        try {
+            orderService.updateStatus(id, status);
+            return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
-    @DeleteMapping("/{id}")
+    /**
+     * VULN-M04 FIX: Đổi từ DELETE sang POST /cancel — đúng REST semantics.
+     * DELETE nên xóa record, không phải cancel. Dùng POST /cancel để rõ ràng hơn.
+     */
+    @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
-        orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
-        return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
+        try {
+            orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
+            return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /** Giữ lại DELETE để backward compatible với frontend hiện tại */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> cancelOrderLegacy(@PathVariable Long id) {
+        return cancelOrder(id);
     }
 
     /** Safe DTO — only scalar fields + account basics, no lazy proxies */

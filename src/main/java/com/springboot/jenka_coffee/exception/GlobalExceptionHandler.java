@@ -117,6 +117,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalError(Exception ex, HttpServletRequest request) {
+        // Ignore client abort exceptions (user closed browser/tab before response completed)
+        if (ex instanceof org.apache.catalina.connector.ClientAbortException ||
+            ex instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException ||
+            (ex.getCause() != null && ex.getCause() instanceof java.nio.channels.ClosedChannelException)) {
+            // Silent ignore - this is normal when user navigates away
+            return null;
+        }
+        
         // Ignore favicon noise
         String uri = request.getRequestURI();
         if (uri != null && uri.contains("favicon")) {

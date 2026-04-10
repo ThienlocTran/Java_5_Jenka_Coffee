@@ -2,15 +2,20 @@ package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.ProductService;
+import com.springboot.jenka_coffee.service.impl.ProductServiceImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -25,6 +30,7 @@ public class ApiProductController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProducts(
             @RequestParam(value = "categoryId", required = false) String categoryId,
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
@@ -33,6 +39,10 @@ public class ApiProductController {
             @RequestParam(value = "sort", defaultValue = "newest") String sort,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "12") int size) {
+
+        // Giới hạn cứng — tránh OOM khi client gửi size=999999
+        size = Math.min(Math.max(size, 1), 50);
+        page = Math.max(page, 0);
 
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
@@ -58,6 +68,7 @@ public class ApiProductController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetail(@PathVariable("id") Integer id) {
         Map<String, Object> details = productService.getProductDetail(id);
         if (details == null) {
@@ -65,10 +76,42 @@ public class ApiProductController {
         }
         return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
     }
+    
+    @GetMapping("/slug/{slug}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetailBySlug(@PathVariable("slug") String slug) {
+        try {
+            Product product = productService.findBySlug(slug);
+            List<Product> similarItems = productService.getRelatedProducts(
+                product.getCategory().getId().toString(), 
+                product.getId()
+            );
+            
+            Map<String, Object> details = new HashMap<>();
+            details.put("item", product);
+            details.put("similarItems", similarItems);
+            
+            return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm với slug: " + slug));
+        }
+    }
 
     @GetMapping("/counts")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getCategoryCounts() {
         return ResponseEntity
                 .ok(ApiResponse.success("Category counts fetched successfully", productService.getCategoryCounts()));
+    }
+
+    @GetMapping("/{id}/images")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<List<ProductImage>>> getProductImages(@PathVariable Integer id) {
+        try {
+            List<ProductImage> images = ((ProductServiceImpl) productService).getProductImages(id);
+            return ResponseEntity.ok(ApiResponse.success("Product images fetched successfully", images));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Error fetching product images: " + e.getMessage()));
+        }
     }
 }
