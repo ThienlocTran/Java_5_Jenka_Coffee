@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.api;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.impl.ProductServiceImpl;
 import org.springframework.data.domain.Page;
@@ -74,6 +75,26 @@ public class ApiProductController {
             return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm với ID: " + id));
         }
         return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
+    }
+    
+    @GetMapping("/slug/{slug}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetailBySlug(@PathVariable("slug") String slug) {
+        try {
+            Product product = productService.findBySlug(slug);
+            List<Product> similarItems = productService.getRelatedProducts(
+                product.getCategory().getId().toString(), 
+                product.getId()
+            );
+            
+            Map<String, Object> details = new HashMap<>();
+            details.put("item", product);
+            details.put("similarItems", similarItems);
+            
+            return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm với slug: " + slug));
+        }
     }
 
     @GetMapping("/counts")

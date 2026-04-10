@@ -13,6 +13,8 @@ public interface ProductService {
     List<Product> findAll();
 
     Product findById(Integer id);
+    
+    Product findBySlug(String slug);
 
     Product create(Product product);
 

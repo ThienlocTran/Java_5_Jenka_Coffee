@@ -30,6 +30,9 @@ public class Product implements Serializable {
     @Column(name = "Name", length = 200, nullable = false)
     private String name;
 
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
     @Column(name = "Image")
     private String image;
 

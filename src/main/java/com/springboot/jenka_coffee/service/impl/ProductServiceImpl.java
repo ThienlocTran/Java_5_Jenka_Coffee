@@ -9,6 +9,7 @@ import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.repository.ProductImageRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
+import com.springboot.jenka_coffee.util.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -144,8 +145,12 @@ public class ProductServiceImpl implements ProductService {
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product create(Product product) {
         log.info("Creating new product: {}", product.getName());
+        
+        // Generate slug from product name
+        product.setSlug(generateUniqueSlug(product.getName()));
+        
         Product savedProduct = productRepository.save(product);
-        log.info("Successfully created product with ID: {}", savedProduct.getId());
+        log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
         return savedProduct;
     }
 
@@ -157,6 +162,12 @@ public class ProductServiceImpl implements ProductService {
         // Kiểm tra product có tồn tại không
         if (!productRepository.existsById(product.getId())) {
             throw new ResourceNotFoundException("Product not found with id: " + product.getId());
+        }
+        
+        // Regenerate slug if name changed
+        Product existingProduct = productRepository.findById(product.getId()).orElseThrow();
+        if (!existingProduct.getName().equals(product.getName())) {
+            product.setSlug(generateUniqueSlug(product.getName()));
         }
 
         Product updatedProduct = productRepository.save(product);
@@ -236,5 +247,76 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
         return productRepository.searchProductsPaginated(keyword, pageable);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Product findBySlug(String slug) {
+        log.info("Finding product by slug: {}", slug);
+        return productRepository.findBySlugWithCategory(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with slug: " + slug));
+    }
+    
+    /**
+     * Generate unique slug from product name
+     */
+    private String generateUniqueSlug(String productName) {
+        String baseSlug = SlugUtils.toSlug(productName);
+        String slug = baseSlug;
+        int counter = 0;
+        
+        // Check if slug exists, if yes, append number
+        while (productRepository.existsBySlug(slug)) {
+            counter++;
+            slug = baseSlug + "-" + counter;
+        }
+        
+        return slug;
+    }
+    
+    /**
+     * Generate slugs for all existing products (Migration)
+     */
+    @Transactional
+    public Map<String, Object> generateSlugsForAllProducts() {
+        log.info("Starting slug migration for all products");
+        
+        List<Product> allProducts = productRepository.findAll();
+        int totalProducts = allProducts.size();
+        int updatedCount = 0;
+        int skippedCount = 0;
+        int errorCount = 0;
+        
+        for (Product product : allProducts) {
+            try {
+                // Skip if already has slug
+                if (product.getSlug() != null && !product.getSlug().isEmpty()) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Generate and save slug
+                String slug = generateUniqueSlug(product.getName());
+                product.setSlug(slug);
+                productRepository.save(product);
+                updatedCount++;
+                
+                log.info("Generated slug '{}' for product ID: {}", slug, product.getId());
+            } catch (Exception e) {
+                errorCount++;
+                log.error("Failed to generate slug for product ID: {} - {}", product.getId(), e.getMessage());
+            }
+        }
+        
+        log.info("Slug migration completed. Total: {}, Updated: {}, Skipped: {}, Errors: {}", 
+                 totalProducts, updatedCount, skippedCount, errorCount);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalProducts", totalProducts);
+        result.put("updatedCount", updatedCount);
+        result.put("skippedCount", skippedCount);
+        result.put("errorCount", errorCount);
+        
+        return result;
     }
 }

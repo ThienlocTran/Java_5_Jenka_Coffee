@@ -15,6 +15,12 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
+    // ── Tìm theo slug ────────────────────────────────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.slug = :slug")
+    Optional<Product> findBySlugWithCategory(@Param("slug") String slug);
+    
+    boolean existsBySlug(String slug);
+
     // ── findAll with JOIN FETCH to avoid LazyInitializationException ──
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category",
            countQuery = "SELECT COUNT(p) FROM Product p")

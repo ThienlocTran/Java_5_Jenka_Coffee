@@ -244,4 +244,16 @@ public class ApiAdminProductController {
                     .body(ApiResponse.error("Lỗi khi xóa ảnh: " + e.getMessage()));
         }
     }
+    
+    // POST /api/admin/products/migrate-slugs - Generate slug cho tất cả sản phẩm
+    @PostMapping("/migrate-slugs")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateProductSlugs() {
+        try {
+            Map<String, Object> result = ((ProductServiceImpl) productService).generateSlugsForAllProducts();
+            return ResponseEntity.ok(ApiResponse.success("Migration hoàn tất", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi migrate slugs: " + e.getMessage()));
+        }
+    }
 }
