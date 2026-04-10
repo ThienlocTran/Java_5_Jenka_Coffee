@@ -26,6 +26,7 @@ public class CheckoutRequest {
 
     @NotBlank(message = "{CheckoutRequest.address.NotBlank}")
     @Size(min = 3, max = 255, message = "{CheckoutRequest.address.Size}")
+    @Pattern(regexp = "^[^<>]+$", message = "{CheckoutRequest.address.Pattern}")
     private String address;
 
     @NotBlank(message = "{CheckoutRequest.province.NotBlank}")

@@ -111,11 +111,18 @@ public class EmailServiceImpl implements EmailService {
             throw new RuntimeException("Không thể gửi email đặt lại mật khẩu");
         }
     }
+
     @Override
     @Async
     public void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
                                           String phone, String address, java.math.BigDecimal total) {
         try {
+            // HTML-escape tất cả user-controlled fields để chống HTML injection
+            String safeName    = HtmlUtils.htmlEscape(customerName != null ? customerName : "Khách");
+            String safePhone   = HtmlUtils.htmlEscape(phone != null ? phone : "");
+            String safeAddress = HtmlUtils.htmlEscape(address != null ? address : "");
+            String formatted   = total != null ? String.format("%,.0f", total.doubleValue()) + " ₫" : "N/A";
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromEmail);
