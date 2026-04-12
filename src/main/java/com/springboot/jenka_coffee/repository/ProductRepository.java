@@ -50,11 +50,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.available = true GROUP BY p.category.id")
     List<Object[]> countProductsGroupedByCategory();
 
-    @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.transaction.annotation.Transactional
-    @Query("UPDATE Product p SET p.quantity = :quantity WHERE p.id = :id")
-    int updateQuantityById(@Param("id") Integer id, @Param("quantity") Integer quantity);
-
     // ── Available only ───────────────────────────────────────────────
     // (findByAvailableTrue removed - unused, use findByAllCriteria instead)
 

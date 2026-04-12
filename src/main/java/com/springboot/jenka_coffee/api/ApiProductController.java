@@ -40,6 +40,24 @@ public class ApiProductController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "12") int size) {
 
+        // VULN-DATABASE-DOS FIX: Giới hạn độ dài keyword để tránh heavy LIKE query
+        if (keyword != null && keyword.length() > 100) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Từ khóa tìm kiếm quá dài (tối đa 100 ký tự)"));
+        }
+        
+        // VULN-SQL-INJECTION FIX: Escape SQL wildcards trong keyword
+        if (keyword != null && !keyword.isEmpty()) {
+            keyword = com.springboot.jenka_coffee.util.SqlUtils.sanitizeSearchInput(keyword, 100);
+        }
+
+        // VULN-DEEP-PAGINATION-DOS FIX: Giới hạn page number để tránh OFFSET DoS
+        // Giới hạn page tối đa 1000 (50 items/page = 50,000 items max)
+        if (page > 1000) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số trang vượt quá giới hạn (tối đa 1000)"));
+        }
+
         // Giới hạn cứng — tránh OOM khi client gửi size=999999
         size = Math.min(Math.max(size, 1), 50);
         page = Math.max(page, 0);

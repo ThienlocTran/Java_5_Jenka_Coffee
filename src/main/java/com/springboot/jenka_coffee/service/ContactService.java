@@ -9,5 +9,6 @@ public interface ContactService {
     void sendContactEmail(ContactRequest request);
     Page<Contact> findAll(Pageable pageable);
     void markAsRead(Long id);
+    void markAllAsRead();
     long countUnread();
 }

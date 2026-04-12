@@ -133,4 +133,20 @@ public interface AccountService {
      * @param otp   OTP code
      */
     void verifyPhoneOTP(String phone, String otp);
+
+    // ===== GOOGLE OAUTH =====
+    
+    /**
+     * Find account by email
+     * @param email Email address
+     * @return Account or null if not found
+     */
+    Account findByEmail(String email);
+    
+    /**
+     * Update phone number for account
+     * @param username Account username
+     * @param phone Phone number
+     */
+    void updatePhone(String username, String phone);
 }

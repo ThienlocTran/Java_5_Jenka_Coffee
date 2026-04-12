@@ -32,6 +32,13 @@ public class ApiBookingController {
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<Void>> submitBooking(@Valid @RequestBody BookingRequest request) {
         try {
+            // VULN-TIME-MACHINE FIX: Không cho đặt lịch trong quá khứ
+            if (request.getBookingDate() != null &&
+                    request.getBookingDate().isBefore(java.time.LocalDate.now())) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Không thể đặt lịch trong quá khứ!"));
+            }
+            
             // VULN-044 FIX: Giới hạn ngày đặt lịch tối đa 3 tháng trong tương lai
             if (request.getBookingDate() != null &&
                     request.getBookingDate().isAfter(java.time.LocalDate.now().plusMonths(3))) {

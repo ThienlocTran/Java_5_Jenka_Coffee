@@ -61,6 +61,15 @@ public class ReportServiceImpl implements ReportService {
         return orderRepository.getRevenueByDateRange(from, to);
     }
 
+    /**
+     * VULN-DASHBOARD-PERFORMANCE WARNING: This method performs full table scans
+     * Current implementation is acceptable for small datasets (<10k orders)
+     * For production with >100k orders, consider:
+     * 1. Add @Cacheable with TTL (e.g., 5 minutes)
+     * 2. Use materialized views or summary tables
+     * 3. Implement incremental counters updated on order creation
+     * 4. Add database indexes on frequently queried columns
+     */
     @Override
     public OrderStatsDTO getOrderStats() {
         long totalOrders = orderRepository.countAllOrders();

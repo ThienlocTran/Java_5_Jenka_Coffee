@@ -58,12 +58,30 @@ public class ProductServiceImpl implements ProductService {
         log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
 
+        // VULN-ORPHANED-STORAGE FIX: Delete old image if updating existing product
+        String oldImageUrl = null;
+        if (product.getId() != null) {
+            Product existingProduct = productRepository.findById(product.getId()).orElse(null);
+            if (existingProduct != null) {
+                oldImageUrl = existingProduct.getImage();
+            }
+        }
+
         if (file != null && !file.isEmpty()) {
             try {
                 String imageUrl = uploadService.saveProductImage(file);
                 if (imageUrl != null) {
                     product.setImage(imageUrl);
                     log.info("Successfully uploaded and compressed product image: {}", imageUrl);
+                    
+                    // Delete old image after successful upload
+                    if (oldImageUrl != null && !oldImageUrl.isEmpty() && !oldImageUrl.equals(imageUrl)) {
+                        try {
+                            uploadService.deleteImage(oldImageUrl);
+                        } catch (Exception e) {
+                            log.warn("Failed to delete old product image: {}", e.getMessage());
+                        }
+                    }
                 } else {
                     log.warn("Failed to upload product image for: {}", product.getName());
                 }
@@ -107,6 +125,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Transactional
     public void deleteProductImage(Integer imageId) {
+        // VULN-ORPHANED-CLOUDINARY-STORAGE FIX: Delete from Cloudinary before deleting DB record
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ảnh với ID: " + imageId));
+        
+        // Delete from Cloudinary first
+        if (image.getImageUrl() != null && !image.getImageUrl().isEmpty()) {
+            try {
+                uploadService.deleteImage(image.getImageUrl());
+            } catch (Exception e) {
+                log.warn("Failed to delete image from Cloudinary: {}", e.getMessage());
+                // Continue with DB deletion even if Cloudinary deletion fails
+                // Better to have orphaned cloud storage than broken DB references
+            }
+        }
+        
+        // Delete from database
         productImageRepository.deleteById(imageId);
         log.info("Deleted product image with ID: {}", imageId);
     }
@@ -146,12 +180,34 @@ public class ProductServiceImpl implements ProductService {
     public Product create(Product product) {
         log.info("Creating new product: {}", product.getName());
         
-        // Generate slug from product name
-        product.setSlug(generateUniqueSlug(product.getName()));
+        // BUG-45 FIX: Retry logic for distributed race condition on slug
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                // Generate slug from product name
+                product.setSlug(generateUniqueSlug(product.getName()));
+                
+                Product savedProduct = productRepository.save(product);
+                log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
+                return savedProduct;
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Slug collision detected (race condition in distributed system)
+                if (attempt < maxAttempts) {
+                    log.warn("Slug collision detected on attempt {}, retrying with new slug", attempt);
+                    // Add small random delay to reduce collision probability
+                    try {
+                        Thread.sleep(50 + (long)(Math.random() * 100));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    log.error("Failed to create product after {} attempts due to slug collision", maxAttempts);
+                    throw new RuntimeException("Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.", e);
+                }
+            }
+        }
         
-        Product savedProduct = productRepository.save(product);
-        log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
-        return savedProduct;
+        throw new RuntimeException("Không thể tạo sản phẩm");
     }
 
     @Override
@@ -186,16 +242,6 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
-    }
-
-    @Override
-    @Transactional
-    public void updateQuantity(Integer id, Integer quantity) {
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-        productRepository.updateQuantityById(id, quantity);
-        log.info("Updated quantity for product ID {} to {}", id, quantity);
     }
 
     // ========== PAGINATION METHODS ==========
@@ -258,17 +304,36 @@ public class ProductServiceImpl implements ProductService {
     }
     
     /**
-     * Generate unique slug from product name
+     * BUG-45 FIX: Generate unique slug with retry logic for distributed systems
+     * 
+     * PROBLEM: synchronized keyword only works within single JVM instance
+     * In load-balanced/multi-server deployments, two servers can generate same slug simultaneously
+     * causing DataIntegrityViolationException when both try to insert
+     * 
+     * SOLUTION: Use optimistic retry approach - catch duplicate key exception and retry with new slug
+     * This works across distributed systems without requiring Redis/distributed locks
+     * 
+     * For production with high concurrency, consider:
+     * 1. Redis distributed lock (Redisson)
+     * 2. Database-level unique constraint (already exists)
+     * 3. This retry mechanism (current implementation - good enough for most cases)
      */
     private String generateUniqueSlug(String productName) {
         String baseSlug = SlugUtils.toSlug(productName);
         String slug = baseSlug;
         int counter = 0;
+        int maxRetries = 10;
         
-        // Check if slug exists, if yes, append number
-        while (productRepository.existsBySlug(slug)) {
+        // Try to find unique slug, with retry limit to prevent infinite loop
+        while (counter < maxRetries && productRepository.existsBySlug(slug)) {
             counter++;
             slug = baseSlug + "-" + counter;
+        }
+        
+        if (counter >= maxRetries) {
+            // Fallback: append timestamp to guarantee uniqueness
+            slug = baseSlug + "-" + System.currentTimeMillis();
+            log.warn("Slug generation exceeded max retries, using timestamp: {}", slug);
         }
         
         return slug;

@@ -12,7 +12,7 @@ public class LoginRequest {
     private String username;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, max = 100, message = "Mật khẩu phải ít nhất 6 ký tự")
+    @Size(min = 6, max = 72, message = "Mật khẩu phải từ 6 đến 72 ký tự")
     private String password;
 
     private boolean remember;

@@ -80,6 +80,15 @@ public class JwtService {
     public boolean isRefreshToken(String token) {
         return "refresh".equals(parseClaims(token).get("type", String.class));
     }
+    
+    /**
+     * VULN-SESSION-REVOCATION FIX: Extract token issued-at timestamp
+     * Used to check if token was issued before password reset
+     */
+    public long extractIssuedAt(String token) {
+        Date issuedAt = parseClaims(token).getIssuedAt();
+        return issuedAt != null ? issuedAt.getTime() : 0;
+    }
 
     /** Trả về true nếu token hợp lệ và chưa hết hạn */
     public boolean isValid(String token) {

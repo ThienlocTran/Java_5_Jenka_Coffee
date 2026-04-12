@@ -43,4 +43,10 @@ public class ApiAdminContactController {
         contactService.markAsRead(id);
         return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu đã đọc", null));
     }
+
+    @PatchMapping("/mark-all-read")
+    public ResponseEntity<ApiResponse<Void>> markAllRead() {
+        contactService.markAllAsRead();
+        return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu tất cả là đã đọc", null));
+    }
 }

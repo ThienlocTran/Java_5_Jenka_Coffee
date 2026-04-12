@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -24,12 +25,13 @@ public class ContactServiceImpl implements ContactService {
 
     @Override
     public void sendContactEmail(ContactRequest request) {
-        // Sanitize input trước khi lưu — ngăn Stored XSS trong admin panel
+        // VULN-OVER-SANITIZATION FIX: Use proper HTML escaping instead of stripping
+        // Preserves user data while preventing XSS
         Contact contact = new Contact();
-        contact.setFullName(stripHtml(request.getFullName()));
+        contact.setFullName(sanitizeInput(request.getFullName()));
         contact.setEmail(request.getEmail()); // email đã validate format
-        contact.setSubject(stripHtml(request.getSubject()));
-        contact.setMessage(stripHtml(request.getMessage()));
+        contact.setSubject(sanitizeInput(request.getSubject()));
+        contact.setMessage(sanitizeInput(request.getMessage()));
         contactRepository.save(contact);
 
         try {
@@ -39,10 +41,18 @@ public class ContactServiceImpl implements ContactService {
         }
     }
 
-    /** Strip HTML tags — ngăn Stored XSS */
-    private String stripHtml(String input) {
+    /**
+     * VULN-OVER-SANITIZATION FIX: Use OWASP HTML Sanitizer instead of regex stripping
+     * Regex stripping destroys user data containing < or > characters
+     * OWASP sanitizer preserves text while removing dangerous HTML
+     */
+    private static final org.owasp.html.PolicyFactory SANITIZE_POLICY =
+            org.owasp.html.Sanitizers.FORMATTING.and(org.owasp.html.Sanitizers.LINKS);
+
+    private String sanitizeInput(String input) {
         if (input == null) return null;
-        return input.replaceAll("<[^>]*>", "").trim();
+        // Sanitize HTML while preserving legitimate text content
+        return SANITIZE_POLICY.sanitize(input).trim();
     }
 
     @Override
@@ -56,6 +66,12 @@ public class ContactServiceImpl implements ContactService {
             c.setIsRead(true);
             contactRepository.save(c);
         });
+    }
+
+    @Override
+    @Transactional
+    public void markAllAsRead() {
+        contactRepository.markAllAsRead();
     }
 
     @Override

@@ -22,7 +22,6 @@ public class ProductDetailDTO {
     private String description;
     private LocalDateTime createDate;
     private Boolean available;
-    private Integer quantity;
     private CategoryDTO category;
     private List<ProductImageDTO> images;
 
@@ -53,7 +52,6 @@ public class ProductDetailDTO {
         dto.setDescription(product.getDescription());
         dto.setCreateDate(product.getCreateDate());
         dto.setAvailable(product.getAvailable());
-        dto.setQuantity(product.getQuantity());
         
         if (product.getCategory() != null) {
             CategoryDTO categoryDTO = new CategoryDTO();

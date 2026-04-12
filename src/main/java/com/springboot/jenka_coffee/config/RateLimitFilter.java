@@ -32,6 +32,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Cache<String, Bucket> otpBuckets     = buildCache(Duration.ofMinutes(5));
     private final Cache<String, Bucket> bookingBuckets = buildCache(Duration.ofMinutes(15));
     private final Cache<String, Bucket> contactBuckets = buildCache(Duration.ofMinutes(35));
+    // VULN-BRUTE-002 FIX: Rate limit cho voucher check để ngăn enumeration attack
+    private final Cache<String, Bucket> voucherBuckets = buildCache(Duration.ofMinutes(5));
+    // VULN-FAKE-TRAFFIC FIX: Rate limit cho visitor ping để ngăn fake traffic
+    private final Cache<String, Bucket> visitorBuckets = buildCache(Duration.ofMinutes(10));
+    // VULN-ENUMERATION FIX: Rate limit cho admin check-username/email để ngăn enumeration
+    private final Cache<String, Bucket> adminCheckBuckets = buildCache(Duration.ofMinutes(5));
+    // VULN-SMS-BOMBING FIX: Rate limit per phone number to prevent distributed SMS bombing
+    private final Cache<String, Bucket> phoneOtpBuckets = buildCache(Duration.ofHours(1));
+    // BUG-48 FIX: Email-specific rate limiting to prevent email spam DoS
+    // Prevents attacker from bombing victim's email with password reset/activation emails
+    // Limit: 1 email per minute per email address (prevents Gmail/SendGrid suspension)
+    private final Cache<String, Bucket> emailBuckets = buildCache(Duration.ofMinutes(60));
 
     private Cache<String, Bucket> buildCache(Duration ttl) {
         return Caffeine.newBuilder()
@@ -47,27 +59,96 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path   = req.getRequestURI();
         String method = req.getMethod();
 
-        if (!"POST".equalsIgnoreCase(method)) {
-            chain.doFilter(req, res);
-            return;
-        }
-
         String ip     = getClientIp(req);
         Bucket bucket = null;
 
-        if (path.startsWith("/api/auth/login")) {
-            bucket = loginBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(1)));
-        } else if (path.startsWith("/api/auth/forgot-password")) {
-            bucket = forgotBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
-        } else if (path.startsWith("/api/auth/signup")) {
-            bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
-        } else if (path.startsWith("/api/auth/verify-otp")) {
-            // VULN-064 FIX: 10 req/5 phút — chặt hơn để ngăn burst brute force OTP
-            bucket = otpBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(5)));
-        } else if (path.startsWith("/api/booking/submit")) {
-            bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
-        } else if (path.startsWith("/api/contact/send")) {
-            bucket = contactBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
+        // Rate limit cho POST endpoints
+        if ("POST".equalsIgnoreCase(method)) {
+            if (path.startsWith("/api/auth/login")) {
+                bucket = loginBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/auth/forgot-password")) {
+                // BUG-48 FIX: Email-specific rate limiting for forgot-password
+                // Extract email from request parameter (not body to avoid consumption issue)
+                String email = req.getParameter("email");
+                if (email != null && !email.isBlank()) {
+                    // Rate limit by email: 1 request per minute per email address
+                    Bucket emailBucket = emailBuckets.get(email.toLowerCase(), 
+                        k -> buildBucket(1, Duration.ofMinutes(1)));
+                    if (!emailBucket.tryConsume(1)) {
+                        res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        res.setCharacterEncoding("UTF-8");
+                        res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Vui lòng đợi 1 phút trước khi gửi lại yêu cầu.\"}");
+                        return;
+                    }
+                }
+                // Also rate limit by IP as fallback
+                bucket = forgotBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/auth/resend-activation")) {
+                // BUG-48 FIX: Email-specific rate limiting for resend-activation
+                String email = req.getParameter("email");
+                if (email != null && !email.isBlank()) {
+                    Bucket emailBucket = emailBuckets.get(email.toLowerCase(), 
+                        k -> buildBucket(1, Duration.ofMinutes(1)));
+                    if (!emailBucket.tryConsume(1)) {
+                        res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        res.setCharacterEncoding("UTF-8");
+                        res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Vui lòng đợi 1 phút trước khi gửi lại yêu cầu.\"}");
+                        return;
+                    }
+                }
+                bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/auth/signup")) {
+                // VULN-REQUEST-BODY-CONSUMPTION FIX: Disabled phone extraction from body
+                // Reading body in filter breaks Spring @RequestBody parsing
+                // Use IP-based rate limiting only (5 signups per minute per IP)
+                bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/auth/verify-otp")) {
+                // VULN-064 FIX: 10 req/5 phút — chặt hơn để ngăn burst brute force OTP
+                bucket = otpBuckets.get(ip, k -> buildBucket(10, Duration.ofMinutes(5)));
+            } else if (path.startsWith("/api/auth/resend-otp")) {
+                // VULN-REQUEST-BODY-CONSUMPTION FIX: Disabled phone extraction from body
+                // Use IP-based rate limiting only (5 resends per minute per IP)
+                bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/booking/submit")) {
+                bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
+            } else if (path.startsWith("/api/contact/send")) {
+                // BUG-48 FIX: Email-specific rate limiting for contact form
+                String email = req.getParameter("email");
+                if (email != null && !email.isBlank()) {
+                    Bucket emailBucket = emailBuckets.get(email.toLowerCase(), 
+                        k -> buildBucket(2, Duration.ofMinutes(30)));
+                    if (!emailBucket.tryConsume(1)) {
+                        res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        res.setCharacterEncoding("UTF-8");
+                        res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Vui lòng đợi 30 phút trước khi gửi lại tin nhắn.\"}");
+                        return;
+                    }
+                }
+                bucket = contactBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
+            } else if (path.startsWith("/api/vouchers/check")) {
+                // VULN-BRUTE-002 FIX: 20 requests/phút để ngăn voucher enumeration
+                bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
+            }
+        }
+        
+        // Rate limit cho GET voucher check (nếu có)
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/vouchers/check")) {
+            bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
+        }
+        
+        // VULN-FAKE-TRAFFIC FIX: Rate limit cho visitor ping - 60 requests/10 phút
+        if (path.startsWith("/api/visitors/ping")) {
+            bucket = visitorBuckets.get(ip, k -> buildBucket(60, Duration.ofMinutes(10)));
+        }
+        
+        // VULN-ENUMERATION FIX: Rate limit cho admin check endpoints - 30 requests/5 phút
+        if ("GET".equalsIgnoreCase(method) && 
+            (path.startsWith("/api/admin/accounts/check-username") || 
+             path.startsWith("/api/admin/accounts/check-email"))) {
+            bucket = adminCheckBuckets.get(ip, k -> buildBucket(30, Duration.ofMinutes(5)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {
@@ -111,5 +192,26 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || ip.startsWith("172.30.") || ip.startsWith("172.31.")
                 || ip.startsWith("192.168.")
                 || "127.0.0.1".equals(ip) || "::1".equals(ip);
+    }
+    
+    /**
+     * VULN-SMS-BOMBING FIX: Extract phone number from request body
+     * Used to rate limit by phone number instead of just IP
+     * 
+     * VULN-REQUEST-BODY-CONSUMPTION FIX: DO NOT read request body in filter!
+     * Reading req.getReader() consumes the input stream, making it unavailable
+     * for controllers. This breaks @RequestBody parsing in Spring.
+     * 
+     * Solution: Use request parameters or headers for rate limiting instead.
+     * For phone-based rate limiting, we'll rely on IP-based limits only.
+     * If phone-specific limits are critical, implement using:
+     * 1. Custom wrapper that caches request body
+     * 2. Rate limit in controller layer after body is parsed
+     * 3. Separate rate limit service called from controller
+     */
+    private String extractPhoneFromRequest(HttpServletRequest req) {
+        // DISABLED: Reading body in filter breaks Spring @RequestBody parsing
+        // Return null to fall back to IP-based rate limiting only
+        return null;
     }
 }

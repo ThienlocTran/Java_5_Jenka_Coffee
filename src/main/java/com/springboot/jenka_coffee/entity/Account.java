@@ -31,8 +31,20 @@ public class Account implements Serializable {
     @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
     private String fullname;
 
-    @Column(name = "Email", length = 100)
+    @Column(name = "Email", length = 100, unique = true)
     private String email;
+
+    /**
+     * SECURITY FIX: Convert empty email to NULL để tránh unique constraint violation
+     * PostgreSQL unique constraint: nhiều NULL OK, nhiều "" NOT OK
+     */
+    @PrePersist
+    @PreUpdate
+    private void normalizeEmail() {
+        if (email != null && email.trim().isEmpty()) {
+            email = null;
+        }
+    }
 
     @Column(name = "phone", length = 15, unique = true)
     private String phone;
@@ -74,7 +86,14 @@ public class Account implements Serializable {
     private LocalDateTime resetTokenExpiry;
 
     @Column(name = "ActivationMethod", length = 10)
-    private String activationMethod; // EMAIL or PHONE // MEMBER, SILVER, GOLD, DIAMOND
+    private String activationMethod; // EMAIL or PHONE
+    
+    /**
+     * VULN-SESSION-REVOCATION FIX: Track when password was last changed
+     * Used to invalidate old JWT tokens after password reset
+     */
+    @Column(name = "lastPasswordResetDate")
+    private LocalDateTime lastPasswordResetDate;
 
     // Quan hệ 1-N với Order
     @JsonIgnore // Chặn Account↔Order cycle

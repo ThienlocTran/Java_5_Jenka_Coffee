@@ -64,6 +64,7 @@ public class ApiSitemapController {
         }
 
         // ── Sản phẩm — paginate để không OOM khi 500+ sản phẩm ────────
+        // VULN-SEO-SABOTAGE FIX: Use slug-based URLs matching frontend router
         try {
             int productPage = 0;
             int productPageSize = 100;
@@ -72,7 +73,11 @@ public class ApiSitemapController {
                 productPageResult = productRepository.findAllWithCategory(
                         PageRequest.of(productPage, productPageSize));
                 for (Product p : productPageResult.getContent()) {
-                    String url = SITE_URL + "/product/detail/" + p.getId();
+                    // Use slug if available, fallback to ID for backward compatibility
+                    String productPath = (p.getSlug() != null && !p.getSlug().isBlank())
+                            ? "/san-pham/" + p.getSlug()
+                            : "/product/detail/" + p.getId();
+                    String url = SITE_URL + productPath;
                     xml.append("  <url>\n");
                     xml.append("    <loc>").append(url).append("</loc>\n");
                     xml.append("    <changefreq>weekly</changefreq>\n");

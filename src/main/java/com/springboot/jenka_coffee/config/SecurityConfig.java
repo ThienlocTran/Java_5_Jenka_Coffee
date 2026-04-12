@@ -17,9 +17,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final SecurityHeadersFilter securityHeadersFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, SecurityHeadersFilter securityHeadersFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.securityHeadersFilter = securityHeadersFilter;
     }
 
     @Bean
@@ -30,6 +32,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // BUG-49 WARNING: CSRF Protection Disabled - Subdomain Attack Risk
+            // 
+            // PROBLEM: SameSite=Lax cookies allow subdomain requests
+            // - Cookie SameSite=Lax prevents CSRF from external sites (hacker.com)
+            // - BUT allows requests from same-site subdomains (blog.jenkacoffee.com)
+            // - If customer creates subdomain with XSS vulnerability, attacker can:
+            //   1. Inject malicious script on blog.jenkacoffee.com
+            //   2. Script makes requests to api.jenkacoffee.com
+            //   3. Browser sends cookies because same eTLD+1 domain
+            //   4. Attacker can perform actions as authenticated user
+            //
+            // CURRENT MITIGATION:
+            // 1. JWT in HttpOnly cookies with SameSite=Lax (blocks external CSRF)
+            // 2. No state-changing GET requests (all mutations use POST/PUT/DELETE)
+            // 3. Explicit CORS configuration
+            // 4. All sensitive operations require authentication
+            //
+            // PRODUCTION RECOMMENDATIONS:
+            // 1. Enable CSRF protection if using subdomains:
+            //    .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+            // 2. Use SameSite=Strict for maximum security (breaks some OAuth flows)
+            // 3. Implement custom CSRF token in request headers
+            // 4. Avoid hosting user-generated content on subdomains
+            // 5. Use separate domain for API (api.example.com) vs app (app.example.com)
+            //
+            // RISK LEVEL: Medium (requires subdomain + XSS vulnerability)
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .formLogin(f -> f.disable())
@@ -63,6 +91,7 @@ public class SecurityConfig {
                     "/sitemap.xml", "/robots.txt").permitAll()
                 .requestMatchers(
                     "/api/auth/**",
+                    "/api/csrf-token", // CSRF token endpoint
                     "/api/contacts",
                     "/api/contact/**",
                     "/api/bookings",
@@ -80,6 +109,7 @@ public class SecurityConfig {
                 // Mọi endpoint không match → deny (secure by default)
                 .anyRequest().denyAll()
             )
+            .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

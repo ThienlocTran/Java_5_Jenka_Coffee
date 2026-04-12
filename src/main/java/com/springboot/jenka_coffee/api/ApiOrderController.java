@@ -68,6 +68,14 @@ public class ApiOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             @AuthenticationPrincipal String username) {
+        // BUG-43 FIX: Add page limit validation to prevent deep pagination DoS
+        // Attacker can request page=99999999 causing database to scan billions of rows
+        // Same protection as ApiProductController (max page 1000)
+        if (page > 1000) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số trang không được vượt quá 1000"));
+        }
+        
         Pageable pageable = PageRequest.of(page, Math.min(size, 20), Sort.by("id").descending());
         Page<Order> orderPage = orderService.findByUsername(username, pageable);
 
@@ -77,5 +85,54 @@ public class ApiOrderController {
         data.put("totalPages",  orderPage.getTotalPages());
         data.put("totalItems",  orderPage.getTotalElements());
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử đơn hàng thành công", data));
+    }
+    
+    /**
+     * VULN-ORDER-DETAIL-BLACKHOLE FIX: Add endpoint to get order details
+     * Allows users to view what products they ordered
+     */
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal String username) {
+        Order order = orderService.findById(orderId);
+        
+        if (order == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Không tìm thấy đơn hàng"));
+        }
+        
+        // Security check: Only allow user to view their own orders
+        if (order.getAccount() != null && !order.getAccount().getUsername().equals(username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Bạn không có quyền xem đơn hàng này"));
+        }
+        
+        // Build response with order details
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", order.getId());
+        data.put("address", order.getAddress());
+        data.put("phone", order.getPhone());
+        data.put("createDate", order.getCreateDate());
+        data.put("status", order.getStatus());
+        data.put("totalAmount", order.getTotalAmount());
+        data.put("voucherCode", order.getVoucherCode());
+        data.put("note", order.getNote());
+        data.put("pointsUsed", order.getPointsUsed());
+        
+        // Add order details (products)
+        var orderDetails = order.getOrderDetails().stream()
+                .map(detail -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("productId", detail.getProduct().getId());
+                    item.put("productName", detail.getProduct().getName());
+                    item.put("productImage", detail.getProduct().getImage());
+                    item.put("price", detail.getPrice());
+                    item.put("quantity", detail.getQuantity());
+                    return item;
+                }).toList();
+        data.put("orderDetails", orderDetails);
+        
+        return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết đơn hàng thành công", data));
     }
 }

@@ -27,7 +27,11 @@ public class AccountRequest {
     @Pattern(regexp = "^$|(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$", message = "{AccountRequest.phone.Pattern}")
     private String phone;
 
-    @Size(min = 6, message = "{AccountRequest.password.Size}")
+    @Size(min = 8, max = 72, message = "{AccountRequest.password.Size}")
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,72}$",
+        message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt (@$!%*?&)"
+    )
     private String password;
 
     private Boolean admin = false;
@@ -57,7 +61,8 @@ public class AccountRequest {
         Account account = new Account();
         account.setUsername(username);
         account.setFullname(fullname);
-        account.setEmail(email != null && !email.isEmpty() ? email : "");
+        // SECURITY FIX: Convert empty email to NULL để tránh unique constraint violation
+        account.setEmail(email != null && !email.isEmpty() ? email : null);
         account.setPhone(phone);
         account.setPasswordHash(password);
         account.setAdmin(admin != null ? admin : false);

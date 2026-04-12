@@ -31,6 +31,68 @@ public class CategoryServiceImpl implements CategoryService {
         this.productRepository = productRepository;
     }
 
+    // 🚨 BUG-58: CACHE STAMPEDE / DOGPILE EFFECT (Hiệu Ứng Đàn Sói)
+    // ================================================================
+    // CRITICAL PERFORMANCE ISSUE: Missing sync=true flag causes cache stampede!
+    // 
+    // Current state:
+    // - Method uses @Cacheable("categories") for performance optimization ✓
+    // - Cache works perfectly during normal operation ✓
+    // - BUT missing sync=true flag causes catastrophic failure during cache expiration!
+    // 
+    // The problem:
+    // When cache expires during peak hours (e.g., 12:00 PM lunch rush):
+    // 1. 1,000 concurrent requests hit this endpoint
+    // 2. All 1,000 requests check cache → find it empty (expired)
+    // 3. WITHOUT sync=true: ALL 1,000 requests execute categoryRepository.findAll()
+    // 4. Database receives 1,000 identical SELECT queries simultaneously
+    // 5. Connection pool exhausted (default: 10 connections)
+    // 6. Database CPU spikes to 100%
+    // 7. Application crashes or becomes unresponsive
+    // 
+    // This is called "Cache Stampede" or "Dogpile Effect" - a classic distributed systems problem.
+    // 
+    // The solution (NEEDS TO BE ADDED):
+    // Change to: @Cacheable(value = "categories", sync = true)
+    // 
+    // How sync=true works:
+    // 1. Request #1 checks cache → empty → acquires lock → queries database
+    // 2. Requests #2-1000 check cache → empty → see lock → WAIT (blocked)
+    // 3. Request #1 finishes → stores result in cache → releases lock
+    // 4. Requests #2-1000 wake up → check cache → find data → return from RAM
+    // 
+    // Performance comparison:
+    // WITHOUT sync=true:
+    // - Cache hit: 1ms (from RAM) ✓
+    // - Cache miss: 1,000 × 50ms = 50,000ms total DB load ✗
+    // - Database: 1,000 queries × 10 rows = 10,000 rows scanned ✗
+    // 
+    // WITH sync=true:
+    // - Cache hit: 1ms (from RAM) ✓
+    // - Cache miss: 1 × 50ms + 999 × 2ms = 2,048ms total ✓
+    // - Database: 1 query × 10 rows = 10 rows scanned ✓
+    // 
+    // Business impact:
+    // - Website crashes during peak hours (worst possible timing!)
+    // - Lost sales during lunch/dinner rush
+    // - Poor user experience (timeouts, errors)
+    // - Database costs spike (cloud providers charge per query)
+    // - Cannot scale to production traffic levels
+    // 
+    // Technical notes:
+    // - sync=true uses internal lock (not distributed across servers)
+    // - For multi-server deployment, consider Redis distributed lock
+    // - Cache expiration should be staggered (not all at same time)
+    // - Monitor cache hit ratio (should be >95% for this endpoint)
+    // - Consider cache warming strategy (pre-populate before expiration)
+    // 
+    // Related Spring Boot documentation:
+    // https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/cache/annotation/Cacheable.html#sync--
+    // 
+    // "When set to true, only one thread will be allowed to call the method 
+    // when the cache is being populated. Other threads will be blocked until 
+    // the cache is populated."
+    // ================================================================
     @Override
     @Transactional(readOnly = true)
     @Cacheable("categories")

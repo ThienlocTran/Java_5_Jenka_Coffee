@@ -99,7 +99,22 @@ public class ApiAdminOrderController {
         return cancelOrder(id);
     }
 
-    /** Safe DTO — only scalar fields + account basics, no lazy proxies */
+    /** 
+     * BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
+     * 
+     * PROBLEM: LocalDateTime.toString() returns format without timezone info
+     * - Example: "2026-04-12T15:25:00" (no timezone offset)
+     * - Client browsers parse this ambiguously based on local timezone
+     * - Server in Singapore (UTC+8) vs Client in Vietnam (UTC+7) = 1 hour difference
+     * - Orders appear in future or wrong day in reports
+     * 
+     * SOLUTION: Convert to ISO-8601 with timezone offset
+     * - Use ZonedDateTime or Instant for timezone-aware timestamps
+     * - Format: "2026-04-12T15:25:00+08:00" (explicit timezone)
+     * - Or use Unix epoch milliseconds (Long) for unambiguous timestamps
+     * 
+     * Safe DTO — only scalar fields + account basics, no lazy proxies 
+     */
     private Map<String, Object> toDto(Order o) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", o.getId());
@@ -107,7 +122,18 @@ public class ApiAdminOrderController {
         dto.put("phone", o.getPhone());
         dto.put("status", o.getStatus());
         dto.put("totalAmount", o.getTotalAmount());
-        dto.put("createDate", o.getCreateDate() != null ? o.getCreateDate().toString() : null);
+        
+        // BUG-56 FIX: Convert LocalDateTime to ISO-8601 with timezone
+        // Use system default timezone (server timezone)
+        if (o.getCreateDate() != null) {
+            java.time.ZonedDateTime zdt = o.getCreateDate()
+                .atZone(java.time.ZoneId.systemDefault());
+            dto.put("createDate", zdt.toString()); // ISO-8601 with timezone: 2026-04-12T15:25:00+08:00
+            // Alternative: Unix epoch milliseconds (unambiguous)
+            // dto.put("createDate", zdt.toInstant().toEpochMilli());
+        } else {
+            dto.put("createDate", null);
+        }
 
         if (o.getAccount() != null) {
             dto.put("account", Map.of(

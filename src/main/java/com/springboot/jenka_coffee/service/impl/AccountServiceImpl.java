@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.dto.response.AuthResult;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
 import com.springboot.jenka_coffee.service.AccountService;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -94,8 +96,21 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AuthResult authenticateWithResult(String identifier, String password) {
+        // VULN-BCRYPT-DOS FIX: Giới hạn độ dài password trước khi hash
+        if (password == null || password.length() > 72) {
+            return AuthResult.invalidCredentials();
+        }
+        
         Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-        if (account == null) return AuthResult.invalidCredentials();
+        
+        // VULN-TIMING-ATTACK FIX: Dummy BCrypt check khi account không tồn tại
+        // Đảm bảo response time giống nhau cho cả trường hợp tồn tại và không tồn tại
+        if (account == null) {
+            // Chạy dummy BCrypt hash để timing giống với trường hợp account tồn tại
+            passwordSecurity.verifyPassword(password, "$2a$12$dummyHashToPreventTimingAttack1234567890123456789012");
+            return AuthResult.invalidCredentials();
+        }
+        
         if (!account.getActivated()) return AuthResult.notActivated(account);
         if (!passwordSecurity.verifyPassword(password, account.getPasswordHash())) return AuthResult.invalidCredentials();
         return AuthResult.success(account);
@@ -109,22 +124,28 @@ public class AccountServiceImpl implements AccountService {
         newAccount.setFullname(fullname.trim());
         newAccount.setPhone(phone.trim());
 
-        // Email is optional - set to empty string if not provided
+        // VULN-PRE-ACCOUNT-HIJACKING FIX: Email phải được verify trước khi activate
+        // Không auto-activate nữa, yêu cầu OTP qua phone
         if (email != null && !email.trim().isEmpty()) {
             newAccount.setEmail(email.trim());
         } else {
-            newAccount.setEmail(""); // Set empty string instead of null
+            newAccount.setEmail(null); // SECURITY FIX: NULL instead of empty string to avoid unique constraint
         }
 
         // 3. Set defaults for new user registration
         newAccount.setPasswordHash(password); // Will be hashed in createAccount
-        newAccount.setActivated(true); // Auto-activate: skip email/OTP since SMTP is unavailable
+        newAccount.setActivated(false); // CHANGED: Require phone OTP verification
         newAccount.setAdmin(false);
         newAccount.setPoints(0);
         newAccount.setCustomerRank("MEMBER");
 
         // 4. Call createAccount which handles validation and hashing
         createAccount(newAccount, null);
+        
+        // 5. Send OTP to phone for verification
+        if (phone != null && !phone.trim().isEmpty()) {
+            otpService.generateOTP(phone.trim());
+        }
     }
 
     @Override
@@ -303,6 +324,9 @@ public class AccountServiceImpl implements AccountService {
         // Clear any existing reset tokens
         account.setResetToken(null);
         account.setResetTokenExpiry(null);
+        
+        // VULN-SESSION-REVOCATION FIX: Update lastPasswordResetDate to invalidate old tokens
+        account.setLastPasswordResetDate(LocalDateTime.now());
 
         Account saved = dao.save(account);
         // VULN-026 FIX: Audit log bắt buộc
@@ -328,8 +352,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void resendActivation(String username) {
-        Account account = findByIdOrThrow(username);
+    public void resendActivation(String identifier) {
+        // VULN-ZOMBIE-OTP FIX: Find account by phone/username/email
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
+        
+        if (account == null) {
+            throw new ValidationException("Không tìm thấy tài khoản!");
+        }
 
         if (account.getActivated()) {
             throw new ValidationException("Tài khoản đã được kích hoạt!");
@@ -349,7 +378,12 @@ public class AccountServiceImpl implements AccountService {
                 log.warn("Activation email sending failed for {}: {}", account.getEmail(), e.getMessage());
             }
         } else {
-            otpService.generateOTP(account.getPhone());
+            // Default to phone OTP
+            if (account.getPhone() != null && !account.getPhone().trim().isEmpty()) {
+                otpService.generateOTP(account.getPhone());
+            } else {
+                throw new ValidationException("Tài khoản không có số điện thoại để gửi OTP!");
+            }
         }
     }
 
@@ -401,7 +435,13 @@ public class AccountServiceImpl implements AccountService {
         account.setPasswordHash(passwordSecurity.hashPassword(newPassword));
         account.setResetToken(null);
         account.setResetTokenExpiry(null);
+        
+        // VULN-SESSION-REVOCATION FIX: Update lastPasswordResetDate to invalidate old tokens
+        account.setLastPasswordResetDate(LocalDateTime.now());
+        
         dao.save(account);
+        
+        log.warn("SECURITY: Password reset via token for user '{}'", account.getUsername());
     }
 
     @Override
@@ -419,5 +459,23 @@ public class AccountServiceImpl implements AccountService {
         account.setActivationToken(null);
         account.setActivationTokenExpiry(null);
         dao.save(account);
+    }
+
+    // ===== GOOGLE OAUTH METHODS =====
+
+    @Override
+    public Account findByEmail(String email) {
+        return dao.findByEmail(email).orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void updatePhone(String username, String phone) {
+        Account account = dao.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with username: " + username));
+        
+        account.setPhone(phone);
+        dao.save(account);
+        log.info("Updated phone number for user: {}", username);
     }
 }

@@ -54,4 +54,12 @@ public interface UploadService {
      * @return Upload directory path
      */
     String getUploadDir();
+    
+    /**
+     * VULN-ORPHANED-STORAGE FIX: Delete image from cloud storage (Cloudinary)
+     * Prevents storage exhaustion from orphaned files
+     * 
+     * @param imageUrl Full URL of the image to delete
+     */
+    void deleteImage(String imageUrl);
 }

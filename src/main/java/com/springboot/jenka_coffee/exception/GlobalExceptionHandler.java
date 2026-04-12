@@ -130,8 +130,16 @@ public class GlobalExceptionHandler {
         if (uri != null && uri.contains("favicon")) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
+        
+        // SECURITY FIX: Không leak stack trace ra client
+        // Log chi tiết ở backend, trả generic message cho client
         logger.error("Internal Server Error at {}: {}", uri, ex.getMessage(), ex);
+        
+        // Production: Generic error message
+        // Development: Có thể thêm chi tiết (check via profile)
+        String errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại sau!";
+        
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Đã có lỗi xảy ra. Vui lòng thử lại sau!"));
+                .body(ApiResponse.error(errorMessage));
     }
 }

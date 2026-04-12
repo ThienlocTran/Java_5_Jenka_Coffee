@@ -45,12 +45,33 @@ public class ProfileServiceImpl implements ProfileService {
             account.setFullname(request.getFullname().trim());
         }
         
-        if (StringUtils.hasText(request.getEmail())) {
-            account.setEmail(request.getEmail().trim().toLowerCase());
+        // VULN-RECOVERY-DEPRIVATION FIX: Prevent removing last recovery method
+        if (request.getEmail() != null) {
+            String email = request.getEmail().trim();
+            if (email.isEmpty()) {
+                // User wants to remove email - check if they have phone as backup
+                if (account.getPhone() == null || account.getPhone().trim().isEmpty()) {
+                    throw new ValidationException(
+                            "Không thể xóa email vì bạn chưa có số điện thoại. " +
+                            "Vui lòng thêm số điện thoại trước khi xóa email để đảm bảo có thể khôi phục tài khoản.");
+                }
+                account.setEmail(null);
+            } else {
+                account.setEmail(email.toLowerCase());
+            }
         }
         
+        // VULN-IDENTITY-SPOOFING FIX: Reset phoneVerified when phone changes
         if (StringUtils.hasText(request.getPhone())) {
-            account.setPhone(request.getPhone().trim());
+            String newPhone = request.getPhone().trim();
+            String oldPhone = account.getPhone();
+            
+            // If phone is changing, reset verification status
+            if (!newPhone.equals(oldPhone)) {
+                account.setPhone(newPhone);
+                account.setPhoneVerified(false);
+                log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
+            }
         }
         
         // Handle password change if requested
@@ -68,6 +89,9 @@ public class ProfileServiceImpl implements ProfileService {
     public Account updateAvatar(String username, MultipartFile avatarFile) {
         Account account = getProfile(username);
 
+        // VULN-ORPHANED-STORAGE FIX: Delete old avatar before uploading new one
+        String oldAvatarUrl = account.getPhoto();
+        
         // Upload directly to Cloudinary — no local resize needed
         String avatarUrl = uploadService.saveImage(avatarFile);
         if (avatarUrl == null) {
@@ -76,6 +100,17 @@ public class ProfileServiceImpl implements ProfileService {
 
         account.setPhoto(avatarUrl);
         Account savedAccount = accountRepository.save(account);
+        
+        // Delete old avatar after successful update (async - don't block response)
+        if (oldAvatarUrl != null && !oldAvatarUrl.isEmpty()) {
+            try {
+                uploadService.deleteImage(oldAvatarUrl);
+            } catch (Exception e) {
+                log.warn("Failed to delete old avatar for user {}: {}", username, e.getMessage());
+                // Don't throw - deletion failure shouldn't block the update
+            }
+        }
+        
         log.info("Updated avatar for user: {}", username);
         return savedAccount;
     }
@@ -120,16 +155,32 @@ public class ProfileServiceImpl implements ProfileService {
                 throw new ValidationException("Số điện thoại phải có 10-11 chữ số");
             }
             
+            // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
+            String currentPhone = currentAccount.getPhone();
+            boolean phoneChanging = !phone.equals(currentPhone);
+            
             // Check if phone already exists (excluding current user)
-            if (accountRepository.existsByPhone(phone) && 
-                !phone.equals(currentAccount.getPhone())) {
+            if (accountRepository.existsByPhone(phone) && phoneChanging) {
                 throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+            }
+        }
+        
+        // VULN-RECOVERY-DEPRIVATION FIX: Validate email removal
+        if (request.getEmail() != null && request.getEmail().trim().isEmpty()) {
+            // User wants to remove email - ensure they have phone as backup
+            if (currentAccount.getPhone() == null || currentAccount.getPhone().trim().isEmpty()) {
+                throw new ValidationException(
+                        "Không thể xóa email vì bạn chưa có số điện thoại. " +
+                        "Vui lòng thêm số điện thoại trước khi xóa email.");
             }
         }
         
         // Validate password change
         if (StringUtils.hasText(request.getNewPassword())) {
-            if (!StringUtils.hasText(request.getCurrentPassword())) {
+            // VULN-OAUTH-PASSWORD-LOCKOUT FIX: OAuth users don't need current password
+            boolean isOAuthAccount = "GOOGLE_OAUTH_NO_PASSWORD".equals(currentAccount.getPasswordHash());
+            
+            if (!isOAuthAccount && !StringUtils.hasText(request.getCurrentPassword())) {
                 throw new ValidationException("Vui lòng nhập mật khẩu hiện tại");
             }
             
@@ -145,26 +196,37 @@ public class ProfileServiceImpl implements ProfileService {
                 throw new ValidationException("Mật khẩu mới phải có ít nhất 6 ký tự");
             }
             
-            // Verify current password
-            if (!passwordSecurity.verifyPassword(request.getCurrentPassword(), currentAccount.getPasswordHash())) {
+            // Verify current password (only for non-OAuth accounts)
+            if (!isOAuthAccount && !passwordSecurity.verifyPassword(request.getCurrentPassword(), currentAccount.getPasswordHash())) {
                 throw new ValidationException("Mật khẩu hiện tại không đúng");
             }
         }
     }
     
     private void changePasswordInternal(Account account, String currentPassword, String newPassword) {
-        // Verify current password
-        if (!passwordSecurity.verifyPassword(currentPassword, account.getPasswordHash())) {
-            throw new ValidationException("Mật khẩu hiện tại không đúng");
-        }
+        // VULN-OAUTH-PASSWORD-LOCKOUT FIX: Allow OAuth users to set password without current password
+        boolean isOAuthAccount = "GOOGLE_OAUTH_NO_PASSWORD".equals(account.getPasswordHash());
+        
+        if (!isOAuthAccount) {
+            // Regular account - verify current password
+            if (!passwordSecurity.verifyPassword(currentPassword, account.getPasswordHash())) {
+                throw new ValidationException("Mật khẩu hiện tại không đúng");
+            }
 
-        // VULN-029 FIX: Không cho phép đặt lại mật khẩu giống mật khẩu cũ
-        if (passwordSecurity.verifyPassword(newPassword, account.getPasswordHash())) {
-            throw new ValidationException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
+            // VULN-029 FIX: Không cho phép đặt lại mật khẩu giống mật khẩu cũ
+            if (passwordSecurity.verifyPassword(newPassword, account.getPasswordHash())) {
+                throw new ValidationException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
+            }
+        } else {
+            // OAuth account - allow setting password for the first time
+            log.info("OAuth user '{}' is setting password for the first time", account.getUsername());
         }
 
         String hashedPassword = passwordSecurity.hashPassword(newPassword);
         account.setPasswordHash(hashedPassword);
+        
+        // VULN-SESSION-REVOCATION FIX: Update lastPasswordResetDate to invalidate old tokens
+        account.setLastPasswordResetDate(LocalDateTime.now());
 
         log.warn("SECURITY: Password changed for user '{}'", account.getUsername());
     }

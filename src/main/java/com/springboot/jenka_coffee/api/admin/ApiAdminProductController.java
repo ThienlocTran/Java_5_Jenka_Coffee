@@ -28,10 +28,13 @@ public class ApiAdminProductController {
 
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final com.springboot.jenka_coffee.repository.OrderDetailRepository orderDetailRepository;
 
-    public ApiAdminProductController(ProductService productService, CategoryService categoryService) {
+    public ApiAdminProductController(ProductService productService, CategoryService categoryService,
+                                    com.springboot.jenka_coffee.repository.OrderDetailRepository orderDetailRepository) {
         this.productService = productService;
         this.categoryService = categoryService;
+        this.orderDetailRepository = orderDetailRepository;
     }
 
     // GET /api/admin/products?page=0&size=10
@@ -67,16 +70,27 @@ public class ApiAdminProductController {
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> createProduct(
-            @ModelAttribute Product product,
+            @ModelAttribute com.springboot.jenka_coffee.dto.request.ProductRequest request,
             @RequestParam("categoryId") String categoryId,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
-        // Always INSERT — force id=null to prevent accidental update
-        product.setId(null);
+        
+        // VULN-MASS-ASSIGNMENT FIX: Dùng DTO thay vì Entity
+        // Chỉ map các field được phép từ DTO sang Entity
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice() != null ? 
+                request.getPrice().setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
+        product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
+        
+        // Set category
         Category category = categoryService.findByIdOrThrow(categoryId);
         product.setCategory(category);
-        if (product.getPrice() != null) {
-            product.setPrice(product.getPrice().setScale(0, java.math.RoundingMode.HALF_UP));
-        }
+        
+        // Always INSERT — force id=null to prevent accidental update
+        product.setId(null);
+        
         Product saved = productService.saveProduct(product, file);
         return ResponseEntity.ok(ApiResponse.success("Thêm sản phẩm thành công", saved));
     }
@@ -108,6 +122,13 @@ public class ApiAdminProductController {
     private ResponseEntity<ApiResponse<Product>> doUpdate(
             Integer id, String name, String description, BigDecimal price,
             String categoryId, Boolean available, MultipartFile file) {
+        
+        // VULN-NEGATIVE-PRICE FIX: Validate price is not negative
+        if (price != null && price.compareTo(BigDecimal.ZERO) < 0) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Giá sản phẩm không thể âm!"));
+        }
+        
         Product existing = productService.findById(id);
         existing.setName(name);
         existing.setDescription(description);
@@ -125,30 +146,15 @@ public class ApiAdminProductController {
         return ResponseEntity.ok(ApiResponse.success("Đổi trạng thái sản phẩm thành công", null));
     }
 
-    // PATCH /api/admin/products/{id}/quantity  (cập nhật tồn kho)
-    @PatchMapping("/{id}/quantity")
-    public ResponseEntity<ApiResponse<Void>> updateQuantity(
-            @PathVariable Integer id,
-            @RequestBody Map<String, Integer> body) {
-        Integer qty = body.get("quantity");
-        if (qty == null || qty < 0) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Số lượng không hợp lệ"));
-        }
-        // Dùng query trực tiếp — tránh load/save toàn bộ entity
-        productService.updateQuantity(id, qty);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật tồn kho thành công", null));
-    }
-
-    // GET /api/admin/products/inventory  (danh sách tồn kho)
+    // GET /api/admin/products/inventory  (danh sách sản phẩm - không quản lý tồn kho)
     @GetMapping("/inventory")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getInventory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String keyword) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("quantity").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
         Page<Product> productPage;
 
         if (keyword != null && !keyword.isBlank()) {
@@ -157,13 +163,7 @@ public class ApiAdminProductController {
             productPage = productService.findAllPaginated(pageable);
         }
 
-        // Filter by stock status nếu có
         var items = productPage.getContent().stream()
-            .filter(p -> {
-                if ("out".equals(status)) return p.getQuantity() == null || p.getQuantity() == 0;
-                if ("low".equals(status)) return p.getQuantity() != null && p.getQuantity() > 0 && p.getQuantity() <= 5;
-                return true;
-            })
             .map(p -> {
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", p.getId());
@@ -171,7 +171,6 @@ public class ApiAdminProductController {
                 item.put("image", p.getImage());
                 item.put("categoryName", p.getCategory() != null ? p.getCategory().getName() : "");
                 item.put("price", p.getPrice());
-                item.put("quantity", p.getQuantity() != null ? p.getQuantity() : 0);
                 item.put("available", p.getAvailable());
                 return item;
             }).toList();
@@ -189,10 +188,21 @@ public class ApiAdminProductController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Integer id) {
         try {
-            // Dùng phương thức delete() có sẵn trong ProductService (không dùng RedirectAttributes)
+            // VULN-CONSTRAINT-VIOLATION FIX: Check if product is used in orders before deletion
+            long orderCount = orderDetailRepository.countByProductId(id);
+            if (orderCount > 0) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error(
+                                "Không thể xóa sản phẩm này vì đã có " + orderCount + 
+                                " đơn hàng sử dụng. Bạn có thể ẩn sản phẩm thay vì xóa."));
+            }
+            
             productService.delete(id);
             return ResponseEntity.ok(ApiResponse.success("Xóa sản phẩm thành công", null));
-        } catch (IllegalStateException e) {
+        } catch (com.springboot.jenka_coffee.exception.ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Không tìm thấy sản phẩm"));
+        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {

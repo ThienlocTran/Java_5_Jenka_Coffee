@@ -33,6 +33,16 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         Optional<Account> findByPhone(String phone);
 
         /**
+         * Find account by email
+         */
+        Optional<Account> findByEmail(String email);
+
+        /**
+         * Find account by username
+         */
+        Optional<Account> findByUsername(String username);
+
+        /**
          * Find all admin accounts (admin = true)
          * Generated query: SELECT * FROM accounts WHERE admin = true
          */

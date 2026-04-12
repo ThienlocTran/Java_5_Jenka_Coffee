@@ -176,4 +176,77 @@ public class UploadServiceImpl implements UploadService {
     public String getUploadDir() {
         return uploadDir;
     }
+    
+    /**
+     * VULN-ORPHANED-STORAGE FIX: Delete image from Cloudinary
+     * Extracts public_id from URL and calls Cloudinary destroy API
+     */
+    @Override
+    public void deleteImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return;
+        }
+        
+        // Only delete Cloudinary images (not external URLs like ui-avatars.com)
+        if (!imageUrl.contains("cloudinary.com")) {
+            log.debug("Skipping deletion of non-Cloudinary URL: {}", imageUrl);
+            return;
+        }
+        
+        try {
+            // Extract public_id from Cloudinary URL
+            // Example: https://res.cloudinary.com/xxx/image/upload/v123/jenka_coffee/abc.jpg
+            // public_id = jenka_coffee/abc
+            String publicId = extractPublicIdFromUrl(imageUrl);
+            if (publicId == null) {
+                log.warn("Could not extract public_id from URL: {}", imageUrl);
+                return;
+            }
+            
+            Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            String status = (String) result.get("result");
+            
+            if ("ok".equals(status)) {
+                log.info("Successfully deleted image from Cloudinary: {}", publicId);
+            } else {
+                log.warn("Failed to delete image from Cloudinary: {} - Status: {}", publicId, status);
+            }
+        } catch (Exception e) {
+            log.error("Error deleting image from Cloudinary: {}", imageUrl, e);
+            // Don't throw - deletion failure shouldn't block the main operation
+        }
+    }
+    
+    /**
+     * Extract public_id from Cloudinary URL
+     * Example: https://res.cloudinary.com/xxx/image/upload/v123/jenka_coffee/abc.jpg -> jenka_coffee/abc
+     */
+    private String extractPublicIdFromUrl(String url) {
+        try {
+            // Find "/upload/" in URL
+            int uploadIndex = url.indexOf("/upload/");
+            if (uploadIndex == -1) {
+                return null;
+            }
+            
+            // Get everything after "/upload/vXXX/"
+            String afterUpload = url.substring(uploadIndex + 8); // 8 = length of "/upload/"
+            
+            // Skip version number if present (e.g., "v1234567890/")
+            if (afterUpload.startsWith("v") && afterUpload.contains("/")) {
+                afterUpload = afterUpload.substring(afterUpload.indexOf("/") + 1);
+            }
+            
+            // Remove file extension
+            int lastDot = afterUpload.lastIndexOf(".");
+            if (lastDot > 0) {
+                afterUpload = afterUpload.substring(0, lastDot);
+            }
+            
+            return afterUpload;
+        } catch (Exception e) {
+            log.error("Error extracting public_id from URL: {}", url, e);
+            return null;
+        }
+    }
 }

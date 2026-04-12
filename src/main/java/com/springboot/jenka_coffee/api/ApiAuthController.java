@@ -1,19 +1,24 @@
 package com.springboot.jenka_coffee.api;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.dto.LoginRequest;
 import com.springboot.jenka_coffee.dto.SignupRequest;
 import com.springboot.jenka_coffee.dto.request.ForgotPasswordRequest;
+import com.springboot.jenka_coffee.dto.request.GoogleLoginRequest;
 import com.springboot.jenka_coffee.dto.request.ResetPasswordRequest;
 import com.springboot.jenka_coffee.dto.request.VerifyOtpRequest;
 import com.springboot.jenka_coffee.dto.response.AuthResult;
+import com.springboot.jenka_coffee.dto.response.AuthStatus;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.security.JwtService;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.service.GoogleOAuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,20 +28,27 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 public class ApiAuthController {
 
     private final AccountService accountService;
     private final JwtService jwtService;
+    private final GoogleOAuthService googleOAuthService;
+    private final com.springboot.jenka_coffee.service.JwtBlacklistService jwtBlacklistService;
 
     // VULN-L02 FIX: Detect production vs local để set Secure flag đúng
     @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:default}")
     private String activeProfile;
 
-    public ApiAuthController(AccountService accountService, JwtService jwtService) {
+    public ApiAuthController(AccountService accountService, JwtService jwtService, 
+                           GoogleOAuthService googleOAuthService,
+                           com.springboot.jenka_coffee.service.JwtBlacklistService jwtBlacklistService) {
         this.accountService = accountService;
         this.jwtService = jwtService;
+        this.googleOAuthService = googleOAuthService;
+        this.jwtBlacklistService = jwtBlacklistService;
     }
 
     @PostMapping("/login")
@@ -46,7 +58,7 @@ public class ApiAuthController {
 
         AuthResult result = accountService.authenticateWithResult(request.getUsername(), request.getPassword());
 
-        if (result.status() == AuthResult.Status.NOT_ACTIVATED) {
+        if (result.status() == AuthStatus.NOT_ACTIVATED) {
             // VULN-C03 FIX: Cùng message với INVALID_CREDENTIALS — không leak user existence
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Sai tên đăng nhập hoặc mật khẩu!"));
@@ -65,16 +77,38 @@ public class ApiAuthController {
         addTokenCookie(response, "refresh_token", refreshToken, 604800);     // 7 ngày
 
         Map<String, Object> data = buildUserData(account);
-        // Trả token trong body để frontend dùng cho Authorization header fallback
-        // (cần thiết cho dev cross-origin: localhost:5173 → localhost:8080)
-        // Frontend lưu vào sessionStorage (tự xóa khi đóng tab), không phải localStorage
-        data.put("accessToken", accessToken);
+        // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
+        // HttpOnly cookie đã đủ an toàn, không cần sessionStorage
+        // data.put("accessToken", accessToken); // REMOVED - tránh XSS
 
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+        // VULN-MOBILE-LOGOUT-BYPASS FIX: Extract token from both cookies AND headers
+        // Mobile apps use Authorization header, web browsers use cookies
+        String accessToken = extractCookie(request, "access_token");
+        String refreshToken = extractCookie(request, "refresh_token");
+        
+        // If not in cookies, check Authorization header (for mobile apps)
+        if (accessToken == null) {
+            accessToken = extractBearerToken(request);
+        }
+        
+        // Blacklist tokens - JwtBlacklistService tự động expire sau 7 ngày
+        if (accessToken != null && jwtService.isValid(accessToken)) {
+            // Tính expiration time: current time + 1 ngày (access token TTL)
+            long expirationMs = System.currentTimeMillis() + 86400000L; // 1 day
+            jwtBlacklistService.blacklistToken(accessToken, expirationMs);
+        }
+        
+        if (refreshToken != null && jwtService.isValid(refreshToken)) {
+            // Tính expiration time: current time + 7 ngày (refresh token TTL)
+            long expirationMs = System.currentTimeMillis() + 604800000L; // 7 days
+            jwtBlacklistService.blacklistToken(refreshToken, expirationMs);
+        }
+        
         clearTokenCookies(response);
         return ResponseEntity.ok(ApiResponse.success("Đã đăng xuất thành công!", null));
     }
@@ -91,6 +125,14 @@ public class ApiAuthController {
                     .body(ApiResponse.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."));
         }
 
+        // VULN-JWT-BLACKLIST-BYPASS FIX: Check if refresh token is blacklisted
+        if (jwtBlacklistService.isBlacklisted(refreshToken)) {
+            clearTokenCookies(response);
+            log.warn("SECURITY: Attempted to use blacklisted refresh token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Token đã bị vô hiệu hóa. Vui lòng đăng nhập lại."));
+        }
+
         String username = jwtService.extractUsername(refreshToken);
         Account account = accountService.findById(username);
         if (account == null || !account.getActivated()) {
@@ -102,7 +144,8 @@ public class ApiAuthController {
         addTokenCookie(response, "access_token", newAccessToken, 86400);
 
         Map<String, Object> data = buildUserData(account);
-        data.put("accessToken", newAccessToken);
+        // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
+        // data.put("accessToken", newAccessToken); // REMOVED
         return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
     }
 
@@ -143,6 +186,132 @@ public class ApiAuthController {
     public ResponseEntity<ApiResponse<Void>> verifyOTP(@Valid @RequestBody VerifyOtpRequest request) {
         accountService.verifyPhoneOTP(request.getPhone(), request.getOtp());
         return ResponseEntity.ok(ApiResponse.success("Tài khoản đã được kích hoạt thành công!", null));
+    }
+
+    /**
+     * Google OAuth Login
+     * Verify Google ID token, create/update account, return JWT
+     */
+    @PostMapping("/google-login")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request,
+            HttpServletResponse response) {
+        
+        // Verify Google ID token
+        GoogleIdToken.Payload payload = googleOAuthService.verifyIdToken(request.getIdToken());
+        
+        if (payload == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Google token không hợp lệ"));
+        }
+        
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+        String picture = (String) payload.get("picture");
+        
+        // VULN-PRE-ACCOUNT-HIJACKING FIX: Chỉ cho phép Google login nếu account đã tồn tại VÀ có password = GOOGLE_OAUTH
+        // Không cho phép login vào account đã đăng ký bằng password thông thường
+        Account account = accountService.findByEmail(email);
+        boolean needsPhone = false;
+        
+        if (account == null) {
+            // Create new account from Google - generate unique username from email
+            String username = email.split("@")[0] + "_" + System.currentTimeMillis();
+            
+            account = new Account();
+            account.setUsername(username);
+            account.setEmail(email);
+            account.setFullname(name);
+            account.setPhoto(picture);
+            account.setPasswordHash("GOOGLE_OAUTH_NO_PASSWORD"); // OAuth users don't have password
+            account.setActivated(true);
+            account.setAdmin(false);
+            account.setPoints(0);
+            account.setCustomerRank("MEMBER");
+            account.setPhone(null); // NULL phone, will be updated later
+            
+            accountService.save(account);
+            needsPhone = true; // New user needs to provide phone
+        } else {
+            // VULN-OAUTH-ACCOUNT-TAKEOVER FIX: Only allow OAuth takeover if account was created via OAuth
+            // Check if account was created by this specific OAuth provider
+            if (!"GOOGLE_OAUTH_NO_PASSWORD".equals(account.getPasswordHash())) {
+                // Account exists with password - check if activated
+                if (!account.getActivated()) {
+                    // SECURITY: Do NOT allow OAuth to take over unactivated password accounts
+                    // This prevents account takeover attack where:
+                    // 1. Attacker registers victim@gmail.com with password (unactivated)
+                    // 2. Victim tries to login with Google OAuth
+                    // 3. System would give attacker's account to victim
+                    log.warn("SECURITY: Blocked OAuth takeover attempt for unactivated password account: {}", email);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(ApiResponse.error("Email này đã được đăng ký. Vui lòng kích hoạt tài khoản hoặc đăng nhập bằng mật khẩu."));
+                } else {
+                    // Activated account with password - deny Google OAuth
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(ApiResponse.error("Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng mật khẩu."));
+                }
+            }
+            
+            if (account.getPhone() == null || account.getPhone().trim().isEmpty()) {
+                needsPhone = true; // Existing user without phone
+            }
+        }
+        
+        // Generate JWT tokens
+        String accessToken = jwtService.generateAccessToken(account.getUsername(), account.getAdmin());
+        String refreshToken = jwtService.generateRefreshToken(account.getUsername());
+        
+        // Set cookies
+        addTokenCookie(response, "access_token", accessToken, 86400);
+        addTokenCookie(response, "refresh_token", refreshToken, 604800);
+        
+        Map<String, Object> data = buildUserData(account);
+        // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
+        // data.put("accessToken", accessToken); // REMOVED
+        data.put("needsPhone", needsPhone);
+        
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
+    }
+
+    /**
+     * Update phone number for authenticated user
+     */
+    @PatchMapping("/update-phone")
+    public ResponseEntity<ApiResponse<Void>> updatePhone(
+            @AuthenticationPrincipal String username,
+            @RequestBody Map<String, String> request) {
+        
+        String phone = request.get("phone");
+        if (phone == null || phone.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số điện thoại không hợp lệ"));
+        }
+        
+        accountService.updatePhone(username, phone);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật số điện thoại thành công", null));
+    }
+
+    /**
+     * VULN-ZOMBIE-OTP FIX: Add resend OTP endpoint
+     * Allows users to request new OTP if they didn't receive the first one
+     */
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<Void>> resendOTP(@RequestBody Map<String, String> request) {
+        String phone = request.get("phone");
+        if (phone == null || phone.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số điện thoại không hợp lệ"));
+        }
+        
+        try {
+            accountService.resendActivation(phone);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Đã gửi lại mã OTP. Vui lòng kiểm tra tin nhắn.", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     /** Lấy thông tin user hiện tại từ JWT (thay thế session /me) */
@@ -201,5 +370,17 @@ public class ApiAuthController {
                 .filter(c -> name.equals(c.getName()))
                 .map(Cookie::getValue)
                 .findFirst().orElse(null);
+    }
+    
+    /**
+     * VULN-MOBILE-LOGOUT-BYPASS FIX: Extract JWT from Authorization header
+     * Mobile apps send tokens via "Authorization: Bearer <token>" header
+     */
+    private String extractBearerToken(HttpServletRequest req) {
+        String header = req.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+        return null;
     }
 }

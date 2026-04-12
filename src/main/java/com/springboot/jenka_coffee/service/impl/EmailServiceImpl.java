@@ -42,6 +42,9 @@ public class EmailServiceImpl implements EmailService {
 
             String activationLink = baseUrl + "/auth/activate/" + token;
 
+            // BUG-41 FIX: HTML-escape fullname to prevent XSS/HTML injection via email
+            String safeName = HtmlUtils.htmlEscape(fullname != null ? fullname : "");
+            
             String htmlContent = """
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #6F4E37;">Xin chào %s!</h2>
@@ -59,7 +62,7 @@ public class EmailServiceImpl implements EmailService {
                         <p style="color: #999; font-size: 12px;">Jenka Coffee - Hương vị cà phê đích thực</p>
                     </div>
                     """
-                    .formatted(fullname, activationLink, activationLink);
+                    .formatted(safeName, activationLink, activationLink);
 
             helper.setText(htmlContent, true);
 
@@ -83,6 +86,9 @@ public class EmailServiceImpl implements EmailService {
 
             String resetLink = baseUrl + "/auth/reset-password/" + token;
 
+            // BUG-41 FIX: HTML-escape fullname to prevent XSS/HTML injection via email
+            String safeName = HtmlUtils.htmlEscape(fullname != null ? fullname : "");
+            
             String htmlContent = """
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #6F4E37;">Xin chào %s!</h2>
@@ -101,7 +107,7 @@ public class EmailServiceImpl implements EmailService {
                         <p style="color: #999; font-size: 12px;">Jenka Coffee - Hương vị cà phê đích thực</p>
                     </div>
                     """
-                    .formatted(fullname, resetLink, resetLink);
+                    .formatted(safeName, resetLink, resetLink);
 
             helper.setText(htmlContent, true);
 
@@ -129,14 +135,14 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(adminEmail);
             helper.setSubject("[Jenka Coffee] Đơn hàng mới #" + orderId);
 
-            String formatted = total != null
+            formatted = total != null
                     ? String.format("%,.0f", total.doubleValue()) + " ₫"
                     : "N/A";
 
             // VULN-066 FIX: Escape tất cả user-controlled fields trước khi inject vào HTML
-            String safeName    = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
-            String safePhone   = HtmlUtils.htmlEscape(phone != null ? phone : "");
-            String safeAddress = HtmlUtils.htmlEscape(address != null ? address : "");
+            safeName = HtmlUtils.htmlEscape(customerName != null ? customerName : "");
+            safePhone = HtmlUtils.htmlEscape(phone != null ? phone : "");
+            safeAddress = HtmlUtils.htmlEscape(address != null ? address : "");
 
             String html = """
                     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden;">

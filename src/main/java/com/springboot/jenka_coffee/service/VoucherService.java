@@ -22,9 +22,15 @@ public interface VoucherService {
 
     /**
      * VULN-C02 FIX: Validate + acquire PESSIMISTIC_WRITE lock + consume trong 1 bước.
+     * VULN-VOUCHER-SIPHON FIX: Check user đã dùng voucher này chưa.
      * Ngăn race condition giữa validate và consume.
+     * 
+     * @param voucherCode Mã voucher
+     * @param orderSubtotal Tổng tiền đơn hàng
+     * @param username Username của user (null nếu guest)
+     * @return Voucher đã lock
      */
-    Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal);
+    Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal, String username);
 
     /**
      * Trừ 1 lượt dùng (quantity > 0). Dùng pessimistic lock để tránh race condition.
