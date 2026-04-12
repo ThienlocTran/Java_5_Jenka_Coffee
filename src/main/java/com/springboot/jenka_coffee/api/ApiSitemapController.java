@@ -41,8 +41,8 @@ public class ApiSitemapController {
     public ResponseEntity<String> sitemap() {
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<urlset xmlns=\"https://www.sitemaps.org/schemas/sitemap/0.9\"\n");
-        xml.append("        xmlns:image=\"https://www.google.com/schemas/sitemap-image/1.1\">\n");
+        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n");
+        xml.append("        xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n");
 
         String today = LocalDateTime.now().format(W3C_DATE);
 

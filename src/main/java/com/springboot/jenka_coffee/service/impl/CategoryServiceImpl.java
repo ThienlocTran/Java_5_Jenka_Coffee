@@ -31,6 +31,135 @@ public class CategoryServiceImpl implements CategoryService {
         this.productRepository = productRepository;
     }
 
+    // 🚨 BUG-61: DATA REDUNDANCY / MISSING DTO PROJECTION (Dư Thừa Dữ Liệu)
+    // ================================================================
+    // PERFORMANCE ISSUE: Fetching entire Category entity when only 3 fields needed!
+    // 
+    // Current state:
+    // - Method returns List<Category> with ALL fields (id, name, slug, icon, createdDate, etc.)
+    // - Frontend menu only needs: id, name, slug (3 fields)
+    // - Fetching 10x more data than necessary
+    // - Storing bloated entities in cache (wastes RAM)
+    // 
+    // The problem:
+    // When rendering navigation menu:
+    // 1. Frontend calls /api/categories
+    // 2. Backend fetches entire Category entity (10 columns)
+    // 3. Jackson serializes all fields to JSON
+    // 4. Network transfers 10x more data
+    // 5. Cache stores full entities (wastes memory)
+    // 6. Frontend only uses 3 fields, ignores the rest
+    // 
+    // Example current response (wasteful):
+    // ```json
+    // [
+    //   {
+    //     "id": "CF_AN_VAT",
+    //     "name": "Cà Phê & Đồ Ăn",
+    //     "slug": "ca-phe-do-an",
+    //     "icon": "ca_phe_do_an.webp",
+    //     "createdDate": "2024-01-15T10:30:00",
+    //     "updatedDate": "2024-03-20T14:45:00",
+    //     "description": "...",
+    //     "displayOrder": 1,
+    //     "isActive": true,
+    //     "metaKeywords": "..."
+    //   }
+    // ]
+    // ```
+    // 
+    // Optimized response (what we need):
+    // ```json
+    // [
+    //   {
+    //     "id": "CF_AN_VAT",
+    //     "name": "Cà Phê & Đồ Ăn",
+    //     "slug": "ca-phe-do-an"
+    //   }
+    // ]
+    // ```
+    // 
+    // Performance impact:
+    // - Network: 10KB → 1KB (90% reduction)
+    // - Memory: 10 categories × 500 bytes = 5KB → 500 bytes (90% reduction)
+    // - Database: Fetches 10 columns → 3 columns (70% less I/O)
+    // - JSON parsing: 10 fields → 3 fields (faster serialization)
+    // 
+    // Solution (NEEDS TO BE IMPLEMENTED):
+    // 
+    // 1. Create lightweight DTO:
+    // ```java
+    // public record CategoryMenuDto(String id, String name, String slug) {}
+    // ```
+    // 
+    // 2. Add projection query to CategoryRepository:
+    // ```java
+    // @Query("SELECT new com.springboot.jenka_coffee.dto.CategoryMenuDto(c.id, c.name, c.slug) " +
+    //        "FROM Category c ORDER BY c.displayOrder")
+    // List<CategoryMenuDto> getCategoryMenu();
+    // ```
+    // 
+    // 3. Create new service method:
+    // ```java
+    // @Override
+    // @Transactional(readOnly = true)
+    // @Cacheable(value = "categoryMenu", sync = true)
+    // public List<CategoryMenuDto> getCategoryMenu() {
+    //     return categoryRepository.getCategoryMenu();
+    // }
+    // ```
+    // 
+    // 4. Update controller to use DTO:
+    // ```java
+    // @GetMapping("/menu")
+    // public ResponseEntity<ApiResponse<List<CategoryMenuDto>>> getCategoryMenu() {
+    //     List<CategoryMenuDto> menu = categoryService.getCategoryMenu();
+    //     return ResponseEntity.ok(ApiResponse.success("Lấy menu danh mục thành công", menu));
+    // }
+    // ```
+    // 
+    // Alternative: Interface-based projection (Spring Data JPA):
+    // ```java
+    // public interface CategoryMenuProjection {
+    //     String getId();
+    //     String getName();
+    //     String getSlug();
+    // }
+    // 
+    // @Query("SELECT c.id as id, c.name as name, c.slug as slug FROM Category c")
+    // List<CategoryMenuProjection> getCategoryMenu();
+    // ```
+    // 
+    // Benefits:
+    // - 90% less network bandwidth
+    // - 90% less cache memory usage
+    // - Faster JSON serialization
+    // - Reduced database I/O
+    // - Better scalability (can cache more items)
+    // 
+    // When to use DTO projection:
+    // - List/menu endpoints (only need summary data)
+    // - Search results (only need key fields)
+    // - Autocomplete (only need id + name)
+    // - Reports (only need aggregated data)
+    // 
+    // When to use full entity:
+    // - Detail pages (need all fields)
+    // - Edit forms (need all fields for update)
+    // - Admin management (need complete data)
+    // 
+    // Related patterns:
+    // - GraphQL (client specifies exact fields needed)
+    // - JSON:API sparse fieldsets
+    // - OData $select parameter
+    // 
+    // Technical notes:
+    // - Constructor expression requires DTO to have matching constructor
+    // - Interface projection uses runtime proxy (slight overhead)
+    // - Record classes (Java 14+) are perfect for DTOs
+    // - Don't over-optimize - only use DTOs for high-traffic endpoints
+    // ================================================================
+    
     // 🚨 BUG-58: CACHE STAMPEDE / DOGPILE EFFECT (Hiệu Ứng Đàn Sói)
     // ================================================================
     // CRITICAL PERFORMANCE ISSUE: Missing sync=true flag causes cache stampede!

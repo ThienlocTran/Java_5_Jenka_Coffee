@@ -213,8 +213,11 @@ public class VoucherServiceImpl implements VoucherService {
      * BUG-44 FIX: Support multiple uses per user based on maxUsesPerUser field.
      * Gọi từ checkout() — đảm bảo không có race condition window.
      */
+    // TRANSACTION FIX: Use MANDATORY propagation to participate in caller's transaction
+    // This prevents "Transaction silently rolled back" error when BusinessRuleException is thrown
+    // The exception will properly rollback the entire checkout transaction (desired behavior)
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal, String username) {
         // Acquire PESSIMISTIC_WRITE lock ngay từ đầu — không có window giữa validate và consume
         Voucher v = entityManager.find(

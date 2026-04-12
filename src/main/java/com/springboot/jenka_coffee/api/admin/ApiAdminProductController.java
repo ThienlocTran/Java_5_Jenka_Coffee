@@ -91,7 +91,14 @@ public class ApiAdminProductController {
         // Always INSERT — force id=null to prevent accidental update
         product.setId(null);
         
-        Product saved = productService.saveProduct(product, file);
+        // Use create() instead of saveProduct() to auto-generate slug
+        Product saved = productService.create(product);
+        
+        // Upload image if provided (after product created)
+        if (file != null && !file.isEmpty()) {
+            saved = productService.saveProduct(saved, file);
+        }
+        
         return ResponseEntity.ok(ApiResponse.success("Thêm sản phẩm thành công", saved));
     }
 
@@ -146,6 +153,25 @@ public class ApiAdminProductController {
         return ResponseEntity.ok(ApiResponse.success("Đổi trạng thái sản phẩm thành công", null));
     }
 
+    // PUT /api/admin/products/{id}/toggle-featured  (đánh dấu sản phẩm nổi bật)
+    @PutMapping("/{id}/toggle-featured")
+    public ResponseEntity<ApiResponse<Product>> toggleFeatured(@PathVariable Integer id) {
+        Product product = productService.findById(id);
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Không tìm thấy sản phẩm"));
+        }
+        
+        // Toggle featured status
+        product.setFeatured(!Boolean.TRUE.equals(product.getFeatured()));
+        Product saved = ((ProductServiceImpl) productService).update(product);
+        
+        String message = Boolean.TRUE.equals(saved.getFeatured()) 
+            ? "Đã đánh dấu sản phẩm nổi bật" 
+            : "Đã bỏ đánh dấu sản phẩm nổi bật";
+        return ResponseEntity.ok(ApiResponse.success(message, saved));
+    }
+
     // GET /api/admin/products/inventory  (danh sách sản phẩm - không quản lý tồn kho)
     @GetMapping("/inventory")
     @Transactional(readOnly = true)
@@ -172,6 +198,7 @@ public class ApiAdminProductController {
                 item.put("categoryName", p.getCategory() != null ? p.getCategory().getName() : "");
                 item.put("price", p.getPrice());
                 item.put("available", p.getAvailable());
+                item.put("featured", p.getFeatured()); // Add featured status
                 return item;
             }).toList();
 

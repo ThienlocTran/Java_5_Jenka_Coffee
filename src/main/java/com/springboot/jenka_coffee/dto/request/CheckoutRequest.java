@@ -12,7 +12,7 @@ public class CheckoutRequest {
 
     @NotBlank(message = "{CheckoutRequest.fullname.NotBlank}")
     @Size(min = 3, max = 100, message = "{CheckoutRequest.fullname.Size}")
-    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "{CheckoutRequest.fullname.Pattern}")
+    @Pattern(regexp = "^[\\p{L}\\s\\d_-]+$", message = "{CheckoutRequest.fullname.Pattern}")
     private String fullname;
 
     @NotBlank(message = "{CheckoutRequest.email.NotBlank}")

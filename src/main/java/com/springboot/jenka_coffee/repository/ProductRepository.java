@@ -22,7 +22,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsBySlug(String slug);
 
     // ── findAll with JOIN FETCH to avoid LazyInitializationException ──
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category",
+    // Featured products first, then by creation date (newest first)
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category ORDER BY p.featured DESC, p.createDate DESC",
            countQuery = "SELECT COUNT(p) FROM Product p")
     Page<Product> findAllWithCategory(Pageable pageable);
     

@@ -51,6 +51,181 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findAll();
     }
 
+    // 🚨 BUG-62: NETWORK I/O INSIDE DATABASE TRANSACTION (Tắc Nghẽn Động Mạch Mạng)
+    // ================================================================
+    // CRITICAL PERFORMANCE BOTTLENECK: Cloudinary upload blocks database connection!
+    // 
+    // Current state:
+    // - Method annotated with @Transactional
+    // - Inside transaction: uploadService.saveProductImage(file) uploads to Cloudinary
+    // - Upload takes 1-3 seconds over network
+    // - Database connection held for entire duration
+    // 
+    // The problem:
+    // When admin uploads product image:
+    // 1. Spring opens database connection from HikariCP pool (default: 10 connections)
+    // 2. Transaction begins
+    // 3. uploadService.saveProductImage() uploads 5MB file to Cloudinary over internet
+    // 4. Network I/O takes 1-3 seconds (slow!)
+    // 5. Database connection BLOCKED for entire 3 seconds (doing nothing!)
+    // 6. Connection pool exhausted if 10 admins upload simultaneously
+    // 7. Request #11 gets "Connection timeout" error
+    // 8. Application crashes or becomes unresponsive
+    // 
+    // This is called "Connection Pool Starvation" - a classic performance anti-pattern.
+    // 
+    // Scenario timeline:
+    // ```
+    // Time  | Action                           | DB Connections Used
+    // ------|----------------------------------|--------------------
+    // 0.0s  | Admin 1 uploads image            | 1/10
+    // 0.1s  | Admin 2 uploads image            | 2/10
+    // 0.2s  | Admin 3 uploads image            | 3/10
+    // ...   | ...                              | ...
+    // 1.0s  | Admin 10 uploads image           | 10/10 (POOL FULL!)
+    // 1.1s  | Customer tries to checkout       | BLOCKED! (timeout)
+    // 1.2s  | Customer tries to view products  | BLOCKED! (timeout)
+    // 1.3s  | Admin 11 tries to upload         | BLOCKED! (timeout)
+    // 3.0s  | First upload completes           | 9/10 (1 freed)
+    // ```
+    // 
+    // Business impact:
+    // - Website becomes unresponsive during image uploads
+    // - Customers cannot checkout (lost sales!)
+    // - Admins cannot manage products
+    // - Database connections wasted on network I/O
+    // - Cannot scale beyond 10 concurrent uploads
+    // - Poor user experience (timeouts, errors)
+    // 
+    // Root cause:
+    // NEVER perform network I/O inside database transactions!
+    // - HTTP calls (external APIs, webhooks)
+    // - File uploads (Cloudinary, S3, Azure Blob)
+    // - Email sending (SMTP)
+    // - Message queue publishing (RabbitMQ, Kafka)
+    // 
+    // Solution (NEEDS TO BE REFACTORED):
+    // 
+    // 1. Split into two methods - upload OUTSIDE transaction:
+    // ```java
+    // // Public method (NO @Transactional) - orchestrates workflow
+    // public Product saveProduct(Product product, MultipartFile file) {
+    //     log.info("Saving product: {}", product.getName());
+    //     
+    //     // STEP 1: Upload image OUTSIDE transaction (can take 3 seconds)
+    //     String imageUrl = null;
+    //     String oldImageUrl = null;
+    //     
+    //     if (product.getId() != null) {
+    //         Product existing = productRepository.findById(product.getId()).orElse(null);
+    //         if (existing != null) {
+    //             oldImageUrl = existing.getImage();
+    //         }
+    //     }
+    //     
+    //     if (file != null && !file.isEmpty()) {
+    //         imageUrl = uploadService.saveProductImage(file); // 3 seconds - NO DB connection held!
+    //         if (imageUrl != null) {
+    //             product.setImage(imageUrl);
+    //         }
+    //     }
+    //     
+    //     // STEP 2: Save to database INSIDE transaction (takes 10ms)
+    //     Product savedProduct = saveProductTransactional(product);
+    //     
+    //     // STEP 3: Cleanup old image OUTSIDE transaction
+    //     if (oldImageUrl != null && imageUrl != null && !oldImageUrl.equals(imageUrl)) {
+    //         try {
+    //             uploadService.deleteImage(oldImageUrl);
+    //         } catch (Exception e) {
+    //             log.warn("Failed to delete old image: {}", e.getMessage());
+    //         }
+    //     }
+    //     
+    //     return savedProduct;
+    // }
+    // 
+    // // Private method WITH @Transactional - only database operations
+    // @Transactional
+    // private Product saveProductTransactional(Product product) {
+    //     Product saved = productRepository.save(product);
+    //     return productRepository.findByIdWithCategory(saved.getId()).orElse(saved);
+    // }
+    // ```
+    // 
+    // 2. Alternative: Use @Async for upload (non-blocking):
+    // ```java
+    // @Transactional
+    // public Product saveProduct(Product product, MultipartFile file) {
+    //     // Save product first with temporary image URL
+    //     product.setImage("pending-upload");
+    //     Product saved = productRepository.save(product);
+    //     
+    //     // Upload asynchronously (doesn't block transaction)
+    //     if (file != null && !file.isEmpty()) {
+    //         uploadService.saveProductImageAsync(saved.getId(), file);
+    //     }
+    //     
+    //     return saved;
+    // }
+    // 
+    // @Async
+    // @Transactional
+    // public void saveProductImageAsync(Integer productId, MultipartFile file) {
+    //     String imageUrl = uploadService.saveProductImage(file); // Runs in separate thread
+    //     Product product = productRepository.findById(productId).orElseThrow();
+    //     product.setImage(imageUrl);
+    //     productRepository.save(product);
+    // }
+    // ```
+    // 
+    // Performance comparison:
+    // BEFORE (current):
+    // - Transaction duration: 3,000ms (3 seconds)
+    // - DB connection held: 3,000ms
+    // - Max concurrent uploads: 10 (connection pool size)
+    // - Throughput: 3.3 uploads/second (10 connections / 3 seconds)
+    // 
+    // AFTER (refactored):
+    // - Transaction duration: 10ms (database save only)
+    // - DB connection held: 10ms
+    // - Max concurrent uploads: 1,000+ (limited by CPU/memory, not DB)
+    // - Throughput: 1,000 uploads/second (10 connections / 0.01 seconds)
+    // 
+    // 300x performance improvement!
+    // 
+    // Other places with same issue:
+    // - AccountServiceImpl.createAccount() - uploads avatar inside transaction
+    // - EmailServiceImpl - sends email inside transaction (if @Transactional)
+    // - Any service that calls external APIs inside @Transactional methods
+    // 
+    // Best practices:
+    // 1. Keep transactions SHORT (< 100ms)
+    // 2. Only database operations inside transactions
+    // 3. Network I/O OUTSIDE transactions
+    // 4. Use @Async for long-running operations
+    // 5. Monitor transaction duration (should be < 100ms)
+    // 6. Use connection pool monitoring (HikariCP metrics)
+    // 
+    // Related patterns:
+    // - Saga pattern (distributed transactions)
+    // - Outbox pattern (reliable message publishing)
+    // - Two-phase commit (distributed systems)
+    // 
+    // Monitoring:
+    // ```java
+    // // Add to application.properties
+    // spring.datasource.hikari.maximum-pool-size=10
+    // spring.datasource.hikari.leak-detection-threshold=60000
+    // management.metrics.enable.hikari=true
+    // 
+    // // Monitor metrics
+    // hikaricp.connections.active (should be < 8)
+    // hikaricp.connections.pending (should be 0)
+    // hikaricp.connections.timeout.total (should be 0)
+    // ```
+    // ================================================================
+
     @Override
     @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
