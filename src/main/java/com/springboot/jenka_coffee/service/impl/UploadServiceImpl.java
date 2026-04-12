@@ -116,8 +116,8 @@ public class UploadServiceImpl implements UploadService {
         // Create temp file with safe name
         File tempFile = File.createTempFile("upload_" + UUID.randomUUID(), "." + extension);
 
-        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-            fos.write(file.getBytes());
+        try (java.io.InputStream is = file.getInputStream()) {
+            Files.copy(is, tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
 
         return tempFile;
@@ -163,8 +163,8 @@ public class UploadServiceImpl implements UploadService {
             throw new IOException("Path traversal detected in filename!");
         }
 
-        try (FileOutputStream fos = new FileOutputStream(targetFile)) {
-            fos.write(file.getBytes());
+        try (java.io.InputStream is = file.getInputStream()) {
+            Files.copy(is, targetFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
 
         String relativePath = subfolder + "/" + uniqueFilename;

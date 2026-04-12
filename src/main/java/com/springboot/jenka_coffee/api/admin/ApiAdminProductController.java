@@ -126,6 +126,7 @@ public class ApiAdminProductController {
         return doUpdate(id, name, description, price, categoryId, available, file);
     }
 
+    @Transactional
     private ResponseEntity<ApiResponse<Product>> doUpdate(
             Integer id, String name, String description, BigDecimal price,
             String categoryId, Boolean available, MultipartFile file) {

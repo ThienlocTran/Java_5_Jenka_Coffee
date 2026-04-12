@@ -227,7 +227,6 @@ public class ProductServiceImpl implements ProductService {
     // ================================================================
 
     @Override
-    @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
@@ -242,6 +241,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
+        // 1. GỌI MẠNG CLOUDINARY BÊN NGOÀI @Transactional
         if (file != null && !file.isEmpty()) {
             try {
                 String imageUrl = uploadService.saveProductImage(file);
@@ -265,9 +265,14 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
+        // 2. LƯU BÀO DATABASE MỚI MỞ TRANSACTION
+        return saveProductTransactional(product);
+    }
+    
+    @Transactional
+    public Product saveProductTransactional(Product product) {
         Product savedProduct = productRepository.save(product);
         log.info("Successfully saved product with ID: {}", savedProduct.getId());
-        // Reload với JOIN FETCH để category không còn là lazy proxy
         return productRepository.findByIdWithCategory(savedProduct.getId())
                 .orElse(savedProduct);
     }

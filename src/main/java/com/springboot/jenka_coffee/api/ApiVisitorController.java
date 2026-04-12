@@ -183,9 +183,9 @@ public class ApiVisitorController {
     }
     
     /**
-     * Get unique client identifier from IP + User-Agent
+     * Get unique client identifier from IP + User-Agent + SessionId
      * Prevents same user from being counted multiple times
-     * VULN-FAKE-ANALYTICS FIX: Use trusted proxy logic to prevent IP spoofing
+     * DEV-FIX: Use sessionId to track individual browser tabs correctly
      */
     private String getClientIdentifier(HttpServletRequest request) {
         String ip = getClientIp(request);
@@ -193,8 +193,12 @@ public class ApiVisitorController {
         String userAgent = request.getHeader("User-Agent");
         if (userAgent == null) userAgent = "unknown";
         
-        // Combine IP + first 50 chars of user agent for uniqueness
-        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent);
+        // Get or create session ID for this browser tab
+        String sessionId = request.getSession(true).getId();
+        
+        // Combine IP + first 50 chars of user agent + sessionId for uniqueness
+        // This ensures each browser tab is tracked separately but correctly
+        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent) + "|" + sessionId;
     }
     
     /**

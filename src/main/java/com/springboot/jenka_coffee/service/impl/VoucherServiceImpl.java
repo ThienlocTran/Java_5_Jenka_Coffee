@@ -217,7 +217,7 @@ public class VoucherServiceImpl implements VoucherService {
     // This prevents "Transaction silently rolled back" error when BusinessRuleException is thrown
     // The exception will properly rollback the entire checkout transaction (desired behavior)
     @Override
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRED)
     public Voucher validateAndLockVoucher(String voucherCode, BigDecimal orderSubtotal, String username) {
         // Acquire PESSIMISTIC_WRITE lock ngay từ đầu — không có window giữa validate và consume
         Voucher v = entityManager.find(
