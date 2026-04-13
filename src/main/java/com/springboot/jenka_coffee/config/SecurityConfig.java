@@ -78,7 +78,7 @@ public class SecurityConfig {
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
                     "img-src 'self' data: https://res.cloudinary.com https://ui-avatars.com https://images.unsplash.com; " +
                     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-                    "connect-src 'self' https://java5jenkacoffee-production.up.railway.app; " +
+                    "connect-src 'self' http://localhost:8080 https://java5jenkacoffee-production.up.railway.app; " +
                     "frame-src https://www.google.com; " +
                     "object-src 'none'"
                 ))
