@@ -1,6 +1,6 @@
 -- VULN-SESSION-REVOCATION FIX: Add lastPasswordResetDate to Account table
 -- Used to invalidate old JWT tokens after password reset
-ALTER TABLE Accounts ADD COLUMN IF NOT EXISTS lastPasswordResetDate TIMESTAMP;
+ALTER TABLE Accounts ADD COLUMN IcF NOT EXISTS lastPasswordResetDate TIMESTAMP;
 
 -- VULN-UNCAPPED-VOUCHER FIX: Add maxDiscountAmount to Voucher table
 -- Caps percentage discounts to prevent unlimited discounts on large orders
