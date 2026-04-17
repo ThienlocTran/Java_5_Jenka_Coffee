@@ -1,5 +1,13 @@
 package com.springboot.jenka_coffee.api.admin;
 
+// ============================================================================
+// PHASE 1 SCOPE REDUCTION: Booking feature temporarily disabled
+// ============================================================================
+// Customer decided to focus on core e-commerce flow first.
+// Booking functionality will be re-enabled in Phase 2.
+// ============================================================================
+
+/*
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.ServiceBooking;
 import com.springboot.jenka_coffee.service.BookingService;
@@ -19,7 +27,6 @@ public class ApiAdminBookingController {
 
     private final BookingService bookingService;
 
-    // VULN-052 FIX: Enum whitelist cho booking status
     private enum BookingStatus { PENDING, CONFIRMED, COMPLETED, CANCELLED }
 
     public ApiAdminBookingController(BookingService bookingService) {
@@ -31,7 +38,6 @@ public class ApiAdminBookingController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // VULN-055 FIX: Giới hạn page size tránh Memory DoS
         size = Math.min(Math.max(size, 1), 100);
         page = Math.max(page, 0);
 
@@ -52,7 +58,6 @@ public class ApiAdminBookingController {
             @PathVariable Long id,
             @RequestParam String status) {
 
-        // VULN-052 FIX: Validate status theo enum whitelist — không cho phép free-text
         try {
             BookingStatus.valueOf(status.toUpperCase().trim());
         } catch (IllegalArgumentException e) {
@@ -64,3 +69,4 @@ public class ApiAdminBookingController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công!", "OK"));
     }
 }
+*/

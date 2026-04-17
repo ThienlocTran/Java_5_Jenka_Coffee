@@ -1,5 +1,14 @@
 package com.springboot.jenka_coffee.api;
 
+// ============================================================================
+// PHASE 1 SCOPE REDUCTION: Voucher feature temporarily disabled
+// ============================================================================
+// Customer decided to simplify checkout flow - no voucher discounts in Phase 1.
+// Checkout will only use product sale prices (if any).
+// Voucher functionality will be re-enabled in Phase 2.
+// ============================================================================
+
+/*
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Voucher;
 import com.springboot.jenka_coffee.service.VoucherService;
@@ -18,10 +27,6 @@ public class ApiVoucherController {
 
     private final VoucherService voucherService;
 
-    /**
-     * POST /api/vouchers/check — Yêu cầu đăng nhập (VULN-020 FIX)
-     * Chỉ trả về thông tin cần thiết cho checkout — không leak scope/productIds
-     */
     @PostMapping("/check")
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkVoucher(
             @RequestBody Map<String, Object> body,
@@ -37,7 +42,6 @@ public class ApiVoucherController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Vui lòng nhập mã giảm giá!"));
         }
 
-        // VULN-M05 FIX: Validate subtotal range — ngăn BigDecimal injection
         BigDecimal subtotal;
         try {
             subtotal = new BigDecimal(body.getOrDefault("subtotal", "0").toString());
@@ -51,7 +55,6 @@ public class ApiVoucherController {
         Voucher v = voucherService.checkVoucher(code, subtotal);
         BigDecimal discount = v.calculateDiscount(subtotal);
 
-        // VULN-020 FIX: Không trả về scope và applicableProductIds (business intelligence leak)
         return ResponseEntity.ok(ApiResponse.success("Mã giảm giá hợp lệ!", Map.of(
                 "code",           v.getCode(),
                 "discountType",   v.getDiscountType(),
@@ -61,3 +64,4 @@ public class ApiVoucherController {
         )));
     }
 }
+*/
