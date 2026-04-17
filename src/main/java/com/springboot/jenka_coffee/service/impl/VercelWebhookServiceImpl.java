@@ -100,6 +100,12 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
         }
 
         // ========================================================================
+        // FIX: Update lastTriggerTime IMMEDIATELY after acquiring lock
+        // This prevents spam when Vercel is down (cooldown applies regardless of success/failure)
+        // ========================================================================
+        lastTriggerTime.set(System.currentTimeMillis());
+
+        // ========================================================================
         // CRITICAL SECTION: Trigger with retry + exponential backoff
         // ========================================================================
         try {
@@ -127,7 +133,6 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
                     // Check response status
                     if (response.getStatusCode().is2xxSuccessful()) {
                         success = true;
-                        lastTriggerTime.set(System.currentTimeMillis()); // Update last trigger time
                         log.info("[VERCEL] ✓ Trigger build SUCCESS (Attempt {}/{}). Vercel will rebuild in ~2-3 minutes.", 
                                 attempt, MAX_RETRIES);
                     } else {
