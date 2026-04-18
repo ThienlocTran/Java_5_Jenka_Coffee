@@ -82,9 +82,11 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
             return;
         }
 
-        // Guard: Check cooldown period (prevent spam)
+        // Capture timestamp ONCE for consistent cooldown check and update
         long now = System.currentTimeMillis();
         long lastTrigger = lastTriggerTime.get();
+        
+        // Guard: Check cooldown period (prevent spam)
         if (now - lastTrigger < COOLDOWN_MS) {
             long remainingSeconds = (COOLDOWN_MS - (now - lastTrigger)) / 1000;
             log.info("[VERCEL] Trigger skipped (Cooldown: {}s remaining). Prioritizing consistency over freshness.", 
@@ -99,11 +101,9 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
             return;
         }
 
-        // ========================================================================
-        // FIX: Update lastTriggerTime IMMEDIATELY after acquiring lock
+        // Update lastTriggerTime immediately after acquiring lock
         // This prevents spam when Vercel is down (cooldown applies regardless of success/failure)
-        // ========================================================================
-        lastTriggerTime.set(System.currentTimeMillis());
+        lastTriggerTime.set(now);
 
         // ========================================================================
         // CRITICAL SECTION: Trigger with retry + exponential backoff
