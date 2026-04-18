@@ -1,5 +1,14 @@
 package com.springboot.jenka_coffee.api.admin;
 
+// ============================================================================
+// PHASE 1 SCOPE REDUCTION: Voucher feature temporarily disabled
+// ============================================================================
+// Customer decided to simplify checkout flow - no voucher discounts in Phase 1.
+// Checkout will only use product sale prices (if any).
+// Voucher functionality will be re-enabled in Phase 2.
+// ============================================================================
+
+/*
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Voucher;
 import com.springboot.jenka_coffee.service.VoucherService;
@@ -43,7 +52,7 @@ public class ApiAdminVoucherController {
     public ResponseEntity<ApiResponse<Voucher>> update(
             @PathVariable String code,
             @RequestBody Voucher voucher) {
-        voucher.setCode(code); // đảm bảo code không bị thay đổi
+        voucher.setCode(code);
         Voucher saved = voucherService.save(voucher);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật voucher thành công", saved));
     }
@@ -61,3 +70,4 @@ public class ApiAdminVoucherController {
         return ResponseEntity.ok(ApiResponse.success(msg, v));
     }
 }
+*/

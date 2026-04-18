@@ -9,6 +9,7 @@ import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.repository.ProductImageRepository;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.service.UploadService;
+import com.springboot.jenka_coffee.service.VercelWebhookService;
 import com.springboot.jenka_coffee.util.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,15 +35,18 @@ public class ProductServiceImpl implements ProductService {
     private final UploadService uploadService;
     private final CategoryRepository categoryRepository;
     private final ProductImageRepository productImageRepository;
+    private final VercelWebhookService vercelWebhookService;
 
     public ProductServiceImpl(ProductRepository productRepository,
             UploadService uploadService,
             CategoryRepository categoryRepository,
-            ProductImageRepository productImageRepository) {
+            ProductImageRepository productImageRepository,
+            VercelWebhookService vercelWebhookService) {
         this.productRepository = productRepository;
         this.uploadService = uploadService;
         this.categoryRepository = categoryRepository;
         this.productImageRepository = productImageRepository;
+        this.vercelWebhookService = vercelWebhookService;
     }
 
     @Override
@@ -273,6 +277,10 @@ public class ProductServiceImpl implements ProductService {
     public Product saveProductTransactional(Product product) {
         Product savedProduct = productRepository.save(product);
         log.info("Successfully saved product with ID: {}", savedProduct.getId());
+        
+        // Trigger Vercel rebuild after successful save
+        vercelWebhookService.triggerRebuild();
+        
         return productRepository.findByIdWithCategory(savedProduct.getId())
                 .orElse(savedProduct);
     }
@@ -408,6 +416,10 @@ public class ProductServiceImpl implements ProductService {
 
         Product updatedProduct = productRepository.save(product);
         log.info("Successfully updated product with ID: {}", updatedProduct.getId());
+        
+        // Trigger Vercel rebuild after successful update
+        vercelWebhookService.triggerRebuild();
+        
         return updatedProduct;
     }
 
@@ -422,6 +434,9 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
+        
+        // Trigger Vercel rebuild after successful delete
+        vercelWebhookService.triggerRebuild();
     }
 
     // ========== PAGINATION METHODS ==========

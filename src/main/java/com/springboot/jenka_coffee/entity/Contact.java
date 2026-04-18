@@ -20,6 +20,9 @@ public class Contact {
     @Column(name = "fullName", nullable = false, length = 100)
     private String fullName;
 
+    @Column(name = "phone", length = 15)
+    private String phone;
+
     @Column(name = "email", length = 150)
     private String email;
 
