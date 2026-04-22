@@ -94,6 +94,7 @@ public class SecurityConfig {
                     "/api/csrf-token", // CSRF token endpoint
                     "/api/contacts",
                     "/api/contact/**",
+                    "/api/feedbacks", // Feedback popup - public access
                     "/api/bookings",
                     "/api/booking/**",
                     "/api/visitors/**",
