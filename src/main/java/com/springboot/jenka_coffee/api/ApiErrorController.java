@@ -24,7 +24,7 @@ public class ApiErrorController implements ErrorController {
             try {
                 status = HttpStatus.valueOf(statusCode);
             } catch (Exception ex) {
-                // Ignore, keep default 500
+                // Ignore, keep default 500 
             }
         }
         

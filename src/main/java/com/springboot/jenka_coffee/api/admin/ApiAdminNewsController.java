@@ -13,8 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
+
+import static com.springboot.jenka_coffee.api.ApiNewsController.getApiResponseResponseEntity;
 
 @RestController
 @RequestMapping("/api/admin/news")
@@ -38,13 +39,7 @@ public class ApiAdminNewsController {
         Pageable pageable = PageRequest.of(page, size);
         Page<News> newsPage = newsService.findAllPaginated(pageable);
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("items", newsPage.getContent());
-        data.put("currentPage", newsPage.getNumber());
-        data.put("totalPages", newsPage.getTotalPages());
-        data.put("totalItems", newsPage.getTotalElements());
-
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tin tức thành công", data));
+        return getApiResponseResponseEntity(newsPage);
     }
 
     @GetMapping("/{id}")

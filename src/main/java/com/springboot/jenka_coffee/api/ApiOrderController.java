@@ -55,22 +55,6 @@ public class ApiOrderController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> processCheckout(
             @Valid @RequestBody CheckoutRequest request,
             @AuthenticationPrincipal String username) {
-        // DEBUG: Log request để debug validation errors
-        System.out.println("=== CHECKOUT REQUEST DEBUG ===");
-        System.out.println("Username: " + username);
-        System.out.println("Fullname: " + request.getFullname());
-        System.out.println("Email: " + request.getEmail());
-        System.out.println("Phone: " + request.getPhone());
-        System.out.println("Address: " + request.getAddress());
-        System.out.println("Province: " + request.getProvince());
-        System.out.println("District: " + request.getDistrict());
-        System.out.println("Ward: " + request.getWard());
-        System.out.println("PaymentMethod: " + request.getPaymentMethod());
-        System.out.println("AgreeTerms: " + request.isAgreeTerms());
-        System.out.println("VoucherCode: " + request.getVoucherCode());
-        System.out.println("Note: " + request.getNote());
-        System.out.println("==============================");
-        
         Account user = accountService.findById(username);
         Order order = orderService.checkout(request, user);
         orderService.postCheckout(order, user);

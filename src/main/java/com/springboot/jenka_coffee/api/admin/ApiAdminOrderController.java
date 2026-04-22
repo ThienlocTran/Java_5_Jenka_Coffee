@@ -2,14 +2,13 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.entity.OrderDetail;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -74,7 +73,7 @@ public class ApiAdminOrderController {
         try {
             orderService.updateStatus(id, status);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
-        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+        } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
@@ -88,7 +87,7 @@ public class ApiAdminOrderController {
         try {
             orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
             return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
-        } catch (com.springboot.jenka_coffee.exception.BusinessRuleException e) {
+        } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
@@ -99,22 +98,7 @@ public class ApiAdminOrderController {
         return cancelOrder(id);
     }
 
-    /** 
-     * BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
-     * 
-     * PROBLEM: LocalDateTime.toString() returns format without timezone info
-     * - Example: "2026-04-12T15:25:00" (no timezone offset)
-     * - Client browsers parse this ambiguously based on local timezone
-     * - Server in Singapore (UTC+8) vs Client in Vietnam (UTC+7) = 1 hour difference
-     * - Orders appear in future or wrong day in reports
-     * 
-     * SOLUTION: Convert to ISO-8601 with timezone offset
-     * - Use ZonedDateTime or Instant for timezone-aware timestamps
-     * - Format: "2026-04-12T15:25:00+08:00" (explicit timezone)
-     * - Or use Unix epoch milliseconds (Long) for unambiguous timestamps
-     * 
-     * Safe DTO — only scalar fields + account basics, no lazy proxies 
-     */
+//   BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
     private Map<String, Object> toDto(Order o) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", o.getId());

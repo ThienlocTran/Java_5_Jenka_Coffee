@@ -579,4 +579,123 @@ public class ProductServiceImpl implements ProductService {
         
         return result;
     }
+    
+    // ========== ADMIN OPERATIONS WITH BUSINESS LOGIC ==========
+    
+    /**
+     * Create product from request DTO with validation
+     */
+    @Override
+    @Transactional
+    public Product createProductFromRequest(com.springboot.jenka_coffee.dto.request.ProductRequest request, 
+                                           String categoryId, MultipartFile imageFile) {
+        log.info("Creating product from request: {}", request.getName());
+        
+        // Validate
+        if (request.getPrice() == null) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không được để trống");
+        }
+        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không thể âm");
+        }
+        
+        // Get category
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+        
+        // Build product
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice().setScale(0, java.math.RoundingMode.HALF_UP));
+        product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
+        product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
+        product.setCategory(category);
+        product.setId(null); // Force INSERT
+        
+        // Create product (auto-generate slug)
+        Product saved = create(product);
+        
+        // Upload image if provided
+        if (imageFile != null && !imageFile.isEmpty()) {
+            saved = saveProduct(saved, imageFile);
+        }
+        
+        return saved;
+    }
+    
+    /**
+     * Update product from request parameters with validation
+     * FIX BUG: price luôn null - giờ validate và xử lý đúng
+     */
+    @Override
+    @Transactional
+    public Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price,
+                                           String categoryId, Boolean available, MultipartFile imageFile) {
+        log.info("Updating product ID: {}", id);
+        
+        // Validate price - FIX BUG Ở ĐÂY!
+        if (price == null) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không được để trống");
+        }
+        if (price.compareTo(BigDecimal.ZERO) < 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không thể âm");
+        }
+        
+        // Get existing product
+        Product existing = findById(id);
+        
+        // Get category
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+        
+        // Update fields
+        existing.setName(name);
+        existing.setDescription(description);
+        existing.setPrice(price.setScale(0, java.math.RoundingMode.HALF_UP)); // Không còn null!
+        existing.setAvailable(available);
+        existing.setCategory(category);
+        
+        // Save with image
+        return saveProduct(existing, imageFile);
+    }
+    
+    /**
+     * Delete product with business rule validation
+     */
+    @Override
+    @Transactional
+    public void deleteProductWithValidation(Integer id) {
+        log.info("Deleting product with validation: {}", id);
+        
+        // Check if product exists
+        if (!productRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id);
+        }
+        
+        // Business rule: Check if product is used in orders
+        long orderCount = productRepository.countOrdersByProductId(id);
+        if (orderCount > 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                "Không thể xóa sản phẩm này vì đã có " + orderCount + 
+                " đơn hàng sử dụng. Bạn có thể ẩn sản phẩm thay vì xóa."
+            );
+        }
+        
+        delete(id);
+    }
+    
+    /**
+     * Toggle product featured status
+     */
+    @Override
+    @Transactional
+    public Product toggleFeatured(Integer id) {
+        log.info("Toggling featured status for product ID: {}", id);
+        
+        Product product = findById(id);
+        product.setFeatured(!Boolean.TRUE.equals(product.getFeatured()));
+        
+        return update(product);
+    }
 }

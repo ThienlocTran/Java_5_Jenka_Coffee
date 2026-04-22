@@ -5,12 +5,12 @@ import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.ProductService;
-import com.springboot.jenka_coffee.service.impl.ProductServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -18,19 +18,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Public Product API Controller - Clean 3-Tier
+ * Controller: HTTP only, no @Transactional, no business logic
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/products")
+@RequiredArgsConstructor
 public class ApiProductController {
 
     private final ProductService productService;
 
-
-    public ApiProductController(ProductService productService) {
-        this.productService = productService;
-    }
-
     @GetMapping
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProducts(
             @RequestParam(value = "categoryId", required = false) String categoryId,
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
@@ -86,22 +86,24 @@ public class ApiProductController {
     }
 
     @GetMapping("/{id}")
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetail(@PathVariable("id") Integer id) {
-        Map<String, Object> details = productService.getProductDetail(id);
-        if (details == null) {
+        try {
+            Map<String, Object> details = productService.getProductDetail(id);
+            return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
+        } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm với ID: " + id));
+        } catch (Exception e) {
+            log.error("Error getting product detail: {}", id, e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy thông tin sản phẩm"));
         }
-        return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
     }
     
     @GetMapping("/slug/{slug}")
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetailBySlug(@PathVariable("slug") String slug) {
         try {
             Product product = productService.findBySlug(slug);
             List<Product> similarItems = productService.getRelatedProducts(
-                product.getCategory().getId().toString(), 
+                    product.getCategory().getId(),
                 product.getId()
             );
             

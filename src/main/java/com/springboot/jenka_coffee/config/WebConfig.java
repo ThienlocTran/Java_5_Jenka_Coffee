@@ -9,6 +9,7 @@ import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactor
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -46,9 +47,9 @@ public class WebConfig implements WebMvcConfigurer {
     public OncePerRequestFilter robotsHeaderFilter() {
         return new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest req,
-                                            HttpServletResponse res,
-                                            FilterChain chain) throws ServletException, IOException {
+            protected void doFilterInternal(@NonNull HttpServletRequest req,
+                                            @NonNull  HttpServletResponse res,
+                                            @NonNull  FilterChain chain) throws ServletException, IOException {
                 String path = req.getRequestURI();
                 // Block Google khỏi index API responses
                 if (path.startsWith("/api/") && !path.equals("/api/sitemap.xml")) {
