@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.exception;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -11,9 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.nio.channels.ClosedChannelException;
 
 // 🚨 BUG-64: EXCEPTION HANDLER SWALLOWS SECURITY EXCEPTIONS (Kẻ Nuốt Chửng Phân Quyền)
 // ================================================================
@@ -326,9 +330,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalError(Exception ex, HttpServletRequest request) {
         // Ignore client abort exceptions (user closed browser/tab before response completed)
-        if (ex instanceof org.apache.catalina.connector.ClientAbortException ||
-            ex instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException ||
-            (ex.getCause() != null && ex.getCause() instanceof java.nio.channels.ClosedChannelException)) {
+        if (ex instanceof ClientAbortException ||
+            ex instanceof AsyncRequestNotUsableException ||
+            (ex.getCause() != null && ex.getCause() instanceof ClosedChannelException)) {
             // Silent ignore - this is normal when user navigates away
             return null;
         }
