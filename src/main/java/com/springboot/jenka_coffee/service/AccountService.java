@@ -149,4 +149,57 @@ public interface AccountService {
      * @param phone Phone number
      */
     void updatePhone(String username, String phone);
+    
+    // ===== SECURITY LAYER METHODS =====
+    
+    /**
+     * Get account security info for JWT validation
+     * Used by Security layer to verify account status without direct repository access
+     * 
+     * @param username Account username
+     * @return AccountSecurityInfo containing activation status, admin status, and password reset date
+     */
+    AccountSecurityInfo getAccountSecurityInfo(String username);
+    
+    /**
+     * DTO for security information needed by JWT filter
+     */
+    class AccountSecurityInfo {
+        private final boolean exists;
+        private final boolean activated;
+        private final boolean admin;
+        private final Long lastPasswordResetTimestamp;
+        
+        public AccountSecurityInfo(boolean exists, boolean activated, boolean admin, Long lastPasswordResetTimestamp) {
+            this.exists = exists;
+            this.activated = activated;
+            this.admin = admin;
+            this.lastPasswordResetTimestamp = lastPasswordResetTimestamp;
+        }
+        
+        public boolean exists() { return exists; }
+        public boolean isActivated() { return activated; }
+        public boolean isAdmin() { return admin; }
+        public Long getLastPasswordResetTimestamp() { return lastPasswordResetTimestamp; }
+        
+        public static AccountSecurityInfo notFound() {
+            return new AccountSecurityInfo(false, false, false, null);
+        }
+        
+        public static AccountSecurityInfo fromAccount(Account account) {
+            Long resetTimestamp = null;
+            if (account.getLastPasswordResetDate() != null) {
+                resetTimestamp = account.getLastPasswordResetDate()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+            }
+            return new AccountSecurityInfo(
+                    true,
+                    Boolean.TRUE.equals(account.getActivated()),
+                    Boolean.TRUE.equals(account.getAdmin()),
+                    resetTimestamp
+            );
+        }
+    }
 }

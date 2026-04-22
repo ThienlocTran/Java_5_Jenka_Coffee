@@ -478,4 +478,17 @@ public class AccountServiceImpl implements AccountService {
         dao.save(account);
         log.info("Updated phone number for user: {}", username);
     }
+
+    // ===== SECURITY LAYER METHODS =====
+
+    @Override
+    public AccountService.AccountSecurityInfo getAccountSecurityInfo(String username) {
+        Account account = dao.findById(username).orElse(null);
+        
+        if (account == null) {
+            return AccountService.AccountSecurityInfo.notFound();
+        }
+        
+        return AccountService.AccountSecurityInfo.fromAccount(account);
+    }
 }
