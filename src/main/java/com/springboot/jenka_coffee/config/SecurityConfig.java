@@ -90,7 +90,14 @@ public class SecurityConfig {
                     "/api/news/**", "/api/banners/**",
                     "/sitemap.xml", "/robots.txt").permitAll()
                 .requestMatchers(
-                    "/api/auth/**",
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/google-login",
+                    "/api/auth/refresh",
+                    "/api/auth/logout",
+                    "/api/auth/send-otp",
+                    "/api/auth/verify-otp",
+                    "/api/auth/reset-password",
                     "/api/csrf-token", // CSRF token endpoint
                     "/api/contacts",
                     "/api/contact/**",
@@ -104,6 +111,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // User — phải đăng nhập
                 .requestMatchers(
+                    "/api/auth/update-phone", // Requires authentication
                     "/api/cart/**",
                     "/api/orders/**",
                     "/api/profile/**").hasRole("USER")
