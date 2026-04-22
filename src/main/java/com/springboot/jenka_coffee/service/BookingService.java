@@ -1,6 +1,5 @@
 package com.springboot.jenka_coffee.service;
 
-import com.springboot.jenka_coffee.entity.ServiceBooking;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

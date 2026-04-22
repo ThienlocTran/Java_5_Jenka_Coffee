@@ -305,10 +305,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Override
     @Transactional
     public Order updateStatus(Long orderId, int status) {
-        // VULN-RACE-CONDITION FIX: Lock Order trước khi đọc status để tránh race condition
-        // Ngăn nhiều request cùng lúc đọc status cũ và cùng chuyển sang CANCELLED
+        // Lock Order to prevent race condition
         Order order = entityManager.find(Order.class, orderId, LockModeType.PESSIMISTIC_WRITE);
         if (order == null) {
             throw new RuntimeException("Không tìm thấy đơn hàng!");
@@ -323,11 +323,11 @@ public class OrderServiceImpl implements OrderService {
                     "Trạng thái đơn hàng không hợp lệ: " + status);
         }
 
+        // Simplified status transitions: NEW -> CONFIRMED or CANCELLED
         boolean validTransition = switch (from) {
             case NEW       -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
-            case CONFIRMED -> to == Order.OrderStatus.SHIPPING  || to == Order.OrderStatus.CANCELLED;
-            case SHIPPING  -> to == Order.OrderStatus.COMPLETED || to == Order.OrderStatus.CANCELLED;
-            case CANCELLED, COMPLETED -> false;
+            case CONFIRMED -> to == Order.OrderStatus.CANCELLED; // Can only cancel after confirm
+            case CANCELLED -> false; // Cannot change cancelled orders
         };
 
         if (!validTransition) {
@@ -335,16 +335,11 @@ public class OrderServiceImpl implements OrderService {
                     "Không thể chuyển trạng thái từ " + from.name() + " sang " + to.name());
         }
 
-        // NOTE: Không hoàn trả tồn kho vì không quản lý tồn kho
-        // Admin sẽ gọi báo khách nếu hết hàng
-        
-        // VULN-DATA-LOSS FIX + VULN-INFINITE-POINTS FIX: Hoàn trả points cho khách khi hủy đơn
-        // CHỈ hoàn số điểm thực tế đã sử dụng (lưu trong order.pointsUsed)
+        // Refund points when order is cancelled
         if (to == Order.OrderStatus.CANCELLED && order.getAccount() != null) {
             Integer pointsToRefund = order.getPointsUsed();
             
             if (pointsToRefund != null && pointsToRefund > 0) {
-                // Lock account và hoàn points
                 Account account = entityManager.find(Account.class, 
                     order.getAccount().getUsername(), LockModeType.PESSIMISTIC_WRITE);
                 if (account != null) {
@@ -352,85 +347,14 @@ public class OrderServiceImpl implements OrderService {
                     account.setPoints(currentPoints + pointsToRefund);
                     entityManager.merge(account);
                     
-                    // VULN-AUDIT-TRAIL FIX: Record point refund in PointHistory
                     recordPointHistory(account.getUsername(), pointsToRefund, order.getId(), 
                         "Hoàn điểm do hủy đơn hàng #" + order.getId());
                     
                     log.info("Refunded {} points to user {} for cancelled order #{}", 
                         pointsToRefund, account.getUsername(), order.getId());
                 }
-            } else {
-                log.info("No points to refund for order #{} (pointsUsed={})", 
-                    order.getId(), pointsToRefund);
             }
         }
-
-        // 🚨 BUG-57: LOYALTY PROGRAM FAILURE (Lòng Trung Thành Chết Yểu)
-        // ================================================================
-        // CRITICAL MISSING FEATURE: System NEVER awards loyalty points to customers!
-        // 
-        // Current state:
-        // - Account entity has `points` field
-        // - PointHistory table exists for audit trail
-        // - System can REFUND points when order cancelled (see above)
-        // - But NO CODE awards points when order COMPLETED!
-        // 
-        // Expected behavior (MISSING):
-        // When order status changes to COMPLETED, system should:
-        // 1. Calculate points: totalAmount * 1% (e.g., 100,000đ order = 1,000 points)
-        // 2. Lock account (PESSIMISTIC_WRITE) to prevent race condition
-        // 3. Add points to account.points
-        // 4. Record in PointHistory for audit trail
-        // 5. Save account
-        // 
-        // Example implementation (NEEDS TO BE ADDED):
-        // ```java
-        // if (to == Order.OrderStatus.COMPLETED && order.getAccount() != null) {
-        //     // Calculate 1% of order total as loyalty points
-        //     int pointsToAward = order.getTotalAmount()
-        //         .multiply(new BigDecimal("0.01"))
-        //         .intValue();
-        //     
-        //     if (pointsToAward > 0) {
-        //         // Lock account to prevent race condition
-        //         Account account = entityManager.find(Account.class, 
-        //             order.getAccount().getUsername(), LockModeType.PESSIMISTIC_WRITE);
-        //         
-        //         if (account != null) {
-        //             int currentPoints = account.getPoints() != null ? account.getPoints() : 0;
-        //             account.setPoints(currentPoints + pointsToAward);
-        //             entityManager.merge(account);
-        //             
-        //             // Record in PointHistory for audit trail
-        //             recordPointHistory(account.getUsername(), pointsToAward, order.getId(), 
-        //                 "Tích điểm từ đơn hàng #" + order.getId());
-        //             
-        //             log.info("Awarded {} points to user {} for completed order #{}", 
-        //                 pointsToAward, account.getUsername(), order.getId());
-        //         }
-        //     }
-        // }
-        // ```
-        // 
-        // Business impact:
-        // - Loyalty program is completely non-functional
-        // - Customers buy hundreds of products but points remain 0
-        // - Marketing campaigns based on points are useless
-        // - Customer retention strategy fails
-        // - Cannot sell this system to real businesses with broken loyalty feature
-        // 
-        // Technical notes:
-        // - Must use PESSIMISTIC_WRITE lock to prevent race condition
-        // - Must record in PointHistory for audit trail (already implemented)
-        // - Consider: Should points be awarded immediately or after return period?
-        // - Consider: What if order is later cancelled? (Already handled - refund logic exists)
-        // - Consider: Minimum order amount to earn points? (e.g., orders < 50,000đ = 0 points)
-        // 
-        // Related code:
-        // - recordPointHistory() method already exists (line ~280)
-        // - Point refund logic already works (see CANCELLED branch above)
-        // - Just need to add symmetric AWARD logic for COMPLETED status
-        // ================================================================
 
         order.setStatus(status);
         log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());

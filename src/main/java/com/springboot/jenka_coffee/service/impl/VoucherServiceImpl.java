@@ -1,6 +1,5 @@
 package com.springboot.jenka_coffee.service.impl;
 
-import com.springboot.jenka_coffee.entity.Voucher;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.VoucherRepository;

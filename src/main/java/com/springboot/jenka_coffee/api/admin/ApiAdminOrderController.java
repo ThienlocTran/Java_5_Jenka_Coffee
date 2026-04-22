@@ -78,10 +78,10 @@ public class ApiAdminOrderController {
     public ResponseEntity<ApiResponse<Void>> updateOrderStatus(
             @PathVariable Long id,
             @PathVariable int status) {
-        // Validate status range
-        if (status < 0 || status > 4) {
+        // Validate status range (0: NEW, 1: CONFIRMED, 2: CANCELLED)
+        if (status < 0 || status > 2) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Trạng thái đơn hàng không hợp lệ (0-4)"));
+                    .body(ApiResponse.error("Trạng thái đơn hàng không hợp lệ (0: Mới, 1: Đã xác nhận, 2: Đã hủy)"));
         }
         try {
             orderService.updateStatus(id, status);

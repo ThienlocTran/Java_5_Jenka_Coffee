@@ -41,9 +41,7 @@ public class Payment implements Serializable {
 
     @Column(name = "status", length = 20)
     private String status = PaymentStatus.PENDING.name();
-
-    public enum PaymentMethod { COD, VNPAY, MOMO }
-
+    
     public enum PaymentStatus { PENDING, SUCCESS, FAILED }
 
     // --- RELATIONSHIPS ---
