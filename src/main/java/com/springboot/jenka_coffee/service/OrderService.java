@@ -12,6 +12,7 @@ public interface OrderService {
 
     Order create(Order order);
     Order findById(Long id);
+    Order findByIdWithDetails(Long id);
 
     Page<Order> findByUsername(String username, Pageable pageable);
     Order checkout(CheckoutRequest request, Account account);

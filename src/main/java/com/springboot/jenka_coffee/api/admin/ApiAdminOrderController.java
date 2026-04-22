@@ -3,8 +3,10 @@ package com.springboot.jenka_coffee.api.admin;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
-import com.springboot.jenka_coffee.repository.OrderRepository;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.OrderService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,23 +19,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Admin Order Controller - Clean 3-Tier
+ * Controller: HTTP only, no Repository injection, no business logic
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/orders")
+@RequiredArgsConstructor
 public class ApiAdminOrderController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
-
-    public ApiAdminOrderController(OrderService orderService, OrderRepository orderRepository) {
-        this.orderService = orderService;
-        this.orderRepository = orderRepository;
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(@PathVariable Long id) {
-        Order order = orderRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng #" + id));
-        return ResponseEntity.ok(ApiResponse.success("OK", toDetailDto(order)));
+        try {
+            Order order = orderService.findByIdWithDetails(id);
+            return ResponseEntity.ok(ApiResponse.success("OK", toDetailDto(order)));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy đơn hàng #" + id));
+        } catch (Exception e) {
+            log.error("Error getting order detail: {}", id, e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy thông tin đơn hàng"));
+        }
     }
 
     @GetMapping
@@ -41,31 +49,36 @@ public class ApiAdminOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        // VULN-032 FIX: Giới hạn page size tránh Memory DoS
-        size = Math.min(Math.max(size, 1), 100);
-        page = Math.max(page, 0);
+        try {
+            // Validate pagination
+            size = Math.min(Math.max(size, 1), 100);
+            page = Math.max(page, 0);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
-        Page<Order> orderPage = orderService.findAll(pageable);
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createDate").descending());
+            Page<Order> orderPage = orderService.findAll(pageable);
 
-        List<Long> ids = orderPage.getContent().stream().map(Order::getId).collect(Collectors.toList());
-        List<Order> orders = orderService.findAllWithAccountByIds(ids);
-        orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
+            List<Long> ids = orderPage.getContent().stream().map(Order::getId).collect(Collectors.toList());
+            List<Order> orders = orderService.findAllWithAccountByIds(ids);
+            orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("items", orders.stream().map(this::toDto).collect(Collectors.toList()));
-        data.put("currentPage", orderPage.getNumber());
-        data.put("totalPages", orderPage.getTotalPages());
-        data.put("totalItems", orderPage.getTotalElements());
+            Map<String, Object> data = new HashMap<>();
+            data.put("items", orders.stream().map(this::toDto).collect(Collectors.toList()));
+            data.put("currentPage", orderPage.getNumber());
+            data.put("totalPages", orderPage.getTotalPages());
+            data.put("totalItems", orderPage.getTotalElements());
 
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đơn hàng thành công", data));
+            return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đơn hàng thành công", data));
+        } catch (Exception e) {
+            log.error("Error getting orders", e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy danh sách đơn hàng"));
+        }
     }
 
     @PutMapping("/{id}/status/{status}")
     public ResponseEntity<ApiResponse<Void>> updateOrderStatus(
             @PathVariable Long id,
             @PathVariable int status) {
-        // VULN-027 FIX: Validate range trước khi gọi service
+        // Validate status range
         if (status < 0 || status > 4) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Trạng thái đơn hàng không hợp lệ (0-4)"));
@@ -75,12 +88,14 @@ public class ApiAdminOrderController {
             return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error updating order status: {}", id, e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi cập nhật trạng thái"));
         }
     }
 
     /**
-     * VULN-M04 FIX: Đổi từ DELETE sang POST /cancel — đúng REST semantics.
-     * DELETE nên xóa record, không phải cancel. Dùng POST /cancel để rõ ràng hơn.
+     * Cancel order - POST /cancel (REST semantics)
      */
     @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
@@ -89,16 +104,19 @@ public class ApiAdminOrderController {
             return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error cancelling order: {}", id, e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi hủy đơn hàng"));
         }
     }
 
-    /** Giữ lại DELETE để backward compatible với frontend hiện tại */
+    /** Backward compatible with frontend */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> cancelOrderLegacy(@PathVariable Long id) {
         return cancelOrder(id);
     }
 
-//   BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
+    // ========== DTO MAPPING (TODO: Move to separate mapper class) ==========//   BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
     private Map<String, Object> toDto(Order o) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", o.getId());

@@ -70,6 +70,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Order findByIdWithDetails(Long id) {
+        return orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                    "Không tìm thấy đơn hàng #" + id));
+    }
+
+    @Override
     public Page<Order> findByUsername(String username, Pageable pageable) {
         return orderRepository.findByAccount_Username(username, pageable);
     }

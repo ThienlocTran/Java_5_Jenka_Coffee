@@ -114,22 +114,32 @@ public class ApiProductController {
             return ResponseEntity.ok(ApiResponse.success("Product detail fetched successfully", details));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm với slug: " + slug));
+        } catch (Exception e) {
+            log.error("Error getting product by slug: {}", slug, e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy thông tin sản phẩm"));
         }
     }
 
     @GetMapping("/counts")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getCategoryCounts() {
-        return ResponseEntity
-                .ok(ApiResponse.success("Category counts fetched successfully", productService.getCategoryCounts()));
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Category counts fetched successfully", 
+                productService.getCategoryCounts()));
+        } catch (Exception e) {
+            log.error("Error getting category counts", e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy số lượng danh mục"));
+        }
     }
 
     @GetMapping("/{id}/images")
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<ProductImage>>> getProductImages(@PathVariable Integer id) {
         try {
-            List<ProductImage> images = ((ProductServiceImpl) productService).getProductImages(id);
+            List<ProductImage> images = productService.getProductImages(id);
             return ResponseEntity.ok(ApiResponse.success("Product images fetched successfully", images));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Không tìm thấy sản phẩm"));
         } catch (Exception e) {
+            log.error("Error fetching product images: {}", id, e);
             return ResponseEntity.status(500)
                     .body(ApiResponse.error("Error fetching product images: " + e.getMessage()));
         }
