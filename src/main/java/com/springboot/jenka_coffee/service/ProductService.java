@@ -1,6 +1,8 @@
 package com.springboot.jenka_coffee.service;
 
+import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductImage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,4 +40,22 @@ public interface ProductService {
                                                 String keyword, Pageable pageable);
 
     Page<Product> searchProductsPaginated(String keyword, Pageable pageable);
+    
+    // Admin operations with business logic
+    Product createProductFromRequest(ProductRequest request, String categoryId, MultipartFile imageFile);
+    
+    Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price, 
+                                     String categoryId, Boolean available, MultipartFile imageFile);
+    
+    void deleteProductWithValidation(Integer id);
+    
+    Product toggleFeatured(Integer id);
+    
+    void saveProductImages(Integer productId, List<MultipartFile> images);
+    
+    List<ProductImage> getProductImages(Integer productId);
+    
+    void deleteProductImage(Integer imageId);
+    
+    Map<String, Object> generateSlugsForAllProducts();
 }

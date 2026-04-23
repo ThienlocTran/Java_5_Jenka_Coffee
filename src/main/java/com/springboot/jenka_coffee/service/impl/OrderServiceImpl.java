@@ -3,17 +3,17 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
 import com.springboot.jenka_coffee.dto.response.CartItem;
 import com.springboot.jenka_coffee.entity.*;
-import com.springboot.jenka_coffee.exception.InsufficientStockException;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
-import com.springboot.jenka_coffee.repository.ProductRepository;
-import com.springboot.jenka_coffee.repository.VoucherRepository;
+import com.springboot.jenka_coffee.repository.PointHistoryRepository;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.EmailService;
 import com.springboot.jenka_coffee.service.OrderService;
-import com.springboot.jenka_coffee.service.VoucherService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,41 +21,30 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
     private final CartService cartService;
     private final EmailService emailService;
     private final EntityManager entityManager;
-    private final VoucherService voucherService;
-    private final VoucherRepository voucherRepository;
-    private final com.springboot.jenka_coffee.repository.PointHistoryRepository pointHistoryRepository;
+    private final PointHistoryRepository pointHistoryRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${spring.mail.username}")
+    @Value("${spring.mail.username}")
     private String adminEmail;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-                            ProductRepository productRepository,
                             CartService cartService,
                             EmailService emailService,
                             EntityManager entityManager,
-                            VoucherService voucherService,
-                            VoucherRepository voucherRepository,
-                            com.springboot.jenka_coffee.repository.PointHistoryRepository pointHistoryRepository) {
+                            PointHistoryRepository pointHistoryRepository) {
         this.orderRepository = orderRepository;
-        this.productRepository = productRepository;
         this.cartService = cartService;
         this.emailService = emailService;
         this.entityManager = entityManager;
-        this.voucherService = voucherService;
-        this.voucherRepository = voucherRepository;
         this.pointHistoryRepository = pointHistoryRepository;
     }
 
@@ -67,6 +56,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order findById(Long id) {
         return orderRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Order findByIdWithDetails(Long id) {
+        return orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng #" + id));
     }
 
     @Override
@@ -84,12 +81,12 @@ public class OrderServiceImpl implements OrderService {
      *   5. Save order
      * Nếu bất kỳ bước nào fail → toàn bộ rollback.
      * Cart clear và email nằm ngoài transaction (postCheckout).
-     * 
      * NOTE: Không quản lý tồn kho - admin sẽ gọi báo khách nếu hết hàng
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Order checkout(CheckoutRequest request, Account account) {
+
         // STEP 1: Validate cart not empty
         Collection<CartItem> cartItems = cartService.getItems();
         if (cartItems.isEmpty()) {
@@ -97,51 +94,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // STEP 2: VULN-DOUBLE-SPEND FIX: Lock Account trước để tránh race condition với points
-        // Nếu không lock, 2 requests cùng lúc có thể đọc cùng 1 giá trị points và cùng trừ
-        Account lockedAccount = null;
-        if (account != null) {
-            lockedAccount = entityManager.find(Account.class, account.getUsername(), LockModeType.PESSIMISTIC_WRITE);
-            if (lockedAccount == null) {
-                throw new IllegalStateException("Tài khoản không tồn tại!");
-            }
-        }
+        Account lockedAccount = lockAccount(account);
 
         // STEP 3: Lock tất cả sản phẩm — sort by ID để tránh deadlock
-        List<Integer> productIds = cartItems.stream()
-                .map(CartItem::getProductId)
-                .distinct()
-                .sorted()
-                .toList();
-
-        List<Product> lockedProducts = new ArrayList<>();
-        for (Integer pid : productIds) {
-            Product p = entityManager.find(Product.class, pid, LockModeType.PESSIMISTIC_WRITE);
-            if (p == null) {
-                throw new IllegalStateException("Sản phẩm ID " + pid + " không tồn tại!");
-            }
-            // VULN-PRODUCT-AVAILABILITY FIX: Check if product is available before checkout
-            if (!Boolean.TRUE.equals(p.getAvailable())) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Sản phẩm '" + p.getName() + "' hiện không còn kinh doanh!");
-            }
-            lockedProducts.add(p);
-        }
+        Map<Integer, Product> productMap = lockProducts(cartItems);
 
         // STEP 4: Build Order + OrderDetails (giá lấy từ locked product)
         Order order = buildOrder(request, lockedAccount);
-        List<OrderDetail> orderDetails = new ArrayList<>();
-        for (CartItem item : cartItems) {
-            Product product = lockedProducts.stream()
-                    .filter(p -> p.getId().equals(item.getProductId()))
-                    .findFirst().get();
-
-            OrderDetail detail = new OrderDetail();
-            detail.setProduct(product);
-            detail.setPrice(product.getPrice()); // giá từ DB, không tin cart
-            detail.setQuantity(item.getQuantity());
-            detail.setOrder(order);
-            orderDetails.add(detail);
-        }
+        List<OrderDetail> orderDetails = buildOrderDetails(cartItems, productMap, order);
         order.setOrderDetails(orderDetails);
 
         BigDecimal totalAmount = orderDetails.stream()
@@ -152,48 +112,10 @@ public class OrderServiceImpl implements OrderService {
         // VULN-VOUCHER-SIPHON FIX: Check user usage count against maxUsesPerUser limit
         // VULN-COMPILATION-ERROR FIX: Require login for all vouchers to prevent guest abuse
         // BUG-44 FIX: Support multiple uses per user based on maxUsesPerUser field
-        Voucher appliedVoucher = null;
-        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
-            if (lockedAccount == null) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Vui lòng đăng nhập để sử dụng mã giảm giá!");
-            }
-            
-            final Voucher voucher = voucherService.validateAndLockVoucher(
-                request.getVoucherCode(), 
-                totalAmount,
-                lockedAccount.getUsername()
-            );
-            appliedVoucher = voucher;
-
-            // Nếu scope = SPECIFIC, kiểm tra ít nhất 1 sản phẩm trong cart được áp dụng
-            if ("SPECIFIC".equals(voucher.getScope())) {
-                boolean hasApplicable = orderDetails.stream()
-                        .anyMatch(d -> voucher.isApplicableToProduct(d.getProduct().getId()));
-                if (!hasApplicable) {
-                    throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                            "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng!");
-                }
-                // Tính discount chỉ trên các sản phẩm được áp dụng
-                BigDecimal applicableSubtotal = orderDetails.stream()
-                        .filter(d -> voucher.isApplicableToProduct(d.getProduct().getId()))
-                        .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                BigDecimal discount = voucher.calculateDiscount(applicableSubtotal);
-                totalAmount = totalAmount.subtract(discount)
-                        .max(new BigDecimal("1000")); // VULN-047 FIX: minimum 1.000đ
-            } else {
-                BigDecimal discount = voucher.calculateDiscount(totalAmount);
-                totalAmount = totalAmount.subtract(discount)
-                        .max(new BigDecimal("1000"));
-            }
-            order.setVoucherCode(appliedVoucher.getCode());
-        }
 
         order.setTotalAmount(totalAmount);
-        
-        // VULN-INFINITE-POINTS FIX: Lưu số điểm thực tế đã sử dụng (hiện tại = 0 vì chưa implement points payment)
-        // Khi implement points payment, cập nhật giá trị này
+
+        // VULN-INFINITE-POINTS FIX: Lưu số điểm thực tế đã sử dụng
         order.setPointsUsed(0);
 
         // STEP 4: Save order (cascade save OrderDetails)
@@ -202,10 +124,10 @@ public class OrderServiceImpl implements OrderService {
         // STEP 6b: VULN-023 FIX — Tạo Payment record (audit trail)
         // VULN-PAYMENT-WITHOUT-VERIFICATION WARNING: Payment status is PENDING
         // System does NOT verify actual payment before creating order
-        // 
+        //
         // Current flow: Order created → Payment PENDING → Admin manually verifies
         // Risk: Users can place orders without paying (COD abuse, fake payment screenshots)
-        // 
+        //
         // Production recommendations:
         // 1. For COD: Keep current flow (payment on delivery)
         // 2. For bank/momo: Integrate payment gateway webhooks
@@ -214,47 +136,114 @@ public class OrderServiceImpl implements OrderService {
         //    - Only confirm order after payment verified
         // 3. Implement payment timeout (auto-cancel unpaid orders after 15 minutes)
         // 4. Add admin dashboard to track pending payments
-        com.springboot.jenka_coffee.entity.Payment payment = new com.springboot.jenka_coffee.entity.Payment();
-        payment.setOrderId(savedOrder.getId());
-        payment.setAmount(totalAmount);
-        payment.setPaymentMethod(
-            request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "COD");
-        payment.setStatus(com.springboot.jenka_coffee.entity.Payment.PaymentStatus.PENDING.name());
-        payment.setPaymentDate(LocalDateTime.now());
-        entityManager.persist(payment);
+        createPayment(savedOrder, totalAmount, request);
 
         // STEP 7: Voucher đã được consume trong validateAndLockVoucher() — không cần gọi lại
 
         // VULN-C01 FIX: Clear cart TRONG transaction — ngăn double checkout
-        // Nếu clear fail, transaction rollback → order không được tạo
-        // Nếu cart đã rỗng (idempotent), không có vấn đề gì
         try {
             cartService.clear();
         } catch (Exception e) {
-            log.warn("Cart clear in transaction failed for account={}: {}", 
-                account != null ? account.getUsername() : "guest", e.getMessage());
-            // Không throw — cart clear fail không nên rollback order đã tạo thành công
+            log.warn("Cart clear in transaction failed for account={}: {}",
+                    account != null ? account.getUsername() : "guest", e.getMessage());
         }
 
-        log.info("Checkout success: orderId={}, account={}, total={}, voucher={}",
+        log.info("Checkout success: orderId={}, account={}, total={}",
                 savedOrder.getId(),
                 account != null ? account.getUsername() : "guest",
-                totalAmount,
-                appliedVoucher != null ? appliedVoucher.getCode() : "none");
+                totalAmount);
 
         return savedOrder;
     }
 
+    private Account lockAccount(Account account) {
+        if (account == null) return null;
+
+        Account locked = entityManager.find(Account.class,
+                account.getUsername(),
+                LockModeType.PESSIMISTIC_WRITE);
+
+        if (locked == null) {
+            throw new IllegalStateException("Tài khoản không tồn tại!");
+        }
+        return locked;
+    }
+
+    private Map<Integer, Product> lockProducts(Collection<CartItem> cartItems) {
+        List<Integer> productIds = cartItems.stream()
+                .map(CartItem::getProductId)
+                .distinct()
+                .sorted()
+                .toList();
+
+        Map<Integer, Product> map = new HashMap<>();
+
+        for (Integer pid : productIds) {
+            Product p = entityManager.find(Product.class, pid, LockModeType.PESSIMISTIC_WRITE);
+
+            if (p == null) {
+                throw new IllegalStateException("Sản phẩm ID " + pid + " không tồn tại!");
+            }
+
+            // VULN-PRODUCT-AVAILABILITY FIX: Check if product is available before checkout
+            if (!Boolean.TRUE.equals(p.getAvailable())) {
+                throw new BusinessRuleException(
+                        "Sản phẩm '" + p.getName() + "' hiện không còn kinh doanh!");
+            }
+
+            map.put(pid, p);
+        }
+
+        return map;
+    }
+
+    private List<OrderDetail> buildOrderDetails(Collection<CartItem> cartItems,
+                                                Map<Integer, Product> productMap,
+                                                Order order) {
+
+        List<OrderDetail> orderDetails = new ArrayList<>();
+
+        for (CartItem item : cartItems) {
+            Product product = productMap.get(item.getProductId());
+
+            if (product == null) {
+                throw new IllegalStateException("Product not found: " + item.getProductId());
+            }
+
+            OrderDetail detail = new OrderDetail();
+            detail.setProduct(product);
+            detail.setPrice(product.getPrice()); // giá từ DB, không tin cart
+            detail.setQuantity(item.getQuantity());
+            detail.setOrder(order);
+
+            orderDetails.add(detail);
+        }
+
+        return orderDetails;
+    }
+
+    private void createPayment(Order savedOrder, BigDecimal totalAmount, CheckoutRequest request) {
+        Payment payment = new Payment();
+        payment.setOrderId(savedOrder.getId());
+        payment.setAmount(totalAmount);
+        payment.setPaymentMethod(
+                request.getPaymentMethod() != null
+                        ? request.getPaymentMethod().toUpperCase()
+                        : "COD");
+        payment.setStatus(Payment.PaymentStatus.PENDING.name());
+        payment.setPaymentDate(LocalDateTime.now());
+
+        entityManager.persist(payment);
+    }
+
     /**
      * Post-checkout side effects — gọi SAU khi transaction commit thành công.
-     * Cart clear và email KHÔNG nằm trong transaction để tránh rollback vì lý do ngoài lề.
      */
     @Override
     public void postCheckout(Order savedOrder, Account account) {
-        // Cart đã được clear trong checkout transaction (VULN-C01 FIX)
-        // postCheckout chỉ xử lý email notification
         try {
             String customerName = account != null ? account.getFullname() : "Khách";
+
             emailService.sendNewOrderNotification(
                     adminEmail,
                     savedOrder.getId(),
@@ -263,44 +252,54 @@ public class OrderServiceImpl implements OrderService {
                     savedOrder.getAddress(),
                     savedOrder.getTotalAmount()
             );
+
         } catch (Exception e) {
-            log.warn("Failed to send order notification for orderId={}: {}", savedOrder.getId(), e.getMessage());
+            log.warn("Failed to send order notification for orderId={}: {}",
+                    savedOrder.getId(), e.getMessage());
         }
     }
 
     private Order buildOrder(CheckoutRequest request, Account account) {
         Order order = new Order();
         order.setAccount(account);
+
         String fullAddress = String.format("%s, %s, %s, %s",
-                request.getAddress(), request.getWard(),
-                request.getDistrict(), request.getProvince());
+                request.getAddress(),
+                request.getWard(),
+                request.getDistrict(),
+                request.getProvince());
+
         order.setAddress(fullAddress);
         order.setPhone(request.getPhone());
         order.setCreateDate(LocalDateTime.now());
         order.setStatus(0); // NEW
-        // VULN-058 FIX: Sanitize note — strip HTML tags trước khi lưu
+
+        // VULN-058 FIX: Sanitize note
         if (request.getNote() != null && !request.getNote().isBlank()) {
             order.setNote(request.getNote().replaceAll("<[^>]*>", "").trim());
         }
+
         return order;
     }
 
     @Override
     public CheckoutRequest prepareCheckoutRequest(Account user) {
         CheckoutRequest request = new CheckoutRequest();
+
         if (user != null) {
             request.setFullname(user.getFullname());
             request.setEmail(user.getEmail());
             request.setPhone(user.getPhone());
         }
+
         return request;
     }
 
     @Override
     @Transactional
-    public Order updateStatus(Long orderId, int status) {
-        // VULN-RACE-CONDITION FIX: Lock Order trước khi đọc status để tránh race condition
-        // Ngăn nhiều request cùng lúc đọc status cũ và cùng chuyển sang CANCELLED
+    public void updateStatus(Long orderId, int status) {
+
+        // Lock Order to prevent race condition
         Order order = entityManager.find(Order.class, orderId, LockModeType.PESSIMISTIC_WRITE);
         if (order == null) {
             throw new RuntimeException("Không tìm thấy đơn hàng!");
@@ -308,134 +307,59 @@ public class OrderServiceImpl implements OrderService {
 
         Order.OrderStatus from = Order.OrderStatus.fromValue(order.getStatus());
         Order.OrderStatus to;
+
         try {
             to = Order.OrderStatus.fromValue(status);
         } catch (IllegalArgumentException e) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                    "Trạng thái đơn hàng không hợp lệ: " + status);
+            throw new BusinessRuleException("Trạng thái đơn hàng không hợp lệ: " + status);
         }
 
         boolean validTransition = switch (from) {
-            case NEW       -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
-            case CONFIRMED -> to == Order.OrderStatus.SHIPPING  || to == Order.OrderStatus.CANCELLED;
-            case SHIPPING  -> to == Order.OrderStatus.COMPLETED || to == Order.OrderStatus.CANCELLED;
-            case CANCELLED, COMPLETED -> false;
+            case NEW -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
+            case CONFIRMED -> to == Order.OrderStatus.CANCELLED;
+            case CANCELLED -> false;
         };
 
         if (!validTransition) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+            throw new BusinessRuleException(
                     "Không thể chuyển trạng thái từ " + from.name() + " sang " + to.name());
         }
 
-        // NOTE: Không hoàn trả tồn kho vì không quản lý tồn kho
-        // Admin sẽ gọi báo khách nếu hết hàng
-        
-        // VULN-DATA-LOSS FIX + VULN-INFINITE-POINTS FIX: Hoàn trả points cho khách khi hủy đơn
-        // CHỈ hoàn số điểm thực tế đã sử dụng (lưu trong order.pointsUsed)
+        // Refund points when order is cancelled
         if (to == Order.OrderStatus.CANCELLED && order.getAccount() != null) {
+
             Integer pointsToRefund = order.getPointsUsed();
-            
+
             if (pointsToRefund != null && pointsToRefund > 0) {
-                // Lock account và hoàn points
-                Account account = entityManager.find(Account.class, 
-                    order.getAccount().getUsername(), LockModeType.PESSIMISTIC_WRITE);
+
+                Account account = entityManager.find(Account.class,
+                        order.getAccount().getUsername(),
+                        LockModeType.PESSIMISTIC_WRITE);
+
                 if (account != null) {
-                    int currentPoints = account.getPoints() != null ? account.getPoints() : 0;
+                    int currentPoints = Optional.ofNullable(account.getPoints()).orElse(0);
                     account.setPoints(currentPoints + pointsToRefund);
                     entityManager.merge(account);
-                    
-                    // VULN-AUDIT-TRAIL FIX: Record point refund in PointHistory
-                    recordPointHistory(account.getUsername(), pointsToRefund, order.getId(), 
-                        "Hoàn điểm do hủy đơn hàng #" + order.getId());
-                    
-                    log.info("Refunded {} points to user {} for cancelled order #{}", 
-                        pointsToRefund, account.getUsername(), order.getId());
+
+                    recordPointHistory(account.getUsername(), pointsToRefund, order.getId(),
+                            "Hoàn điểm do hủy đơn hàng #" + order.getId());
+
+                    log.info("Refunded {} points to user {} for cancelled order #{}",
+                            pointsToRefund, account.getUsername(), order.getId());
                 }
-            } else {
-                log.info("No points to refund for order #{} (pointsUsed={})", 
-                    order.getId(), pointsToRefund);
             }
         }
 
-        // 🚨 BUG-57: LOYALTY PROGRAM FAILURE (Lòng Trung Thành Chết Yểu)
-        // ================================================================
-        // CRITICAL MISSING FEATURE: System NEVER awards loyalty points to customers!
-        // 
-        // Current state:
-        // - Account entity has `points` field
-        // - PointHistory table exists for audit trail
-        // - System can REFUND points when order cancelled (see above)
-        // - But NO CODE awards points when order COMPLETED!
-        // 
-        // Expected behavior (MISSING):
-        // When order status changes to COMPLETED, system should:
-        // 1. Calculate points: totalAmount * 1% (e.g., 100,000đ order = 1,000 points)
-        // 2. Lock account (PESSIMISTIC_WRITE) to prevent race condition
-        // 3. Add points to account.points
-        // 4. Record in PointHistory for audit trail
-        // 5. Save account
-        // 
-        // Example implementation (NEEDS TO BE ADDED):
-        // ```java
-        // if (to == Order.OrderStatus.COMPLETED && order.getAccount() != null) {
-        //     // Calculate 1% of order total as loyalty points
-        //     int pointsToAward = order.getTotalAmount()
-        //         .multiply(new BigDecimal("0.01"))
-        //         .intValue();
-        //     
-        //     if (pointsToAward > 0) {
-        //         // Lock account to prevent race condition
-        //         Account account = entityManager.find(Account.class, 
-        //             order.getAccount().getUsername(), LockModeType.PESSIMISTIC_WRITE);
-        //         
-        //         if (account != null) {
-        //             int currentPoints = account.getPoints() != null ? account.getPoints() : 0;
-        //             account.setPoints(currentPoints + pointsToAward);
-        //             entityManager.merge(account);
-        //             
-        //             // Record in PointHistory for audit trail
-        //             recordPointHistory(account.getUsername(), pointsToAward, order.getId(), 
-        //                 "Tích điểm từ đơn hàng #" + order.getId());
-        //             
-        //             log.info("Awarded {} points to user {} for completed order #{}", 
-        //                 pointsToAward, account.getUsername(), order.getId());
-        //         }
-        //     }
-        // }
-        // ```
-        // 
-        // Business impact:
-        // - Loyalty program is completely non-functional
-        // - Customers buy hundreds of products but points remain 0
-        // - Marketing campaigns based on points are useless
-        // - Customer retention strategy fails
-        // - Cannot sell this system to real businesses with broken loyalty feature
-        // 
-        // Technical notes:
-        // - Must use PESSIMISTIC_WRITE lock to prevent race condition
-        // - Must record in PointHistory for audit trail (already implemented)
-        // - Consider: Should points be awarded immediately or after return period?
-        // - Consider: What if order is later cancelled? (Already handled - refund logic exists)
-        // - Consider: Minimum order amount to earn points? (e.g., orders < 50,000đ = 0 points)
-        // 
-        // Related code:
-        // - recordPointHistory() method already exists (line ~280)
-        // - Point refund logic already works (see CANCELLED branch above)
-        // - Just need to add symmetric AWARD logic for COMPLETED status
-        // ================================================================
-
         order.setStatus(status);
         log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());
-        return orderRepository.save(order);
+        orderRepository.save(order);
     }
-    
+
     /**
      * VULN-AUDIT-TRAIL FIX: Record point transaction in PointHistory for audit trail
-     * This provides traceability for all point changes (earn, spend, refund)
      */
     private void recordPointHistory(String username, int amount, Long orderId, String reason) {
-        com.springboot.jenka_coffee.entity.PointHistory history = 
-            new com.springboot.jenka_coffee.entity.PointHistory();
+        PointHistory history = new PointHistory();
         history.setUsername(username);
         history.setAmount(amount);
         history.setOrderId(orderId);

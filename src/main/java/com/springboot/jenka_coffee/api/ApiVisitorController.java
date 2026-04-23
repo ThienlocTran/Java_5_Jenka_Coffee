@@ -4,78 +4,66 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.Instant;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * BUG-50 WARNING: Analytics Data Manipulation Risk
- * 
- * PROBLEM: Visitor ping endpoint is open (permitAll) with no authentication
- * - Endpoint: POST /api/visitors/ping
- * - No JWT token required, no session validation
- * - No fingerprinting or cryptographic proof of legitimacy
- * - Attacker can spam requests to inflate visitor counts
- * 
- * ATTACK SCENARIO:
- * 1. Competitor runs script: while(true) { fetch('/api/visitors/ping', {method:'POST'}) }
- * 2. Dashboard shows "1 BILLION VISITORS" - completely fake data
- * 3. Charts break, business decisions based on fake metrics
- * 4. Customer loses trust when they discover data can be manipulated
- * 
- * CURRENT MITIGATION:
- * 1. Rate limiting: 60 requests per 10 minutes per IP (RateLimitFilter)
- * 2. Unique client ID: IP + User-Agent combination
- * 3. Trusted proxy logic: Prevents IP spoofing via X-Forwarded-For
- * 4. 5-minute timeout: Users inactive for 5 minutes removed from online count
- * 5. Cleanup job: Removes expired users every minute
- * 
- * LIMITATIONS:
- * - Attacker with botnet (multiple IPs) can bypass rate limiting
- * - User-Agent can be spoofed easily
- * - No cryptographic proof that request came from legitimate frontend
- * - In-memory counters are volatile (lost on restart)
- * 
- * PRODUCTION RECOMMENDATIONS:
- * 1. Issue short-lived session token on first page load:
- *    - Generate JWT with 1-hour expiration
- *    - Store in HttpOnly cookie
- *    - Require token for all /ping requests
- *    - Prevents automated scripts without browser
- * 
- * 2. Implement device fingerprinting:
- *    - Canvas fingerprinting
- *    - WebGL fingerprinting
- *    - Browser feature detection
- *    - Combine with IP for unique ID
- * 
- * 3. Use Redis for distributed rate limiting:
- *    - Current Caffeine cache is per-instance
- *    - Redis works across load-balanced servers
- *    - Prevents attacker from hitting different servers
- * 
- * 4. Persist analytics to database:
- *    - Current counters reset on restart (volatile)
- *    - Save to DB every N minutes via @Scheduled
- *    - Use write-through cache pattern
- * 
- * 5. Implement anomaly detection:
- *    - Alert when visitor count spikes abnormally
- *    - Track request patterns (timing, frequency)
- *    - Flag suspicious IPs for manual review
- * 
- * 6. Add CAPTCHA for suspicious traffic:
- *    - If rate limit exceeded, require CAPTCHA
- *    - Prevents automated bots
- *    - Only affects suspicious users
- * 
- * RISK LEVEL: Medium (requires effort but possible with botnets)
- * BUSINESS IMPACT: High (fake metrics damage credibility and decisions)
- */
+/// BUG-50 WARNING: Analytics Data Manipulation Risk
+/// PROBLEM: Visitor ping endpoint is open (permitAll) with no authentication
+/// - Endpoint: POST /api/visitors/ping
+/// - No JWT token required, no session validation
+/// - No fingerprinting or cryptographic proof of legitimacy
+/// - Attacker can spam requests to inflate visitor counts
+/// ATTACK SCENARIO:
+/// 1. Competitor runs script: while(true) { fetch('/api/visitors/ping', {method:'POST'}) }
+/// 2. Dashboard shows "1 BILLION VISITORS" - completely fake data
+/// 3. Charts break, business decisions based on fake metrics
+/// 4. Customer loses trust when they discover data can be manipulated
+/// CURRENT MITIGATION:
+/// 1. Rate limiting: 60 requests per 10 minutes per IP (RateLimitFilter)
+/// 2. Unique client ID: IP + User-Agent combination
+/// 3. Trusted proxy logic: Prevents IP spoofing via X-Forwarded-For
+/// 4. 5-minute timeout: Users inactive for 5 minutes removed from online count
+/// 5. Cleanup job: Removes expired users every minute
+/// LIMITATIONS:
+/// - Attacker with botnet (multiple IPs) can bypass rate limiting
+/// - User-Agent can be spoofed easily
+/// - No cryptographic proof that request came from legitimate frontend
+/// - In-memory counters are volatile (lost on restart)
+/// PRODUCTION RECOMMENDATIONS:
+/// 1. Issue short-lived session token on first page load:
+///    - Generate JWT with 1-hour expiration
+///    - Store in HttpOnly cookie
+///    - Require token for all /ping requests
+///    - Prevents automated scripts without browser
+/// 2. Implement device fingerprinting:
+///    - Canvas fingerprinting
+///    - WebGL fingerprinting
+///    - Browser feature detection
+///    - Combine with IP for unique ID
+/// 3. Use Redis for distributed rate limiting:
+///    - Current Caffeine cache is per-instance
+///    - Redis works across load-balanced servers
+///    - Prevents attacker from hitting different servers
+/// 4. Persist analytics to database:
+///    - Current counters reset on restart (volatile)
+///    - Save to DB every N minutes via @Scheduled
+///    - Use write-through cache pattern
+/// 5. Implement anomaly detection:
+///    - Alert when visitor count spikes abnormally
+///    - Track request patterns (timing, frequency)
+///    - Flag suspicious IPs for manual review
+/// 6. Add CAPTCHA for suspicious traffic:
+///    - If rate limit exceeded, require CAPTCHA
+///    - Prevents automated bots
+///    - Only affects suspicious users
+/// RISK LEVEL: Medium (requires effort but possible with botnets)
+/// BUSINESS IMPACT: High (fake metrics damage credibility and decisions)
 @RestController
 @RequestMapping("/api/visitors")
 public class ApiVisitorController {
@@ -175,7 +163,7 @@ public class ApiVisitorController {
             .count();
         
         return Map.of(
-                "online", Math.max(0, activeCount),
+                "online", activeCount,
                 "today",  todayVisits.get(),
                 "month",  monthVisits.get(),
                 "total",  totalVisits.get()
@@ -183,9 +171,9 @@ public class ApiVisitorController {
     }
     
     /**
-     * Get unique client identifier from IP + User-Agent + SessionId
+     * Get unique client identifier from IP + User-Agent
      * Prevents same user from being counted multiple times
-     * DEV-FIX: Use sessionId to track individual browser tabs correctly
+     * FIX: Removed session dependency since app uses STATELESS session policy
      */
     private String getClientIdentifier(HttpServletRequest request) {
         String ip = getClientIp(request);
@@ -193,12 +181,9 @@ public class ApiVisitorController {
         String userAgent = request.getHeader("User-Agent");
         if (userAgent == null) userAgent = "unknown";
         
-        // Get or create session ID for this browser tab
-        String sessionId = request.getSession(true).getId();
-        
-        // Combine IP + first 50 chars of user agent + sessionId for uniqueness
-        // This ensures each browser tab is tracked separately but correctly
-        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent) + "|" + sessionId;
+        // Combine IP + first 50 chars of user agent for uniqueness
+        // Note: This means multiple tabs from same IP will be counted as one user
+        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent);
     }
     
     /**
@@ -221,6 +206,10 @@ public class ApiVisitorController {
     }
     
     private boolean isTrustedProxy(String ip) {
+        return checkIp(ip);
+    }
+
+    public static boolean checkIp(String ip) {
         if (ip == null) return false;
         return ip.startsWith("10.")
                 || ip.startsWith("172.16.") || ip.startsWith("172.17.")

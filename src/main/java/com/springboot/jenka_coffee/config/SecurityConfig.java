@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,11 +24,6 @@ public class SecurityConfig {
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, SecurityHeadersFilter securityHeadersFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.securityHeadersFilter = securityHeadersFilter;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
@@ -58,13 +55,13 @@ public class SecurityConfig {
             // 5. Use separate domain for API (api.example.com) vs app (app.example.com)
             //
             // RISK LEVEL: Medium (requires subdomain + XSS vulnerability)
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .formLogin(f -> f.disable())
-            .httpBasic(b -> b.disable())
-            .logout(l -> l.disable())
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .logout(AbstractHttpConfigurer::disable)
             .headers(headers -> headers
-                .frameOptions(fo -> fo.deny())
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                 .contentTypeOptions(cto -> {})
                 .httpStrictTransportSecurity(hsts -> hsts
                     .includeSubDomains(true)
@@ -90,20 +87,30 @@ public class SecurityConfig {
                     "/api/news/**", "/api/banners/**",
                     "/sitemap.xml", "/robots.txt").permitAll()
                 .requestMatchers(
-                    "/api/auth/**",
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/google-login",
+                    "/api/auth/refresh",
+                    "/api/auth/logout",
+                    "/api/auth/check-remember", // Check remember me cookie
+                    "/api/auth/send-otp",
+                    "/api/auth/verify-otp",
+                    "/api/auth/reset-password",
                     "/api/csrf-token", // CSRF token endpoint
                     "/api/contacts",
                     "/api/contact/**",
+                    "/api/feedbacks", // Feedback popup - public access
                     "/api/bookings",
                     "/api/booking/**",
                     "/api/visitors/**",
+                    "/api/cart/**", // Allow anonymous cart (session-based)
                     "/api/error",
                     "/uploads/**").permitAll()
                 // Admin — phải có ROLE_ADMIN
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // User — phải đăng nhập
                 .requestMatchers(
-                    "/api/cart/**",
+                    "/api/auth/update-phone", // Requires authentication
                     "/api/orders/**",
                     "/api/profile/**").hasRole("USER")
                 // Mọi endpoint không match → deny (secure by default)

@@ -9,6 +9,7 @@ import com.springboot.jenka_coffee.service.BannerSetService;
 import com.springboot.jenka_coffee.service.UploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ public class BannerSetServiceImpl implements BannerSetService {
 
     @Override
     public List<BannerSet> findAll() {
-        return setRepo.findAll(org.springframework.data.domain.Sort.by("createdAt").descending());
+        return setRepo.findAll(Sort.by("createdAt").descending());
     }
 
     @Override

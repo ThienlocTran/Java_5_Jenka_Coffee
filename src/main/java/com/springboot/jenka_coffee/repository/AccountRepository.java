@@ -80,6 +80,5 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          * VULN-M01 FIX: Check account exists AND is active — dùng trong JwtAuthFilter
          * Lightweight query, không load toàn bộ entity
          */
-        boolean existsByUsernameAndActivatedTrue(String username);
 
 }

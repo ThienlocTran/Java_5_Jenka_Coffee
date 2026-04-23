@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> {
     
-    /**
+    /*
      * VULN-CONSTRAINT-VIOLATION FIX: Check if product is used in any orders
      * Used to prevent deletion of products that have order history
      */

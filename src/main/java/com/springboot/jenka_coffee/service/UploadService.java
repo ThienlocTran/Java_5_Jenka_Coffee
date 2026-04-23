@@ -38,23 +38,12 @@ public interface UploadService {
      * @return URL of uploaded image, or null if failed
      */
     String saveImageWithCompression(MultipartFile file, int targetWidth, float quality);
-    
-    /**
-     * Upload file to local storage
-     * 
-     * @param file File to upload
-     * @param subfolder Subfolder name (e.g., "avatars", "products")
-     * @return Relative path to uploaded file
-     */
+
+
     String uploadFile(MultipartFile file, String subfolder) throws IOException;
-    
-    /**
-     * Get upload directory path
-     * 
-     * @return Upload directory path
-     */
+
     String getUploadDir();
-    
+
     /**
      * VULN-ORPHANED-STORAGE FIX: Delete image from cloud storage (Cloudinary)
      * Prevents storage exhaustion from orphaned files

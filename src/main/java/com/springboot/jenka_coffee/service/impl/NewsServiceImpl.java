@@ -69,7 +69,7 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
-    public News saveNews(News news, MultipartFile file) {
+    public void saveNews(News news, MultipartFile file) {
         // Handle image upload
         if (file != null && !file.isEmpty()) {
             String url = uploadService.saveNewsImage(file);
@@ -82,8 +82,7 @@ public class NewsServiceImpl implements NewsService {
         
         // Trigger Vercel rebuild after successful save
         vercelWebhookService.triggerRebuild();
-        
-        return savedNews;
+
     }
 
     @Override

@@ -64,11 +64,9 @@ public class ImageUtils {
         if (header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38)
             return true;
         // WebP: 52 49 46 46 ?? ?? ?? ?? 57 45 42 50 (RIFF....WEBP)
-        if (header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+        return header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
                 && header.length >= 12 && header[8] == 0x57 && header[9] == 0x45
-                && header[10] == 0x42 && header[11] == 0x50)
-            return true;
-        return false;
+                && header[10] == 0x42 && header[11] == 0x50;
     }
 
     /**
@@ -137,13 +135,9 @@ public class ImageUtils {
      * Image processing presets
      */
     public static class ImagePresets {
-        public static final int PRODUCT_WIDTH = 800;
-        public static final float PRODUCT_QUALITY = 0.85f;
 
         public static final int AVATAR_WIDTH = 400;
         public static final float AVATAR_QUALITY = 0.8f;
 
-        public static final int NEWS_WIDTH = 1200;
-        public static final float NEWS_QUALITY = 0.85f;
     }
 }

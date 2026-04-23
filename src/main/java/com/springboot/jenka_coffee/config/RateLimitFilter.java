@@ -4,18 +4,20 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
+
+import static com.springboot.jenka_coffee.api.ApiVisitorController.checkIp;
 
 /**
  * Rate limiter per IP — dùng Caffeine Cache với TTL tự động.
@@ -39,7 +41,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // VULN-ENUMERATION FIX: Rate limit cho admin check-username/email để ngăn enumeration
     private final Cache<String, Bucket> adminCheckBuckets = buildCache(Duration.ofMinutes(5));
     // VULN-SMS-BOMBING FIX: Rate limit per phone number to prevent distributed SMS bombing
-    private final Cache<String, Bucket> phoneOtpBuckets = buildCache(Duration.ofHours(1));
     // BUG-48 FIX: Email-specific rate limiting to prevent email spam DoS
     // Prevents attacker from bombing victim's email with password reset/activation emails
     // Limit: 1 email per minute per email address (prevents Gmail/SendGrid suspension)
@@ -53,9 +54,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest req,
-                                    HttpServletResponse res,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest req,
+                                    @NonNull HttpServletResponse res,
+                                    @NonNull FilterChain chain) throws ServletException, IOException {
         String path   = req.getRequestURI();
         String method = req.getMethod();
 
@@ -163,7 +164,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private Bucket buildBucket(int capacity, Duration refillDuration) {
-        Bandwidth limit = Bandwidth.classic(capacity, Refill.intervally(capacity, refillDuration));
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(capacity)
+                .refillIntervally(capacity, refillDuration)
+                .build();
         return Bucket.builder().addLimit(limit).build();
     }
 
@@ -180,28 +184,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean isTrustedProxy(String ip) {
-        if (ip == null) return false;
-        return ip.startsWith("10.")
-                || ip.startsWith("172.16.") || ip.startsWith("172.17.")
-                || ip.startsWith("172.18.") || ip.startsWith("172.19.")
-                || ip.startsWith("172.20.") || ip.startsWith("172.21.")
-                || ip.startsWith("172.22.") || ip.startsWith("172.23.")
-                || ip.startsWith("172.24.") || ip.startsWith("172.25.")
-                || ip.startsWith("172.26.") || ip.startsWith("172.27.")
-                || ip.startsWith("172.28.") || ip.startsWith("172.29.")
-                || ip.startsWith("172.30.") || ip.startsWith("172.31.")
-                || ip.startsWith("192.168.")
-                || "127.0.0.1".equals(ip) || "::1".equals(ip);
+        return checkIp(ip);
     }
     
-    /**
+    /*
      * VULN-SMS-BOMBING FIX: Extract phone number from request body
      * Used to rate limit by phone number instead of just IP
-     * 
      * VULN-REQUEST-BODY-CONSUMPTION FIX: DO NOT read request body in filter!
      * Reading req.getReader() consumes the input stream, making it unavailable
      * for controllers. This breaks @RequestBody parsing in Spring.
-     * 
      * Solution: Use request parameters or headers for rate limiting instead.
      * For phone-based rate limiting, we'll rely on IP-based limits only.
      * If phone-specific limits are critical, implement using:
@@ -209,9 +200,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * 2. Rate limit in controller layer after body is parsed
      * 3. Separate rate limit service called from controller
      */
-    private String extractPhoneFromRequest(HttpServletRequest req) {
-        // DISABLED: Reading body in filter breaks Spring @RequestBody parsing
-        // Return null to fall back to IP-based rate limiting only
-        return null;
-    }
+
 }

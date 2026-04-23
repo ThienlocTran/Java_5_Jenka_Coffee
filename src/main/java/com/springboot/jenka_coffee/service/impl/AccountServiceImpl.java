@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.dto.response.AuthResult;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
@@ -86,15 +87,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account authenticate(String identifier, String password) {
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-        if (account == null || !account.getActivated()) {
-            return null;
-        }
-        return passwordSecurity.verifyPassword(password, account.getPasswordHash()) ? account : null;
-    }
-
-    @Override
     public AuthResult authenticateWithResult(String identifier, String password) {
         // VULN-BCRYPT-DOS FIX: Giới hạn độ dài password trước khi hash
         if (password == null || password.length() > 72) {
@@ -143,7 +135,7 @@ public class AccountServiceImpl implements AccountService {
         createAccount(newAccount, null);
         
         // 5. Send OTP to phone for verification
-        if (phone != null && !phone.trim().isEmpty()) {
+        if (!phone.trim().isEmpty()) {
             otpService.generateOTP(phone.trim());
         }
     }
@@ -184,7 +176,7 @@ public class AccountServiceImpl implements AccountService {
 
         // Hash password before saving
         if (account.getPasswordHash() != null && !account.getPasswordHash().trim().isEmpty()) {
-            if (!passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
                 account.setPasswordHash(passwordSecurity.hashPassword(account.getPasswordHash()));
             }
         }
@@ -214,7 +206,7 @@ public class AccountServiceImpl implements AccountService {
             updatedAccount.setPasswordHash(existingAccount.getPasswordHash());
         } else {
             // Hash new password if it's not already hashed
-            if (!passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
                 updatedAccount.setPasswordHash(passwordSecurity.hashPassword(updatedAccount.getPasswordHash()));
             }
         }
@@ -256,7 +248,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public Account findByIdOrThrow(String username) {
         return dao.findById(username)
-                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Account", "username", username));
     }
 
@@ -266,10 +258,10 @@ public class AccountServiceImpl implements AccountService {
 
         if (!canDeleteAccount(username)) {
             if (account.getAdmin() != null && account.getAdmin()) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                throw new BusinessRuleException(
                         "Không thể xóa admin cuối cùng trong hệ thống!");
             }
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+            throw new BusinessRuleException(
                     "Không thể xóa tài khoản này!");
         }
 
@@ -285,54 +277,11 @@ public class AccountServiceImpl implements AccountService {
 
     // ===== ADMIN USER MANAGEMENT METHODS =====
 
-    @Override
-    public Account lockAccount(String username) {
-        Account account = findByIdOrThrow(username);
-        
-        // Business rule: Cannot lock admin if they are the last admin
-        if (account.getAdmin() != null && account.getAdmin()) {
-            long adminCount = dao.countByAdminTrue();
-            if (adminCount <= 1) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Không thể khóa admin cuối cùng trong hệ thống!");
-            }
-        }
-        
-        account.setActivated(false);
-        return dao.save(account);
-    }
 
-    @Override
-    public Account unlockAccount(String username) {
-        Account account = findByIdOrThrow(username);
-        account.setActivated(true);
-        return dao.save(account);
-    }
 
-    @Override
-    public Account adminResetPassword(String username, String newPassword) {
-        Account account = findByIdOrThrow(username);
-        
-        // Validate new password
-        if (newPassword == null || newPassword.trim().length() < 6) {
-            throw new ValidationException("Mật khẩu mới phải có ít nhất 6 ký tự!");
-        }
-        
-        // Hash and save new password (reuse existing logic)
-        account.setPasswordHash(passwordSecurity.hashPassword(newPassword.trim()));
 
-        // Clear any existing reset tokens
-        account.setResetToken(null);
-        account.setResetTokenExpiry(null);
-        
-        // VULN-SESSION-REVOCATION FIX: Update lastPasswordResetDate to invalidate old tokens
-        account.setLastPasswordResetDate(LocalDateTime.now());
 
-        Account saved = dao.save(account);
-        // VULN-026 FIX: Audit log bắt buộc
-        log.warn("SECURITY AUDIT: Admin reset password for user '{}' at {}", username, java.time.LocalDateTime.now());
-        return saved;
-    }
+
 
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET IMPLEMENTATION =====
 
@@ -385,41 +334,6 @@ public class AccountServiceImpl implements AccountService {
                 throw new ValidationException("Tài khoản không có số điện thoại để gửi OTP!");
             }
         }
-    }
-
-    @Override
-    public String requestPasswordReset(String identifier) {
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-
-        // VULN-003 FIX: Silent fail — không tiết lộ user có/không tồn tại
-        // Luôn trả về cùng message dù user tồn tại hay không
-        if (account == null) {
-            log.info("Password reset requested for non-existent identifier (masked for security)");
-            return "EMAIL"; // Fake return — timing consistent
-        }
-
-        boolean hasEmail = account.getEmail() != null && !account.getEmail().trim().isEmpty();
-        boolean hasPhone = account.getPhone() != null && !account.getPhone().trim().isEmpty();
-
-        if (hasEmail) {
-            try {
-                String resetToken = UUID.randomUUID().toString();
-                account.setResetToken(resetToken);
-                account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
-                dao.save(account);
-                emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
-                return "EMAIL";
-            } catch (Exception e) {
-                log.warn("Email sending failed (masked for security)");
-                if (!hasPhone) return "EMAIL"; // Silent fail
-            }
-        }
-
-        if (hasPhone) {
-            otpService.generateOTP(account.getPhone());
-            return "PHONE";
-        }
-        return "EMAIL"; // Silent fail
     }
 
     @Override
@@ -477,5 +391,82 @@ public class AccountServiceImpl implements AccountService {
         account.setPhone(phone);
         dao.save(account);
         log.info("Updated phone number for user: {}", username);
+    }
+
+    // ===== SECURITY LAYER METHODS =====
+
+    @Override
+    public AccountService.AccountSecurityInfo getAccountSecurityInfo(String username) {
+        Account account = dao.findById(username).orElse(null);
+        
+        if (account == null) {
+            return AccountService.AccountSecurityInfo.notFound();
+        }
+        
+        return AccountService.AccountSecurityInfo.fromAccount(account);
+    }
+
+    @Override
+    @Transactional
+    public void requestPasswordReset(String identifier) {
+        log.info("Password reset requested for identifier: {}", identifier);
+        
+        // Find account by username, email, or phone
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Không tìm thấy tài khoản với thông tin: " + identifier));
+        
+        // Check if account is activated
+        if (!Boolean.TRUE.equals(account.getActivated())) {
+            throw new BusinessRuleException("Tài khoản chưa được kích hoạt. Vui lòng kích hoạt tài khoản trước.");
+        }
+        
+        // Generate reset token (valid for 1 hour)
+        String resetToken = UUID.randomUUID().toString();
+        account.setResetToken(resetToken);
+        account.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+        dao.save(account);
+        
+        // Send reset link/OTP based on identifier type
+        if (identifier.contains("@")) {
+            // Email - send reset link
+            emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
+            log.info("Password reset email sent to: {}", account.getEmail());
+        } else if (identifier.matches("\\d{10,11}")) {
+            // Phone - send OTP
+            String otp = otpService.generateOTP(account.getPhone());
+            // OTP service will handle sending SMS
+            log.info("Password reset OTP sent to: {}", account.getPhone());
+        } else {
+            // Username - send to email if available
+            if (account.getEmail() != null && !account.getEmail().isEmpty()) {
+                emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
+                log.info("Password reset email sent to: {}", account.getEmail());
+            } else {
+                throw new BusinessRuleException("Tài khoản không có email. Vui lòng liên hệ quản trị viên.");
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void adminResetPassword(String username, String newPassword) {
+        log.info("Admin resetting password for user: {}", username);
+        
+        // Find account
+        Account account = dao.findById(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
+        
+        // Hash new password using PasswordSecurity
+        String hashedPassword = passwordSecurity.hashPassword(newPassword);
+        account.setPasswordHash(hashedPassword);
+        
+        // Update last password reset date
+        account.setLastPasswordResetDate(java.time.LocalDateTime.now());
+        
+        // Save account
+        dao.save(account);
+        
+        log.info("Successfully reset password for user: {}", username);
     }
 }

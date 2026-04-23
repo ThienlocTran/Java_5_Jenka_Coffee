@@ -3,8 +3,10 @@ package com.springboot.jenka_coffee.api;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.News;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.NewsRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,11 +29,11 @@ public class ApiSitemapController {
 
     private final ProductRepository productRepository;
     private final NewsRepository newsRepository;
-    private final com.springboot.jenka_coffee.repository.CategoryRepository categoryRepository;
+    private final CategoryRepository categoryRepository;
 
     public ApiSitemapController(ProductRepository productRepository,
                                 NewsRepository newsRepository,
-                                com.springboot.jenka_coffee.repository.CategoryRepository categoryRepository) {
+                                CategoryRepository categoryRepository) {
         this.productRepository = productRepository;
         this.newsRepository = newsRepository;
         this.categoryRepository = categoryRepository;
@@ -41,8 +43,8 @@ public class ApiSitemapController {
     public ResponseEntity<String> sitemap() {
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n");
-        xml.append("        xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n");
+        xml.append("<urlset xmlns=\"https://www.sitemaps.org/schemas/sitemap/0.9\"\n");
+        xml.append("        xmlns:image=\"https://www.google.com/schemas/sitemap-image/1.1\">\n");
 
         String today = LocalDateTime.now().format(W3C_DATE);
 
@@ -56,7 +58,7 @@ public class ApiSitemapController {
         // ── Danh mục sản phẩm ───────────────────────────────────────────
         try {
             List<Category> categories = categoryRepository.findAll();
-            for (com.springboot.jenka_coffee.entity.Category c : categories) {
+            for (Category c : categories) {
                 addUrl(xml, SITE_URL + "/category/" + c.getId(), "0.85", "weekly", today);
             }
         } catch (Exception e) {
@@ -68,7 +70,7 @@ public class ApiSitemapController {
         try {
             int productPage = 0;
             int productPageSize = 100;
-            org.springframework.data.domain.Page<Product> productPageResult;
+            Page<Product> productPageResult;
             do {
                 productPageResult = productRepository.findAllWithCategory(
                         PageRequest.of(productPage, productPageSize));

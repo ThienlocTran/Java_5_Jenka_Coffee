@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.dto.response.DashboardCountsDTO;
 import com.springboot.jenka_coffee.dto.response.OrderStatsDTO;
 import com.springboot.jenka_coffee.dto.response.RevenueReportDTO;
+import com.springboot.jenka_coffee.dto.response.TopProductDTO;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.service.ReportService;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.temporal.IsoFields;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +64,7 @@ public class ApiAdminDashboardController {
             return dto;
         }).collect(Collectors.toList());
 
-        List<com.springboot.jenka_coffee.dto.response.TopProductDTO> topProducts = reportService.getTopProducts(5);
+        List<TopProductDTO> topProducts = reportService.getTopProducts(5);
 
         Map<String, Object> data = new HashMap<>();
         data.put("totalRevenue",   stats.getTotalRevenue() != null ? stats.getTotalRevenue() : BigDecimal.ZERO);
@@ -86,9 +89,9 @@ public class ApiAdminDashboardController {
 
         switch (period) {
             case "week" -> {
-                int week = value != null ? value : LocalDateTime.now().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                int week = value != null ? value : LocalDateTime.now().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
                 from = LocalDateTime.now().with(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR, week)
-                        .with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
+                        .with(DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
                 to   = from.plusDays(7).minusSeconds(1);
             }
             case "quarter" -> {
@@ -109,7 +112,7 @@ public class ApiAdminDashboardController {
         }
 
         List<RevenueReportDTO> revenueData = reportService.getRevenueByDateRange(from, to);
-        List<com.springboot.jenka_coffee.dto.response.TopProductDTO> topProducts = reportService.getTopProducts(10);
+        List<TopProductDTO> topProducts = reportService.getTopProducts(10);
 
         Map<String, Object> result = new HashMap<>();
         result.put("data", revenueData);

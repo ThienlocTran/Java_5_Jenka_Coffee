@@ -8,7 +8,7 @@ public class SqlUtils {
     /**
      * Escape SQL LIKE wildcards để chống SQL injection
      * Escape: % _ [ ] ^ -
-     * 
+
      * SECURITY: Ngăn hacker inject wildcards để bypass filters hoặc DoS
      * Example: "test%" → "test\%"
      */

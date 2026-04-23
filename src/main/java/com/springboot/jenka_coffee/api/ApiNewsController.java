@@ -31,6 +31,10 @@ public class ApiNewsController {
         Pageable pageable = PageRequest.of(page, size);
         Page<News> newsPage = newsService.findAvailableNewsPaginated(pageable);
 
+        return getApiResponseResponseEntity(newsPage);
+    }
+
+    public static ResponseEntity<ApiResponse<Map<String, Object>>> getApiResponseResponseEntity(Page<News> newsPage) {
         Map<String, Object> data = new HashMap<>();
         data.put("items", newsPage.getContent());
         data.put("currentPage", newsPage.getNumber());

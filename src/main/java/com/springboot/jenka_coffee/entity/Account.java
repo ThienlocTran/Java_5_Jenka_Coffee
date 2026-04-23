@@ -107,11 +107,7 @@ public class Account implements Serializable {
     @ToString.Exclude
     private List<PointHistory> pointHistories;
 
-    // Quan hệ 1-N với ServiceBooking
-    @JsonIgnore // Chặn Account↔ServiceBooking cycle
-    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    private List<ServiceBooking> serviceBookings;
+
 
     // --- LOGIC HIBERNATE PROXY (Chuẩn chỉ) ---
 

@@ -14,17 +14,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Async Configuration for @Async methods + RestTemplate
- * 
  * Thread Pool Strategy:
  * - Core threads: 2 (always alive)
  * - Max threads: 5 (scale up under load)
  * - Queue capacity: 10 (buffer for burst traffic)
  * - Rejection policy: CallerRunsPolicy (backpressure, run in caller thread)
- * 
  * RestTemplate Configuration:
  * - Connection timeout: 10s
  * - Read timeout: 10s
- * 
  * Use case: VercelWebhookService async triggers
  */
 @Slf4j
@@ -63,11 +60,9 @@ public class AsyncConfig {
 
     /**
      * RestTemplate bean for HTTP requests
-     * 
      * Configuration:
      * - Connection timeout: 10 seconds
      * - Read timeout: 10 seconds
-     * 
      * Used by: VercelWebhookService, GoogleOAuthService, etc.
      */
     @Bean

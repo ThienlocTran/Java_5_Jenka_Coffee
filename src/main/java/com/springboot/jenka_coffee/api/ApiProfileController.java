@@ -79,9 +79,8 @@ public class ApiProfileController {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private <T> ResponseEntity<ApiResponse<T>> unauthorized() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body((ApiResponse<T>) ApiResponse.error("Vui lòng đăng nhập"));
+                .body(ApiResponse.error("Vui lòng đăng nhập"));
     }
 }

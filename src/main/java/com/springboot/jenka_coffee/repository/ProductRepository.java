@@ -88,4 +88,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                         " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
+    
+    // ── Count orders using this product ──────────────────────────────
+    @Query("SELECT COUNT(od) FROM OrderDetail od WHERE od.product.id = :productId")
+    long countOrdersByProductId(@Param("productId") Integer productId);
 }

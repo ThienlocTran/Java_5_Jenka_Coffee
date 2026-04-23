@@ -12,12 +12,13 @@ public interface OrderService {
 
     Order create(Order order);
     Order findById(Long id);
+    Order findByIdWithDetails(Long id);
 
     Page<Order> findByUsername(String username, Pageable pageable);
     Order checkout(CheckoutRequest request, Account account);
     void postCheckout(Order savedOrder, Account account);
     CheckoutRequest prepareCheckoutRequest(Account user);
-    Order updateStatus(Long orderId, int status);
+    void updateStatus(Long orderId, int status);
     Page<Order> findAll(Pageable pageable);
 
     /**

@@ -34,19 +34,15 @@ public interface NewsService {
      */
     void delete(Integer id);
 
-    /**
-     * Save news with image upload
-     */
-    News saveNews(News news, MultipartFile file);
 
-    /**
+    void saveNews(News news, MultipartFile file);
+
+    /*
      * Toggle news availability
      */
     void toggleAvailable(Integer id);
 
-    /**
-     * Find all available news (Site)
-     */
+
     List<News> findAvailableNews();
 
     /**
