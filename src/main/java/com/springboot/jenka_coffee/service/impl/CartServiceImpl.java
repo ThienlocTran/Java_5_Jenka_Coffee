@@ -164,27 +164,32 @@ public class CartServiceImpl implements CartService {
         CartItem item = map.get(productId);
         if (item == null) {
             Product product = productService().findById(productId);
-            if (product != null) {
-                // VULN-PRODUCT-AVAILABILITY FIX: Check if product is available
-                if (!Boolean.TRUE.equals(product.getAvailable())) {
-                    throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                            "Sản phẩm này hiện không còn kinh doanh!");
-                }
-                
-                // SECURITY: Prevent adding requireContact products to cart
-                if (Boolean.TRUE.equals(product.getRequireContact())) {
-                    throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                            "Sản phẩm này yêu cầu liên hệ trực tiếp, không thể thêm vào giỏ hàng");
-                }
-                
-                item = new CartItem();
-                item.setProductId(product.getId());
-                item.setName(product.getName());
-                item.setImage(product.getImage());
-                item.setPrice(product.getPrice());
-                item.setQuantity(1);
-                map.put(productId, item);
+            
+            // SECURITY: Prevent enumeration - throw same error for non-existent and unavailable products
+            if (product == null) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Sản phẩm không tồn tại hoặc không còn kinh doanh!");
             }
+            
+            // VULN-PRODUCT-AVAILABILITY FIX: Check if product is available
+            if (!Boolean.TRUE.equals(product.getAvailable())) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Sản phẩm không tồn tại hoặc không còn kinh doanh!");
+            }
+            
+            // SECURITY: Prevent adding requireContact products to cart
+            if (Boolean.TRUE.equals(product.getRequireContact())) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Sản phẩm này yêu cầu liên hệ trực tiếp, không thể thêm vào giỏ hàng");
+            }
+            
+            item = new CartItem();
+            item.setProductId(product.getId());
+            item.setName(product.getName());
+            item.setImage(product.getImage());
+            item.setPrice(product.getPrice());
+            item.setQuantity(1);
+            map.put(productId, item);
         } else {
             // FVULN-003 FIX: Giới hạn max 99 per item
             if (item.getQuantity() >= 99) {

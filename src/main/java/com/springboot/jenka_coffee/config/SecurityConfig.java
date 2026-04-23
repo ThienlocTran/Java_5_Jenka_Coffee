@@ -92,6 +92,7 @@ public class SecurityConfig {
                     "/api/auth/google-login",
                     "/api/auth/refresh",
                     "/api/auth/logout",
+                    "/api/auth/check-remember", // Check remember me cookie
                     "/api/auth/send-otp",
                     "/api/auth/verify-otp",
                     "/api/auth/reset-password",
