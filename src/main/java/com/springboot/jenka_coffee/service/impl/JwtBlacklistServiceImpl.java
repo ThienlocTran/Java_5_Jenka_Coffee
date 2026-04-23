@@ -19,10 +19,8 @@ public class JwtBlacklistServiceImpl implements JwtBlacklistService {
     
     /**
      * BUG-46 FIX: Use custom Expiry to set TTL per token based on actual expiration time
-     * 
      * PROBLEM: expireAfterWrite(7 days) applies to ALL tokens regardless of their actual TTL
      * A token with 1 second remaining gets cached for 7 days = massive memory waste
-     * 
      * SOLUTION: Use Expiry interface to calculate TTL dynamically per token
      * Each token is cached only until its actual expiration time
      */

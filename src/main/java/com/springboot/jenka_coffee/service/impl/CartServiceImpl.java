@@ -2,9 +2,11 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.dto.response.CartItem;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.ProductService;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -15,72 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * BUG-51 WARNING: Stateful In-Memory Cart Kills Horizontal Scaling
- * 
- * PROBLEM: Cart stored in ConcurrentHashMap in application memory
- * - Backend uses JWT (stateless) but cart is stateful (in-memory)
- * - Works fine on single server but breaks with load balancing
- * 
- * SCALING FAILURE SCENARIO:
- * Customer deploys 3 servers (A, B, C) behind load balancer (Nginx/AWS ELB)
- * 1. User visits site → Load balancer routes to Server A
- * 2. User adds coffee to cart → Stored in Server A's RAM
- * 3. User refreshes page → Load balancer routes to Server B
- * 4. Server B checks its RAM → Empty! Cart disappeared!
- * 5. User goes to checkout → Cart is empty, customer angry
- * 
- * CURRENT IMPLEMENTATION:
- * - ConcurrentHashMap<String, CartEntry> userCarts (in-memory only)
- * - Cart data lives only in single JVM instance
- * - Lost on server restart or load balancer routing
- * - TTL eviction after 1 hour of inactivity
- * - Max 5000 carts to prevent memory exhaustion
- * 
- * PRODUCTION SOLUTIONS:
- * 
- * 1. REDIS CACHE (Recommended for high traffic):
- *    - Store cart in Redis with TTL
- *    - All servers share same Redis instance
- *    - Fast read/write (sub-millisecond)
- *    - Automatic expiration
- *    - Example: Spring Data Redis + @Cacheable
- *    
- * 2. DATABASE PERSISTENCE (Recommended for reliability):
- *    - Create Cart and CartItem tables
- *    - Store cart in database per user
- *    - Survives server restarts
- *    - Can implement abandoned cart recovery
- *    - Slower than Redis but more reliable
- *    
- * 3. HYBRID APPROACH (Best of both worlds):
- *    - Write-through cache: Redis + Database
- *    - Redis for fast reads
- *    - Database for persistence
- *    - Background sync job
- *    
- * 4. STICKY SESSIONS (Not recommended):
- *    - Load balancer routes same user to same server
- *    - Defeats purpose of load balancing
- *    - Server failure = lost carts
- *    - Don't use this approach
- * 
- * MIGRATION STEPS:
- * 1. Create Cart/CartItem entities and repositories
- * 2. Implement database-backed CartService
- * 3. Add Redis caching layer (optional)
- * 4. Migrate existing in-memory carts (if any)
- * 5. Update frontend to handle cart sync
- * 
- * RISK LEVEL: Critical for production scaling
- * BUSINESS IMPACT: High (lost sales, customer frustration)
- * EFFORT: Medium (2-3 days for database, 1 day for Redis)
- * 
- * Cart lưu in-memory per username — tương thích với JWT stateless.
- * Thay thế @SessionScope (không hoạt động với stateless JWT).
- * Trade-off: cart mất khi server restart. Acceptable cho quy mô hiện tại.
- * Production scale: chuyển sang Redis hoặc bảng CartItems trong DB.
- */
+// BUG-51 WARNING: Stateful In-Memory Cart Kills Horizontal Scaling
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -94,7 +31,7 @@ public class CartServiceImpl implements CartService {
 
     private static class CartEntry {
         // VULN-DDOS-001 FIX: Dùng ConcurrentHashMap thay vì HashMap để tránh race condition
-        final Map<Integer, CartItem> items = new java.util.concurrent.ConcurrentHashMap<>();
+        final Map<Integer, CartItem> items = new ConcurrentHashMap<>();
         volatile long lastAccess = System.currentTimeMillis();
 
         void touch() { lastAccess = System.currentTimeMillis(); }
@@ -184,7 +121,7 @@ public class CartServiceImpl implements CartService {
     public void update(Integer productId, int qty) {
         // FVULN-003 FIX: Validate qty — ngăn bypass qua API trực tiếp
         if (qty <= 0) { cart().remove(productId); return; }
-        if (qty > 99) throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+        if (qty > 99) throw new BusinessRuleException(
                 "Số lượng tối đa mỗi sản phẩm là 99!");
         CartItem item = cart().get(productId);
         if (item != null) item.setQuantity(qty);
@@ -225,7 +162,7 @@ public class CartServiceImpl implements CartService {
      * VULN-M06 FIX: Evict theo TTL thực sự — không chỉ xóa cart rỗng.
      * Chạy mỗi 30 phút, xóa cart không hoạt động quá 1 giờ.
      */
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 1_800_000)
+    @Scheduled(fixedDelay = 1_800_000)
     public void evictStaleCarts() {
         userCarts.entrySet().removeIf(e -> e.getValue().isExpired() || e.getValue().items.isEmpty());
     }

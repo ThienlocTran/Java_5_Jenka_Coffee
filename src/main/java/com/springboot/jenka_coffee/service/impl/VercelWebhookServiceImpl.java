@@ -15,24 +15,24 @@ import java.util.concurrent.atomic.AtomicLong;
  * ============================================================================
  * VERCEL WEBHOOK SERVICE - Self-Healing Pipeline
  * ============================================================================
- * 
+
  * Purpose: Trigger Vercel rebuild when product/news data changes
- * 
+
  * Thread Safety Strategy:
  * - AtomicLong lastTriggerTime: Track last successful trigger (cooldown 60s)
  * - AtomicBoolean isTriggering: Lock-free flag to prevent concurrent triggers
  * - NO synchronized blocks: Avoid thread blocking and potential deadlocks
- * 
+
  * Retry Strategy:
  * - Manual retry loop (NOT @Retryable): Full control over retry scope
  * - Exponential backoff: 2s → 4s → 8s (3 attempts max)
  * - Try-finally pattern: Guaranteed cleanup even on crash/timeout
- * 
+
  * Trade-offs:
  * - Consistency over Freshness: Skip concurrent requests during trigger
  * - Eventual consistency: Vercel rebuild takes ~2-3 minutes
  * - Idempotent: Multiple triggers = same result (safe to retry)
- * 
+
  * Error Handling:
  * - Network timeout: Retry with backoff
  * - 4xx errors: Log and skip (bad webhook URL)
@@ -57,7 +57,7 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
     private static final long COOLDOWN_MS = 60_000; // 60 seconds
     private static final int MAX_RETRIES = 3;
     private static final long INITIAL_BACKOFF_MS = 2_000; // 2 seconds
-    private static final int HTTP_TIMEOUT_MS = 10_000; // 10 seconds
+
 
     public VercelWebhookServiceImpl(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -65,7 +65,7 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
 
     /**
      * Trigger Vercel rebuild asynchronously
-     * 
+
      * Flow:
      * 1. Check if webhook URL is configured
      * 2. Check cooldown period (60s since last trigger)

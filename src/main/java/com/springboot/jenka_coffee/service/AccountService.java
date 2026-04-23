@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.dto.response.AuthResult;
 import com.springboot.jenka_coffee.entity.Account;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -154,6 +155,8 @@ public interface AccountService {
      * @return AccountSecurityInfo containing activation status, admin status, and password reset date
      */
     AccountSecurityInfo getAccountSecurityInfo(String username);
+
+    void requestPasswordReset(@NotBlank(message = "Vui lòng nhập email hoặc số điện thoại đã đăng ký") String identifier);
 
     /**
          * DTO for security information needed by JWT filter

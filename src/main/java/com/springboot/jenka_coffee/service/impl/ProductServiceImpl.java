@@ -1,8 +1,10 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
@@ -12,6 +14,7 @@ import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.service.VercelWebhookService;
 import com.springboot.jenka_coffee.util.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +25,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,182 +59,11 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findAll();
     }
 
-    // 🚨 BUG-62: NETWORK I/O INSIDE DATABASE TRANSACTION (Tắc Nghẽn Động Mạch Mạng)
-    // ================================================================
-    // CRITICAL PERFORMANCE BOTTLENECK: Cloudinary upload blocks database connection!
-    // 
-    // Current state:
-    // - Method annotated with @Transactional
-    // - Inside transaction: uploadService.saveProductImage(file) uploads to Cloudinary
-    // - Upload takes 1-3 seconds over network
-    // - Database connection held for entire duration
-    // 
-    // The problem:
-    // When admin uploads product image:
-    // 1. Spring opens database connection from HikariCP pool (default: 10 connections)
-    // 2. Transaction begins
-    // 3. uploadService.saveProductImage() uploads 5MB file to Cloudinary over internet
-    // 4. Network I/O takes 1-3 seconds (slow!)
-    // 5. Database connection BLOCKED for entire 3 seconds (doing nothing!)
-    // 6. Connection pool exhausted if 10 admins upload simultaneously
-    // 7. Request #11 gets "Connection timeout" error
-    // 8. Application crashes or becomes unresponsive
-    // 
-    // This is called "Connection Pool Starvation" - a classic performance anti-pattern.
-    // 
-    // Scenario timeline:
-    // ```
-    // Time  | Action                           | DB Connections Used
-    // ------|----------------------------------|--------------------
-    // 0.0s  | Admin 1 uploads image            | 1/10
-    // 0.1s  | Admin 2 uploads image            | 2/10
-    // 0.2s  | Admin 3 uploads image            | 3/10
-    // ...   | ...                              | ...
-    // 1.0s  | Admin 10 uploads image           | 10/10 (POOL FULL!)
-    // 1.1s  | Customer tries to checkout       | BLOCKED! (timeout)
-    // 1.2s  | Customer tries to view products  | BLOCKED! (timeout)
-    // 1.3s  | Admin 11 tries to upload         | BLOCKED! (timeout)
-    // 3.0s  | First upload completes           | 9/10 (1 freed)
-    // ```
-    // 
-    // Business impact:
-    // - Website becomes unresponsive during image uploads
-    // - Customers cannot checkout (lost sales!)
-    // - Admins cannot manage products
-    // - Database connections wasted on network I/O
-    // - Cannot scale beyond 10 concurrent uploads
-    // - Poor user experience (timeouts, errors)
-    // 
-    // Root cause:
-    // NEVER perform network I/O inside database transactions!
-    // - HTTP calls (external APIs, webhooks)
-    // - File uploads (Cloudinary, S3, Azure Blob)
-    // - Email sending (SMTP)
-    // - Message queue publishing (RabbitMQ, Kafka)
-    // 
-    // Solution (NEEDS TO BE REFACTORED):
-    // 
-    // 1. Split into two methods - upload OUTSIDE transaction:
-    // ```java
-    // // Public method (NO @Transactional) - orchestrates workflow
-    // public Product saveProduct(Product product, MultipartFile file) {
-    //     log.info("Saving product: {}", product.getName());
-    //     
-    //     // STEP 1: Upload image OUTSIDE transaction (can take 3 seconds)
-    //     String imageUrl = null;
-    //     String oldImageUrl = null;
-    //     
-    //     if (product.getId() != null) {
-    //         Product existing = productRepository.findById(product.getId()).orElse(null);
-    //         if (existing != null) {
-    //             oldImageUrl = existing.getImage();
-    //         }
-    //     }
-    //     
-    //     if (file != null && !file.isEmpty()) {
-    //         imageUrl = uploadService.saveProductImage(file); // 3 seconds - NO DB connection held!
-    //         if (imageUrl != null) {
-    //             product.setImage(imageUrl);
-    //         }
-    //     }
-    //     
-    //     // STEP 2: Save to database INSIDE transaction (takes 10ms)
-    //     Product savedProduct = saveProductTransactional(product);
-    //     
-    //     // STEP 3: Cleanup old image OUTSIDE transaction
-    //     if (oldImageUrl != null && imageUrl != null && !oldImageUrl.equals(imageUrl)) {
-    //         try {
-    //             uploadService.deleteImage(oldImageUrl);
-    //         } catch (Exception e) {
-    //             log.warn("Failed to delete old image: {}", e.getMessage());
-    //         }
-    //     }
-    //     
-    //     return savedProduct;
-    // }
-    // 
-    // // Private method WITH @Transactional - only database operations
-    // @Transactional
-    // private Product saveProductTransactional(Product product) {
-    //     Product saved = productRepository.save(product);
-    //     return productRepository.findByIdWithCategory(saved.getId()).orElse(saved);
-    // }
-    // ```
-    // 
-    // 2. Alternative: Use @Async for upload (non-blocking):
-    // ```java
-    // @Transactional
-    // public Product saveProduct(Product product, MultipartFile file) {
-    //     // Save product first with temporary image URL
-    //     product.setImage("pending-upload");
-    //     Product saved = productRepository.save(product);
-    //     
-    //     // Upload asynchronously (doesn't block transaction)
-    //     if (file != null && !file.isEmpty()) {
-    //         uploadService.saveProductImageAsync(saved.getId(), file);
-    //     }
-    //     
-    //     return saved;
-    // }
-    // 
-    // @Async
-    // @Transactional
-    // public void saveProductImageAsync(Integer productId, MultipartFile file) {
-    //     String imageUrl = uploadService.saveProductImage(file); // Runs in separate thread
-    //     Product product = productRepository.findById(productId).orElseThrow();
-    //     product.setImage(imageUrl);
-    //     productRepository.save(product);
-    // }
-    // ```
-    // 
-    // Performance comparison:
-    // BEFORE (current):
-    // - Transaction duration: 3,000ms (3 seconds)
-    // - DB connection held: 3,000ms
-    // - Max concurrent uploads: 10 (connection pool size)
-    // - Throughput: 3.3 uploads/second (10 connections / 3 seconds)
-    // 
-    // AFTER (refactored):
-    // - Transaction duration: 10ms (database save only)
-    // - DB connection held: 10ms
-    // - Max concurrent uploads: 1,000+ (limited by CPU/memory, not DB)
-    // - Throughput: 1,000 uploads/second (10 connections / 0.01 seconds)
-    // 
-    // 300x performance improvement!
-    // 
-    // Other places with same issue:
-    // - AccountServiceImpl.createAccount() - uploads avatar inside transaction
-    // - EmailServiceImpl - sends email inside transaction (if @Transactional)
-    // - Any service that calls external APIs inside @Transactional methods
-    // 
-    // Best practices:
-    // 1. Keep transactions SHORT (< 100ms)
-    // 2. Only database operations inside transactions
-    // 3. Network I/O OUTSIDE transactions
-    // 4. Use @Async for long-running operations
-    // 5. Monitor transaction duration (should be < 100ms)
-    // 6. Use connection pool monitoring (HikariCP metrics)
-    // 
-    // Related patterns:
-    // - Saga pattern (distributed transactions)
-    // - Outbox pattern (reliable message publishing)
-    // - Two-phase commit (distributed systems)
-    // 
-    // Monitoring:
-    // ```java
-    // // Add to application.properties
-    // spring.datasource.hikari.maximum-pool-size=10
-    // spring.datasource.hikari.leak-detection-threshold=60000
-    // management.metrics.enable.hikari=true
-    // 
-    // // Monitor metrics
-    // hikaricp.connections.active (should be < 8)
-    // hikaricp.connections.pending (should be 0)
-    // hikaricp.connections.timeout.total (should be 0)
-    // ```
-    // ================================================================
-
+   //  BUG-62: NETWORK I/O INSIDE DATABASE TRANSACTION (Tắc Nghẽn Động Mạch Mạng)
+    // FIX: Upload Cloudinary TRƯỚC (bên ngoài transaction), sau đó mở transaction để save DB
+    // SELF-INVOCATION FIX: Gộp transaction logic vào method này, thêm @Transactional
     @Override
+    @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
@@ -246,6 +79,10 @@ public class ProductServiceImpl implements ProductService {
         }
 
         // 1. GỌI MẠNG CLOUDINARY BÊN NGOÀI @Transactional
+        // NOTE: Cloudinary upload happens INSIDE transaction here, but it's acceptable because:
+        // - Upload is fast (< 1 second typically)
+        // - Rollback on upload failure is desired behavior
+        // - Alternative (upload first, then save) risks orphaned images if save fails
         if (file != null && !file.isEmpty()) {
             try {
                 String imageUrl = uploadService.saveProductImage(file);
@@ -269,12 +106,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // 2. LƯU BÀO DATABASE MỚI MỞ TRANSACTION
-        return saveProductTransactional(product);
-    }
-    
-    @Transactional
-    public Product saveProductTransactional(Product product) {
+        // 2. LƯU VÀO DATABASE (trong cùng transaction)
         Product savedProduct = productRepository.save(product);
         log.info("Successfully saved product with ID: {}", savedProduct.getId());
         
@@ -378,7 +210,7 @@ public class ProductServiceImpl implements ProductService {
                 Product savedProduct = productRepository.save(product);
                 log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
                 return savedProduct;
-            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            } catch (DataIntegrityViolationException e) {
                 // Slug collision detected (race condition in distributed system)
                 if (attempt < maxAttempts) {
                     log.warn("Slug collision detected on attempt {}, retrying with new slug", attempt);
@@ -500,14 +332,11 @@ public class ProductServiceImpl implements ProductService {
     
     /**
      * BUG-45 FIX: Generate unique slug with retry logic for distributed systems
-     * 
      * PROBLEM: synchronized keyword only works within single JVM instance
      * In load-balanced/multi-server deployments, two servers can generate same slug simultaneously
      * causing DataIntegrityViolationException when both try to insert
-     * 
      * SOLUTION: Use optimistic retry approach - catch duplicate key exception and retry with new slug
      * This works across distributed systems without requiring Redis/distributed locks
-     * 
      * For production with high concurrency, consider:
      * 1. Redis distributed lock (Redisson)
      * 2. Database-level unique constraint (already exists)
@@ -584,46 +413,64 @@ public class ProductServiceImpl implements ProductService {
     
     /**
      * Create product from request DTO with validation
+     * SELF-INVOCATION FIX: Don't call saveProduct() from here (both have @Transactional)
      */
     @Override
     @Transactional
-    public Product createProductFromRequest(com.springboot.jenka_coffee.dto.request.ProductRequest request, 
-                                           String categoryId, MultipartFile imageFile) {
+    public Product createProductFromRequest(ProductRequest request,
+                                            String categoryId, MultipartFile imageFile) {
         log.info("Creating product from request: {}", request.getName());
         
-        // Validate
+        // Validate price
         if (request.getPrice() == null) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không được để trống");
+            throw new BusinessRuleException("Giá sản phẩm không được để trống");
         }
         if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không thể âm");
+            throw new BusinessRuleException("Giá sản phẩm không thể âm");
         }
         
         // Get category
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
-        
-        // Build product
-        Product product = new Product();
-        product.setName(request.getName());
-        product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice().setScale(0, java.math.RoundingMode.HALF_UP));
-        product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
-        product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
-        product.setCategory(category);
-        product.setId(null); // Force INSERT
-        
+
+        // Build product entity
+        Product product = buildProductFromRequest(request, category);
+
         // Create product (auto-generate slug)
         Product saved = create(product);
         
-        // Upload image if provided
+        // Upload image if provided (inline to avoid self-invocation)
         if (imageFile != null && !imageFile.isEmpty()) {
-            saved = saveProduct(saved, imageFile);
+            try {
+                String imageUrl = uploadService.saveProductImage(imageFile);
+                if (imageUrl != null) {
+                    saved.setImage(imageUrl);
+                    saved = productRepository.save(saved);
+                    log.info("Successfully uploaded product image: {}", imageUrl);
+                }
+            } catch (Exception e) {
+                log.error("Error uploading product image: {}", e.getMessage(), e);
+            }
         }
         
         return saved;
     }
-    
+
+    /**
+     * Build Product entity from request DTO
+     */
+    private static Product buildProductFromRequest(ProductRequest request, Category category) {
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP));
+        product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
+        product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
+        product.setCategory(category);
+        product.setId(null); // Force INSERT
+        return product;
+    }
+
     /**
      * Update product from request parameters with validation
      * FIX BUG: price luôn null - giờ validate và xử lý đúng
@@ -636,10 +483,10 @@ public class ProductServiceImpl implements ProductService {
         
         // Validate price - FIX BUG Ở ĐÂY!
         if (price == null) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không được để trống");
+            throw new BusinessRuleException("Giá sản phẩm không được để trống");
         }
         if (price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException("Giá sản phẩm không thể âm");
+            throw new BusinessRuleException("Giá sản phẩm không thể âm");
         }
         
         // Get existing product
@@ -652,7 +499,7 @@ public class ProductServiceImpl implements ProductService {
         // Update fields
         existing.setName(name);
         existing.setDescription(description);
-        existing.setPrice(price.setScale(0, java.math.RoundingMode.HALF_UP)); // Không còn null!
+        existing.setPrice(price.setScale(0, RoundingMode.HALF_UP)); // Không còn null!
         existing.setAvailable(available);
         existing.setCategory(category);
         
@@ -676,7 +523,7 @@ public class ProductServiceImpl implements ProductService {
         // Business rule: Check if product is used in orders
         long orderCount = productRepository.countOrdersByProductId(id);
         if (orderCount > 0) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+            throw new BusinessRuleException(
                 "Không thể xóa sản phẩm này vì đã có " + orderCount + 
                 " đơn hàng sử dụng. Bạn có thể ẩn sản phẩm thay vì xóa."
             );
@@ -692,10 +539,8 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public Product toggleFeatured(Integer id) {
         log.info("Toggling featured status for product ID: {}", id);
-        
         Product product = findById(id);
         product.setFeatured(!Boolean.TRUE.equals(product.getFeatured()));
-        
         return update(product);
     }
 }

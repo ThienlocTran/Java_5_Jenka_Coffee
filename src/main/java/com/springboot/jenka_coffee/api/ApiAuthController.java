@@ -41,6 +41,7 @@ public class ApiAuthController {
     private final JwtService jwtService;
     private final GoogleOAuthService googleOAuthService;
     private final JwtBlacklistService jwtBlacklistService;
+    private final com.springboot.jenka_coffee.service.CookieService cookieService;
 
     // VULN-L02 FIX: Detect production vs local để set Secure flag đúng
     @Value("${spring.profiles.active:default}")
@@ -48,11 +49,13 @@ public class ApiAuthController {
 
     public ApiAuthController(AccountService accountService, JwtService jwtService, 
                            GoogleOAuthService googleOAuthService,
-                           JwtBlacklistService jwtBlacklistService) {
+                           JwtBlacklistService jwtBlacklistService,
+                           com.springboot.jenka_coffee.service.CookieService cookieService) {
         this.accountService = accountService;
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.jwtBlacklistService = jwtBlacklistService;
+        this.cookieService = cookieService;
     }
 
     @PostMapping("/login")
@@ -79,6 +82,12 @@ public class ApiAuthController {
         // Gửi access token qua httpOnly cookie (an toàn hơn localStorage)
         addTokenCookie(response, "access_token",  accessToken,  86400);      // 1 ngày
         addTokenCookie(response, "refresh_token", refreshToken, 604800);     // 7 ngày
+
+        // REMEMBER ME: Nếu user chọn "Ghi nhớ đăng nhập", tạo remember cookie
+        if (request.isRemember()) {
+            Cookie rememberCookie = cookieService.createRememberMeCookie(account.getUsername(), 30); // 30 ngày
+            response.addCookie(rememberCookie);
+        }
 
         Map<String, Object> data = buildUserData(account);
         // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
@@ -112,6 +121,9 @@ public class ApiAuthController {
             long expirationMs = currentTimeMillis() + 604800000L; // 7 days
             jwtBlacklistService.blacklistToken(refreshToken, expirationMs);
         }
+        
+        // REMEMBER ME: Xóa remember cookie khi logout
+        cookieService.deleteRememberMeCookie(response);
         
         clearTokenCookies(response);
         return ResponseEntity.ok(ApiResponse.success("Đã đăng xuất thành công!", null));
@@ -371,6 +383,27 @@ public class ApiAuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Tài khoản không tồn tại"));
         }
         return ResponseEntity.ok(ApiResponse.success("Đã đăng nhập", buildUserData(account)));
+    }
+
+    /**
+     * REMEMBER ME: Check if remember cookie exists and return username for auto-fill
+     * Frontend sẽ gọi endpoint này khi load trang login để auto-fill username
+     */
+    @GetMapping("/check-remember")
+    public ResponseEntity<ApiResponse<Map<String, String>>> checkRememberMe(HttpServletRequest request) {
+        String username = cookieService.getRememberMeUsername(request);
+        
+        if (username != null) {
+            // Verify account still exists and is active
+            Account account = accountService.findById(username);
+            if (account != null && account.getActivated()) {
+                Map<String, String> data = new HashMap<>();
+                data.put("username", username);
+                return ResponseEntity.ok(ApiResponse.success("Remember cookie found", data));
+            }
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success("No remember cookie", null));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

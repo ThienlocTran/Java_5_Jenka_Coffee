@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.service;
 import com.springboot.jenka_coffee.entity.News;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -34,6 +35,7 @@ public interface NewsService {
     void delete(Integer id);
 
 
+    void saveNews(News news, MultipartFile file);
 
     /*
      * Toggle news availability
@@ -41,6 +43,7 @@ public interface NewsService {
     void toggleAvailable(Integer id);
 
 
+    List<News> findAvailableNews();
 
     /**
      * Find all news with pagination (Admin)

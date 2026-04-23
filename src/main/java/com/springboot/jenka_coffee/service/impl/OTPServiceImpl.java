@@ -5,6 +5,7 @@ import com.springboot.jenka_coffee.service.OTPService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -47,8 +48,8 @@ public class OTPServiceImpl implements OTPService {
 
         // VULN-H03 FIX: Constant-time comparison — ngăn timing side-channel attack
         boolean match = java.security.MessageDigest.isEqual(
-                stored.otp.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                otp.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                stored.otp.getBytes(StandardCharsets.UTF_8),
+                otp.getBytes(StandardCharsets.UTF_8));
 
         if (match) {
             otpStore.remove(phone);

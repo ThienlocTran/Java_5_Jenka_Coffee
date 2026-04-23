@@ -6,6 +6,8 @@ import com.springboot.jenka_coffee.repository.ContactRepository;
 import com.springboot.jenka_coffee.service.ContactService;
 import com.springboot.jenka_coffee.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
+import org.owasp.html.PolicyFactory;
+import org.owasp.html.Sanitizers;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,8 +48,8 @@ public class ContactServiceImpl implements ContactService {
      * Regex stripping destroys user data containing < or > characters
      * OWASP sanitizer preserves text while removing dangerous HTML
      */
-    private static final org.owasp.html.PolicyFactory SANITIZE_POLICY =
-            org.owasp.html.Sanitizers.FORMATTING.and(org.owasp.html.Sanitizers.LINKS);
+    private static final PolicyFactory SANITIZE_POLICY =
+            Sanitizers.FORMATTING.and(Sanitizers.LINKS);
 
     private String sanitizeInput(String input) {
         if (input == null) return null;

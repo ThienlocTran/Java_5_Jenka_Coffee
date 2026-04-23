@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.dto.response.AuthResult;
+import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.exception.ValidationException;
 import com.springboot.jenka_coffee.repository.AccountRepository;
@@ -247,7 +248,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public Account findByIdOrThrow(String username) {
         return dao.findById(username)
-                .orElseThrow(() -> new com.springboot.jenka_coffee.exception.ResourceNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Account", "username", username));
     }
 
@@ -257,10 +258,10 @@ public class AccountServiceImpl implements AccountService {
 
         if (!canDeleteAccount(username)) {
             if (account.getAdmin() != null && account.getAdmin()) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                throw new BusinessRuleException(
                         "Không thể xóa admin cuối cùng trong hệ thống!");
             }
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+            throw new BusinessRuleException(
                     "Không thể xóa tài khoản này!");
         }
 
@@ -276,54 +277,11 @@ public class AccountServiceImpl implements AccountService {
 
     // ===== ADMIN USER MANAGEMENT METHODS =====
 
-    @Override
-    public Account lockAccount(String username) {
-        Account account = findByIdOrThrow(username);
-        
-        // Business rule: Cannot lock admin if they are the last admin
-        if (account.getAdmin() != null && account.getAdmin()) {
-            long adminCount = dao.countByAdminTrue();
-            if (adminCount <= 1) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Không thể khóa admin cuối cùng trong hệ thống!");
-            }
-        }
-        
-        account.setActivated(false);
-        return dao.save(account);
-    }
 
-    @Override
-    public Account unlockAccount(String username) {
-        Account account = findByIdOrThrow(username);
-        account.setActivated(true);
-        return dao.save(account);
-    }
 
-    @Override
-    public Account adminResetPassword(String username, String newPassword) {
-        Account account = findByIdOrThrow(username);
-        
-        // Validate new password
-        if (newPassword == null || newPassword.trim().length() < 6) {
-            throw new ValidationException("Mật khẩu mới phải có ít nhất 6 ký tự!");
-        }
-        
-        // Hash and save new password (reuse existing logic)
-        account.setPasswordHash(passwordSecurity.hashPassword(newPassword.trim()));
 
-        // Clear any existing reset tokens
-        account.setResetToken(null);
-        account.setResetTokenExpiry(null);
-        
-        // VULN-SESSION-REVOCATION FIX: Update lastPasswordResetDate to invalidate old tokens
-        account.setLastPasswordResetDate(LocalDateTime.now());
 
-        Account saved = dao.save(account);
-        // VULN-026 FIX: Audit log bắt buộc
-        log.warn("SECURITY AUDIT: Admin reset password for user '{}' at {}", username, java.time.LocalDateTime.now());
-        return saved;
-    }
+
 
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET IMPLEMENTATION =====
 
@@ -376,41 +334,6 @@ public class AccountServiceImpl implements AccountService {
                 throw new ValidationException("Tài khoản không có số điện thoại để gửi OTP!");
             }
         }
-    }
-
-    @Override
-    public String requestPasswordReset(String identifier) {
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-
-        // VULN-003 FIX: Silent fail — không tiết lộ user có/không tồn tại
-        // Luôn trả về cùng message dù user tồn tại hay không
-        if (account == null) {
-            log.info("Password reset requested for non-existent identifier (masked for security)");
-            return "EMAIL"; // Fake return — timing consistent
-        }
-
-        boolean hasEmail = account.getEmail() != null && !account.getEmail().trim().isEmpty();
-        boolean hasPhone = account.getPhone() != null && !account.getPhone().trim().isEmpty();
-
-        if (hasEmail) {
-            try {
-                String resetToken = UUID.randomUUID().toString();
-                account.setResetToken(resetToken);
-                account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
-                dao.save(account);
-                emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
-                return "EMAIL";
-            } catch (Exception e) {
-                log.warn("Email sending failed (masked for security)");
-                if (!hasPhone) return "EMAIL"; // Silent fail
-            }
-        }
-
-        if (hasPhone) {
-            otpService.generateOTP(account.getPhone());
-            return "PHONE";
-        }
-        return "EMAIL"; // Silent fail
     }
 
     @Override

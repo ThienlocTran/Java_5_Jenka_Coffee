@@ -24,4 +24,5 @@ public interface OTPService {
     boolean verifyOTP(String phone, String otp);
 
 
+    String resendOTP(String phone);
 }
