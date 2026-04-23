@@ -110,13 +110,17 @@ public class ApiAdminAccountController {
 
     @PutMapping("/{username}/lock")
     public ResponseEntity<ApiResponse<Void>> lockAccount(@PathVariable String username) {
-        accountService.lockAccount(username);
+        Account account = accountService.findByIdOrThrow(username);
+        account.setActivated(false);
+        accountService.save(account);
         return ResponseEntity.ok(ApiResponse.success("Đã khóa tài khoản thành công!", null));
     }
 
     @PutMapping("/{username}/unlock")
     public ResponseEntity<ApiResponse<Void>> unlockAccount(@PathVariable String username) {
-        accountService.unlockAccount(username);
+        Account account = accountService.findByIdOrThrow(username);
+        account.setActivated(true);
+        accountService.save(account);
         return ResponseEntity.ok(ApiResponse.success("Đã mở khóa tài khoản thành công!", null));
     }
 

@@ -27,11 +27,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // BUG-49 WARNING: CSRF Protection Disabled - Subdomain Attack Risk
@@ -107,6 +102,7 @@ public class SecurityConfig {
                     "/api/bookings",
                     "/api/booking/**",
                     "/api/visitors/**",
+                    "/api/cart/**", // Allow anonymous cart (session-based)
                     "/api/error",
                     "/uploads/**").permitAll()
                 // Admin — phải có ROLE_ADMIN
@@ -114,7 +110,6 @@ public class SecurityConfig {
                 // User — phải đăng nhập
                 .requestMatchers(
                     "/api/auth/update-phone", // Requires authentication
-                    "/api/cart/**",
                     "/api/orders/**",
                     "/api/profile/**").hasRole("USER")
                 // Mọi endpoint không match → deny (secure by default)

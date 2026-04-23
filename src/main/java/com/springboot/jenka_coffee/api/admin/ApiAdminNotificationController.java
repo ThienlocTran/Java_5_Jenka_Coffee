@@ -15,14 +15,14 @@ import java.util.Map;
 public class ApiAdminNotificationController {
 
     private final OrderRepository orderRepository;
-    private final ServiceBookingRepository bookingRepository;
+
     private final ContactRepository contactRepository;
 
     public ApiAdminNotificationController(OrderRepository orderRepository,
-                                           ServiceBookingRepository bookingRepository,
+
                                            ContactRepository contactRepository) {
         this.orderRepository = orderRepository;
-        this.bookingRepository = bookingRepository;
+
         this.contactRepository = contactRepository;
     }
 
@@ -36,15 +36,14 @@ public class ApiAdminNotificationController {
     @GetMapping("/counts")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getCounts() {
         long newOrders      = orderRepository.countByStatus(0);
-        long pendingBookings = bookingRepository.countByStatus("PENDING");
+
         long unreadContacts = contactRepository.countByIsReadFalse();
-        long total = newOrders + pendingBookings + unreadContacts;
 
         return ResponseEntity.ok(ApiResponse.success("OK", Map.of(
                 "newOrders",       newOrders,
-                "pendingBookings", pendingBookings,
-                "unreadContacts",  unreadContacts,
-                "total",           total
+
+                "unreadContacts",  unreadContacts
+
         )));
     }
 }

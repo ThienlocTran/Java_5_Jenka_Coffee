@@ -171,9 +171,9 @@ public class ApiVisitorController {
     }
     
     /**
-     * Get unique client identifier from IP + User-Agent + SessionId
+     * Get unique client identifier from IP + User-Agent
      * Prevents same user from being counted multiple times
-     * DEV-FIX: Use sessionId to track individual browser tabs correctly
+     * FIX: Removed session dependency since app uses STATELESS session policy
      */
     private String getClientIdentifier(HttpServletRequest request) {
         String ip = getClientIp(request);
@@ -181,12 +181,9 @@ public class ApiVisitorController {
         String userAgent = request.getHeader("User-Agent");
         if (userAgent == null) userAgent = "unknown";
         
-        // Get or create session ID for this browser tab
-        String sessionId = request.getSession(true).getId();
-        
-        // Combine IP + first 50 chars of user agent + sessionId for uniqueness
-        // This ensures each browser tab is tracked separately but correctly
-        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent) + "|" + sessionId;
+        // Combine IP + first 50 chars of user agent for uniqueness
+        // Note: This means multiple tabs from same IP will be counted as one user
+        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent);
     }
     
     /**

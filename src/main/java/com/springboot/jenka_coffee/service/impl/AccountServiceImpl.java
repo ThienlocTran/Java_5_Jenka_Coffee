@@ -405,4 +405,68 @@ public class AccountServiceImpl implements AccountService {
         
         return AccountService.AccountSecurityInfo.fromAccount(account);
     }
+
+    @Override
+    @Transactional
+    public void requestPasswordReset(String identifier) {
+        log.info("Password reset requested for identifier: {}", identifier);
+        
+        // Find account by username, email, or phone
+        Account account = dao.findByUsernameOrEmailOrPhone(identifier)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Không tìm thấy tài khoản với thông tin: " + identifier));
+        
+        // Check if account is activated
+        if (!Boolean.TRUE.equals(account.getActivated())) {
+            throw new BusinessRuleException("Tài khoản chưa được kích hoạt. Vui lòng kích hoạt tài khoản trước.");
+        }
+        
+        // Generate reset token (valid for 1 hour)
+        String resetToken = UUID.randomUUID().toString();
+        account.setResetToken(resetToken);
+        account.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+        dao.save(account);
+        
+        // Send reset link/OTP based on identifier type
+        if (identifier.contains("@")) {
+            // Email - send reset link
+            emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
+            log.info("Password reset email sent to: {}", account.getEmail());
+        } else if (identifier.matches("\\d{10,11}")) {
+            // Phone - send OTP
+            String otp = otpService.generateOTP(account.getPhone());
+            // OTP service will handle sending SMS
+            log.info("Password reset OTP sent to: {}", account.getPhone());
+        } else {
+            // Username - send to email if available
+            if (account.getEmail() != null && !account.getEmail().isEmpty()) {
+                emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
+                log.info("Password reset email sent to: {}", account.getEmail());
+            } else {
+                throw new BusinessRuleException("Tài khoản không có email. Vui lòng liên hệ quản trị viên.");
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void adminResetPassword(String username, String newPassword) {
+        log.info("Admin resetting password for user: {}", username);
+        
+        // Find account
+        Account account = dao.findById(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
+        
+        // Hash new password using PasswordSecurity
+        String hashedPassword = passwordSecurity.hashPassword(newPassword);
+        account.setPasswordHash(hashedPassword);
+        
+        // Update last password reset date
+        account.setLastPasswordResetDate(java.time.LocalDateTime.now());
+        
+        // Save account
+        dao.save(account);
+        
+        log.info("Successfully reset password for user: {}", username);
+    }
 }

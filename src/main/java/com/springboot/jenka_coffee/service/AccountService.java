@@ -83,13 +83,13 @@ public interface AccountService {
      * @return Updated account
      */
 
-    /*
+    /**
      * Admin reset password for user (admin function)
      * 
      * @param username Account username
-     * @param newPassword New password
-     * @return Updated account
+     * @param newPassword New password (plain text, will be hashed)
      */
+    void adminResetPassword(String username, String newPassword);
 
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET =====
 

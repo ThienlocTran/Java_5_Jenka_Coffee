@@ -28,6 +28,9 @@ public class CartServiceImpl implements CartService {
 
     private static final int MAX_CARTS = 5000;          // giới hạn tổng số cart
     private static final long CART_TTL_MS = 3_600_000L; // 1 giờ không hoạt động → xóa
+    
+    // ThreadLocal to store request context for anonymous user identification
+    private static final ThreadLocal<jakarta.servlet.http.HttpServletRequest> requestContext = new ThreadLocal<>();
 
     private static class CartEntry {
         // VULN-DDOS-001 FIX: Dùng ConcurrentHashMap thay vì HashMap để tránh race condition
@@ -46,15 +49,95 @@ public class CartServiceImpl implements CartService {
         return productServiceProvider.getObject();
     }
 
-    /** VULN-024 FIX: Không cho anonymous dùng cart — yêu cầu đăng nhập.
-     *  Trước đây tất cả anonymous dùng chung key "anonymous" → cart poisoning. */
+    /** 
+     * Get current user identifier for cart.
+     * Returns username for authenticated users, or IP+UserAgent hash for anonymous users.
+     * 
+     * SECURITY NOTE: Anonymous cart uses IP+UserAgent fingerprint.
+     * Limitations:
+     * - Users behind same NAT with same browser will share cart (rare but possible)
+     * - Changing browser or network will lose cart
+     * - This is acceptable because:
+     *   1. Anonymous users can't checkout (requires login)
+     *   2. Cart data is temporary and non-sensitive
+     *   3. Memory limits prevent abuse (MAX_CARTS + TTL eviction)
+     * 
+     * PRODUCTION RECOMMENDATION: Use frontend localStorage for anonymous cart
+     * and sync to backend only on login/checkout.
+     */
     private String currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                    "Vui lòng đăng nhập để sử dụng giỏ hàng!");
+            // For anonymous users, use IP + User-Agent as identifier
+            jakarta.servlet.http.HttpServletRequest request = requestContext.get();
+            if (request == null) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Không thể xác định người dùng. Vui lòng thử lại!");
+            }
+            return "anon:" + getClientIdentifier(request);
         }
         return auth.getName();
+    }
+    
+    /**
+     * Get unique client identifier from IP + User-Agent
+     * Same logic as ApiVisitorController
+     */
+    private String getClientIdentifier(jakarta.servlet.http.HttpServletRequest request) {
+        String ip = getClientIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        if (userAgent == null) userAgent = "unknown";
+        
+        // Combine IP + first 50 chars of user agent for uniqueness
+        return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent);
+    }
+    
+    /**
+     * Get client IP, respecting X-Forwarded-For from trusted proxies
+     */
+    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+        if (isTrustedProxy(remoteAddr)) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp;
+            }
+        }
+        return remoteAddr;
+    }
+    
+    private boolean isTrustedProxy(String ip) {
+        if (ip == null) return false;
+        return ip.startsWith("10.")
+                || ip.startsWith("172.16.") || ip.startsWith("172.17.")
+                || ip.startsWith("172.18.") || ip.startsWith("172.19.")
+                || ip.startsWith("172.20.") || ip.startsWith("172.21.")
+                || ip.startsWith("172.22.") || ip.startsWith("172.23.")
+                || ip.startsWith("172.24.") || ip.startsWith("172.25.")
+                || ip.startsWith("172.26.") || ip.startsWith("172.27.")
+                || ip.startsWith("172.28.") || ip.startsWith("172.29.")
+                || ip.startsWith("172.30.") || ip.startsWith("172.31.")
+                || ip.startsWith("192.168.")
+                || "127.0.0.1".equals(ip) || "::1".equals(ip);
+    }
+    
+    /**
+     * Set request context for anonymous user identification.
+     * Should be called by controller before service methods.
+     */
+    public static void setRequestContext(jakarta.servlet.http.HttpServletRequest request) {
+        requestContext.set(request);
+    }
+    
+    /**
+     * Clear request context after processing.
+     */
+    public static void clearRequestContext() {
+        requestContext.remove();
     }
 
     /** Lấy cart của user hiện tại, tạo mới nếu chưa có */
