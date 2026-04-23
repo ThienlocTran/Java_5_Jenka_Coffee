@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 public class SlugUtils {
     
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
-    private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s");
     private static final Pattern EDGESDHASHES = Pattern.compile("(^-|-$)");
     
     /**
@@ -26,14 +26,5 @@ public class SlugUtils {
         
         return slug.toLowerCase();
     }
-    
-    /**
-     * Tạo slug unique bằng cách thêm số vào cuối nếu trùng
-     */
-    public static String makeUnique(String baseSlug, int counter) {
-        if (counter == 0) {
-            return baseSlug;
-        }
-        return baseSlug + "-" + counter;
-    }
+
 }

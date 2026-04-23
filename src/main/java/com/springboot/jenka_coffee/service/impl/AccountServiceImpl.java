@@ -176,7 +176,7 @@ public class AccountServiceImpl implements AccountService {
 
         // Hash password before saving
         if (account.getPasswordHash() != null && !account.getPasswordHash().trim().isEmpty()) {
-            if (!passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(account.getPasswordHash())) {
                 account.setPasswordHash(passwordSecurity.hashPassword(account.getPasswordHash()));
             }
         }
@@ -206,7 +206,7 @@ public class AccountServiceImpl implements AccountService {
             updatedAccount.setPasswordHash(existingAccount.getPasswordHash());
         } else {
             // Hash new password if it's not already hashed
-            if (!passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
+            if (passwordSecurity.isPasswordHashed(updatedAccount.getPasswordHash())) {
                 updatedAccount.setPasswordHash(passwordSecurity.hashPassword(updatedAccount.getPasswordHash()));
             }
         }
