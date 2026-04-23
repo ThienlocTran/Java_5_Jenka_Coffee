@@ -8,7 +8,6 @@ import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.EmailService;
 import com.springboot.jenka_coffee.service.OrderService;
-import com.springboot.jenka_coffee.service.VoucherService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.extern.slf4j.Slf4j;
@@ -302,10 +301,10 @@ public class OrderServiceImpl implements OrderService {
         return request;
     }
 
-    @Override
+
     @Override
     @Transactional
-    public Order updateStatus(Long orderId, int status) {
+    public void updateStatus(Long orderId, int status) {
         // Lock Order to prevent race condition
         Order order = entityManager.find(Order.class, orderId, LockModeType.PESSIMISTIC_WRITE);
         if (order == null) {
@@ -356,7 +355,7 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(status);
         log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());
-        return orderRepository.save(order);
+        orderRepository.save(order);
     }
     
     /**

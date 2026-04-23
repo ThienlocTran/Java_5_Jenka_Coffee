@@ -1,5 +1,7 @@
 package com.springboot.jenka_coffee.service;
 
+import java.math.BigDecimal;
+
 /**
  * Email service for sending activation and password reset emails
  */
@@ -27,9 +29,8 @@ public interface EmailService {
      * Notify admin when a new order is placed
      */
     void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
-                                   String phone, String address, java.math.BigDecimal total);
+                                   String phone, String address, BigDecimal total);
 
-    void sendBookingConfirmation(String customerName, String phone, String bookingDate, String description);
 
     void sendContactConfirmation(String toEmail, String customerName, String subject);
 }

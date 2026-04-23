@@ -31,17 +31,16 @@ public interface ProfileService {
      * @return Updated account with new avatar path
      */
     Account updateAvatar(String username, MultipartFile avatarFile);
-    
+
     /**
      * Change user password
-     * 
-     * @param username Username
+     *
+     * @param username        Username
      * @param currentPassword Current password for verification
-     * @param newPassword New password
-     * @return Updated account
+     * @param newPassword     New password
      */
-    Account changePassword(String username, String currentPassword, String newPassword);
-    
+    void changePassword(String username, String currentPassword, String newPassword);
+
     /**
      * Validate profile update request
      * 

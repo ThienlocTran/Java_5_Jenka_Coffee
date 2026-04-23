@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.service.impl;
 
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
-import com.springboot.jenka_coffee.service.VoucherService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;

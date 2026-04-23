@@ -51,15 +51,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             // Không tin JWT claim vì có thể đã bị revoke
             AccountService.AccountSecurityInfo securityInfo = accountService.getAccountSecurityInfo(username);
             
-            if (!securityInfo.exists() || !securityInfo.isActivated()) {
+            if (!securityInfo.exists() || !securityInfo.activated()) {
                 chain.doFilter(req, res);
                 return;
             }
             
             // VULN-SESSION-REVOCATION FIX: Check if token was issued before password reset
-            if (securityInfo.getLastPasswordResetTimestamp() != null) {
+            if (securityInfo.lastPasswordResetTimestamp() != null) {
                 long tokenIssuedAt = jwtService.extractIssuedAt(token);
-                long passwordResetTime = securityInfo.getLastPasswordResetTimestamp();
+                long passwordResetTime = securityInfo.lastPasswordResetTimestamp();
                 
                 if (tokenIssuedAt < passwordResetTime) {
                     // Token issued before password reset - reject
@@ -69,7 +69,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
             
             // Lấy admin status từ DB (fresh data), không từ JWT token
-            boolean isAdminInDb = securityInfo.isAdmin();
+            boolean isAdminInDb = securityInfo.admin();
             boolean isAdminInToken = jwtService.isAdmin(token);
             
             // VULN-PRIVILEGE-REVOCATION FIX: Nếu token claim admin=true nhưng DB là false → reject

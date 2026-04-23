@@ -23,11 +23,5 @@ public interface OTPService {
      */
     boolean verifyOTP(String phone, String otp);
 
-    /**
-     * Resend OTP to phone number
-     * 
-     * @param phone Phone number
-     * @return New OTP code
-     */
-    String resendOTP(String phone);
+
 }

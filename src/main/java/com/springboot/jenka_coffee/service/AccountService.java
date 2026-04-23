@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.dto.response.AuthResult;
 import com.springboot.jenka_coffee.entity.Account;
+import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,9 +28,6 @@ public interface AccountService {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
-
-    // Authentication
-    Account authenticate(String username, String password);
 
     /**
      * Authenticate and return a rich result — avoids N+1 query in controller.
@@ -70,34 +68,31 @@ public interface AccountService {
      */
     Account toggleActivation(String username);
 
-    /**
+    /*
      * Lock account (admin function)
      * 
      * @param username Account username
      * @return Updated account
      */
-    Account lockAccount(String username);
 
-    /**
+    /*
      * Unlock account (admin function)
      * 
      * @param username Account username
      * @return Updated account
      */
-    Account unlockAccount(String username);
 
-    /**
+    /*
      * Admin reset password for user (admin function)
      * 
      * @param username Account username
      * @param newPassword New password
      * @return Updated account
      */
-    Account adminResetPassword(String username, String newPassword);
 
     // ===== ACCOUNT ACTIVATION & PASSWORD RESET =====
 
-    /**
+    /*
      * Activate account using activation token
      * 
      * @param token Activation token
@@ -111,12 +106,11 @@ public interface AccountService {
      */
     void resendActivation(String username);
 
-    /**
+    /*
      * Request password reset
      * 
      * @return "EMAIL" or "PHONE" to indicate sending method
      */
-    String requestPasswordReset(String identifier);
 
     /**
      * Reset password using reset token
@@ -160,46 +154,31 @@ public interface AccountService {
      * @return AccountSecurityInfo containing activation status, admin status, and password reset date
      */
     AccountSecurityInfo getAccountSecurityInfo(String username);
-    
+
     /**
-     * DTO for security information needed by JWT filter
-     */
-    class AccountSecurityInfo {
-        private final boolean exists;
-        private final boolean activated;
-        private final boolean admin;
-        private final Long lastPasswordResetTimestamp;
-        
-        public AccountSecurityInfo(boolean exists, boolean activated, boolean admin, Long lastPasswordResetTimestamp) {
-            this.exists = exists;
-            this.activated = activated;
-            this.admin = admin;
-            this.lastPasswordResetTimestamp = lastPasswordResetTimestamp;
-        }
-        
-        public boolean exists() { return exists; }
-        public boolean isActivated() { return activated; }
-        public boolean isAdmin() { return admin; }
-        public Long getLastPasswordResetTimestamp() { return lastPasswordResetTimestamp; }
-        
+         * DTO for security information needed by JWT filter
+         */
+        record AccountSecurityInfo(boolean exists, @Getter boolean activated, @Getter boolean admin,
+                                   @Getter Long lastPasswordResetTimestamp) {
+
         public static AccountSecurityInfo notFound() {
-            return new AccountSecurityInfo(false, false, false, null);
-        }
-        
-        public static AccountSecurityInfo fromAccount(Account account) {
-            Long resetTimestamp = null;
-            if (account.getLastPasswordResetDate() != null) {
-                resetTimestamp = account.getLastPasswordResetDate()
-                        .atZone(java.time.ZoneId.systemDefault())
-                        .toInstant()
-                        .toEpochMilli();
+                return new AccountSecurityInfo(false, false, false, null);
             }
-            return new AccountSecurityInfo(
-                    true,
-                    Boolean.TRUE.equals(account.getActivated()),
-                    Boolean.TRUE.equals(account.getAdmin()),
-                    resetTimestamp
-            );
+
+        public static AccountSecurityInfo fromAccount(Account account) {
+                Long resetTimestamp = null;
+                if (account.getLastPasswordResetDate() != null) {
+                    resetTimestamp = account.getLastPasswordResetDate()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli();
+                }
+                return new AccountSecurityInfo(
+                        true,
+                        Boolean.TRUE.equals(account.getActivated()),
+                        Boolean.TRUE.equals(account.getAdmin()),
+                        resetTimestamp
+                );
+            }
         }
-    }
 }

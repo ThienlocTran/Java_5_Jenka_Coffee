@@ -86,15 +86,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account authenticate(String identifier, String password) {
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
-        if (account == null || !account.getActivated()) {
-            return null;
-        }
-        return passwordSecurity.verifyPassword(password, account.getPasswordHash()) ? account : null;
-    }
-
-    @Override
     public AuthResult authenticateWithResult(String identifier, String password) {
         // VULN-BCRYPT-DOS FIX: Giới hạn độ dài password trước khi hash
         if (password == null || password.length() > 72) {
@@ -143,7 +134,7 @@ public class AccountServiceImpl implements AccountService {
         createAccount(newAccount, null);
         
         // 5. Send OTP to phone for verification
-        if (phone != null && !phone.trim().isEmpty()) {
+        if (!phone.trim().isEmpty()) {
             otpService.generateOTP(phone.trim());
         }
     }

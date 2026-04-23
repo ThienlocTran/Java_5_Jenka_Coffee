@@ -118,10 +118,10 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
-    public Account changePassword(String username, String currentPassword, String newPassword) {
+    public void changePassword(String username, String currentPassword, String newPassword) {
         Account account = getProfile(username);
         changePasswordInternal(account, currentPassword, newPassword);
-        return accountRepository.save(account);
+        accountRepository.save(account);
     }
 
     @Override
