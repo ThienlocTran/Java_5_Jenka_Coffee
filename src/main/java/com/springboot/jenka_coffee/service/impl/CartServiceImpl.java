@@ -110,8 +110,40 @@ public class CartServiceImpl implements CartService {
         return remoteAddr;
     }
     
+    /**
+     * Check if IP is from trusted proxy.
+     * 
+     * VULN-CART-HIJACKING WARNING: In production behind proxy (Railway/Vercel/K8s),
+     * remoteAddr is often private IP (10.x, 172.x, 192.168.x) which makes this
+     * function always return TRUE → app blindly trusts X-Forwarded-For header.
+     * 
+     * SECURITY RISK:
+     * - Attacker can spoof X-Forwarded-For to hijack other users' carts
+     * - Privacy leak: view cart contents of other users
+     * - Cart vandalism: add/remove items from other users' carts
+     * 
+     * PRODUCTION FIX OPTIONS:
+     * 1. **Best**: Use UUID-based cart ID stored in cookie/localStorage
+     *    - Generate cartId = UUID.randomUUID() on first cart access
+     *    - Store in HttpOnly cookie or localStorage
+     *    - Send with every cart request
+     * 
+     * 2. **Alternative**: Whitelist specific proxy IPs (not IP ranges)
+     *    - Only trust X-Forwarded-For from known proxy IPs
+     *    - Example: "10.0.0.5", "172.17.0.1" (specific IPs, not ranges)
+     *    - Configure via environment variable
+     * 
+     * 3. **Temporary**: Disable anonymous cart, require login
+     *    - Remove IP-based identification
+     *    - Force users to login before adding to cart
+     * 
+     * CURRENT STATUS: Accepted risk for MVP
+     * TODO: Implement UUID-based cart ID before production deployment
+     */
     private boolean isTrustedProxy(String ip) {
         if (ip == null) return false;
+        // WARNING: These IP ranges are too broad for production
+        // In containerized environments, remoteAddr is often in these ranges
         return ip.startsWith("10.")
                 || ip.startsWith("172.16.") || ip.startsWith("172.17.")
                 || ip.startsWith("172.18.") || ip.startsWith("172.19.")

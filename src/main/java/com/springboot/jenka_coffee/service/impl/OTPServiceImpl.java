@@ -18,6 +18,11 @@ public class OTPServiceImpl implements OTPService {
 
     private final Map<String, OTPData>     otpStore     = new ConcurrentHashMap<>();
     private final Map<String, AttemptData> attemptStore = new ConcurrentHashMap<>();
+    
+    // VULN-THREAD-STARVATION FIX: Per-phone locks instead of singleton lock
+    // Using ConcurrentHashMap to store individual locks per phone number
+    // This prevents one phone's OTP verification from blocking all other users
+    private final Map<String, Object> phoneLocks = new ConcurrentHashMap<>();
 
     private static final int OTP_EXPIRY_MINUTES = 5;
     private static final int MAX_ATTEMPTS       = 5;
@@ -32,9 +37,12 @@ public class OTPServiceImpl implements OTPService {
 
     @Override
     public boolean verifyOTP(String phone, String otp) {
-        // VULN-M02 FIX: Synchronized block to prevent race condition
-        // Without synchronization, concurrent requests can bypass MAX_ATTEMPTS check
-        synchronized (this) {
+        // VULN-M02 & VULN-THREAD-STARVATION FIX: Lock per phone, not entire service
+        // Get or create a lock object specific to this phone number
+        // This allows concurrent OTP verification for different phone numbers
+        Object lock = phoneLocks.computeIfAbsent(phone, k -> new Object());
+        
+        synchronized (lock) {
             AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
             if (attempts.count.get() >= MAX_ATTEMPTS) {
                 otpStore.remove(phone);
@@ -47,6 +55,7 @@ public class OTPServiceImpl implements OTPService {
             if (stored.expiry.isBefore(LocalDateTime.now())) {
                 otpStore.remove(phone);
                 attemptStore.remove(phone);
+                phoneLocks.remove(phone); // Cleanup lock
                 return false;
             }
 
@@ -58,6 +67,7 @@ public class OTPServiceImpl implements OTPService {
             if (match) {
                 otpStore.remove(phone);
                 attemptStore.remove(phone);
+                phoneLocks.remove(phone); // Cleanup lock
                 return true;
             }
 

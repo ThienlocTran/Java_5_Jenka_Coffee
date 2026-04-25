@@ -60,7 +60,16 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
 
 
     public VercelWebhookServiceImpl(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        // VULN-EXTERNAL-CALL-DOS FIX: Configure timeout for external HTTP calls
+        // Without timeout, thread can block indefinitely if Vercel is slow/hanging
+        // This prevents thread pool exhaustion and service degradation
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = 
+            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000); // 5 seconds to establish connection
+        factory.setReadTimeout(10000);   // 10 seconds to read response
+        
+        this.restTemplate = new RestTemplate(factory);
+        log.info("[VERCEL] RestTemplate configured with timeouts: connect=5s, read=10s");
     }
 
     /**
