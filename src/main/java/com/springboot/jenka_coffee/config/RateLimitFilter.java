@@ -48,6 +48,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // VULN-H03 FIX: Rate limit for /api/auth/me to prevent DB spam
     // Limit: 60 requests per minute per IP (prevents DB query flooding with stolen token)
     private final Cache<String, Bucket> authMeBuckets = buildCache(Duration.ofMinutes(1));
+    // VULN-RATE-LIMIT-GAPS FIX: Rate limit for public product search to prevent DB DoS
+    // Limit: 100 requests per minute per IP (prevents expensive search/filter/sort queries)
+    private final Cache<String, Bucket> productBuckets = buildCache(Duration.ofMinutes(1));
 
     private Cache<String, Bucket> buildCache(Duration ttl) {
         return Caffeine.newBuilder()
@@ -132,6 +135,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     }
                 }
                 bucket = contactBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
+            } else if (path.startsWith("/api/orders/checkout")) {
+                // VULN-ORDER-FLOODING FIX: Rate limit checkout to prevent spam orders
+                // Limit: 3 checkouts per 10 minutes per IP
+                // Prevents: fake orders, email spam, inventory manipulation
+                bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
             } else if (path.startsWith("/api/vouchers/check")) {
                 // VULN-BRUTE-002 FIX: 20 requests/phút để ngăn voucher enumeration
                 bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
@@ -159,6 +167,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Prevents DB spam attack with stolen token
         if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/auth/me")) {
             bucket = authMeBuckets.get(ip, k -> buildBucket(60, Duration.ofMinutes(1)));
+        }
+        
+        // VULN-RATE-LIMIT-GAPS FIX: Rate limit cho /api/products - 100 requests/phút
+        // Prevents DB DoS via expensive search/filter/sort queries
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/products")) {
+            bucket = productBuckets.get(ip, k -> buildBucket(100, Duration.ofMinutes(1)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {
