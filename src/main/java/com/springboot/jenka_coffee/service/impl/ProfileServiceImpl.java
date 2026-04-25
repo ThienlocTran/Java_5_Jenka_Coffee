@@ -94,26 +94,29 @@ public class ProfileServiceImpl implements ProfileService {
         return savedAccount;
     }
 
+    // VULN #11 FIX: Connection Pool Exhaustion Prevention in Avatar Upload
+    // PROBLEM: Class-level @Transactional held DB connection during Cloudinary upload
+    // SOLUTION: Split into two steps - upload outside transaction, save inside transaction
     @Override
     public Account updateAvatar(String username, MultipartFile avatarFile) {
+        // STEP 1: Get old avatar URL (quick query, no transaction needed)
         Account account = getProfile(username);
-
-        // VULN-ORPHANED-STORAGE FIX: Delete old avatar before uploading new one
         String oldAvatarUrl = account.getPhoto();
         
-        // Upload directly to Cloudinary — no local resize needed
+        // STEP 2: Upload to Cloudinary OUTSIDE transaction (no DB connection held during network I/O)
         String avatarUrl = uploadService.saveImage(avatarFile);
         if (avatarUrl == null) {
             throw new BusinessRuleException("Không thể tải lên ảnh đại diện");
         }
 
-        account.setPhoto(avatarUrl);
-        Account savedAccount = accountRepository.save(account);
+        // STEP 3: Save to database in separate transaction (fast, no network I/O)
+        Account savedAccount = updateAvatarInDatabase(username, avatarUrl);
         
-        // Delete old avatar after successful update (async - don't block response)
+        // STEP 4: Cleanup old avatar after successful update (async - don't block response)
         if (oldAvatarUrl != null && !oldAvatarUrl.isEmpty()) {
             try {
                 uploadService.deleteImage(oldAvatarUrl);
+                log.info("Deleted old avatar for user: {}", username);
             } catch (Exception e) {
                 log.warn("Failed to delete old avatar for user {}: {}", username, e.getMessage());
                 // Don't throw - deletion failure shouldn't block the update
@@ -123,8 +126,26 @@ public class ProfileServiceImpl implements ProfileService {
         log.info("Updated avatar for user: {}", username);
         return savedAccount;
     }
+    
+    /**
+     * VULN #11 FIX: Separate transactional method for DB operations only
+     * This method ONLY does database operations - no network I/O
+     * Transaction is short-lived, connection released quickly
+     */
+    @Transactional
+    protected Account updateAvatarInDatabase(String username, String avatarUrl) {
+        Account account = accountRepository.findById(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
+        
+        account.setPhoto(avatarUrl);
+        Account savedAccount = accountRepository.save(account);
+        log.info("Saved avatar URL to database for user: {}", username);
+        
+        return savedAccount;
+    }
 
     @Override
+    @Transactional
     public void changePassword(String username, String currentPassword, String newPassword) {
         Account account = getProfile(username);
         changePasswordInternal(account, currentPassword, newPassword);

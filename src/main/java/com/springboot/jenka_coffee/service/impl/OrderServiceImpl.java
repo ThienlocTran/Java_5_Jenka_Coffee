@@ -284,9 +284,24 @@ public class OrderServiceImpl implements OrderService {
         order.setCreateDate(LocalDateTime.now());
         order.setStatus(0); // NEW
 
-        // VULN-058 FIX: Sanitize note
+        // VULN #12 FIX: XSS Prevention in Order Notes
+        // PROBLEM: Regex sanitization <[^>]*> is insufficient
+        // - Doesn't match incomplete tags: <img src=x onerror=alert(1)
+        // - Regex is NOT a proper HTML sanitizer
+        // SOLUTION: Use proper HTML escaping (converts < to &lt;, > to &gt;, etc.)
+        // - If frontend uses v-html, browser won't execute escaped HTML as code
+        // - Simple, safe, and effective for plain text fields
         if (request.getNote() != null && !request.getNote().isBlank()) {
-            order.setNote(request.getNote().replaceAll("<[^>]*>", "").trim());
+            String sanitizedNote = org.springframework.web.util.HtmlUtils.htmlEscape(request.getNote().trim());
+            order.setNote(sanitizedNote);
+            
+            // Log if potential XSS attempt detected
+            if (!sanitizedNote.equals(request.getNote().trim())) {
+                log.warn("SECURITY: Potential XSS attempt in order note from account={}, original length={}, escaped length={}",
+                        account != null ? account.getUsername() : "guest",
+                        request.getNote().length(),
+                        sanitizedNote.length());
+            }
         }
 
         return order;
