@@ -101,7 +101,9 @@ public class SecurityConfig {
                     "/api/auth/send-otp",
                     "/api/auth/resend-otp",       // FIX: was missing
                     "/api/auth/verify-otp",
-                    "/api/csrf-token",            // CSRF token endpoint
+                    // VULN #24 FIX: Removed /api/csrf-token endpoint
+                    // CSRF protection is disabled (using JWT + SameSite cookies instead)
+                    // Having unused CSRF endpoint creates false sense of security
                     "/api/contacts",
                     "/api/contact/**",
                     "/api/feedbacks",             // Feedback popup - public access

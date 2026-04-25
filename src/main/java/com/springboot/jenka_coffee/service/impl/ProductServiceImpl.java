@@ -26,6 +26,7 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -138,30 +139,56 @@ public class ProductServiceImpl implements ProductService {
         return savedProduct;
     }
 
-    @Transactional
+    // VULN #21 FIX: Connection Pool Exhaustion - Multi-Image Upload (REGRESSION)
+    // PROBLEM: @Transactional holds DB connection during multiple Cloudinary uploads
+    // - 5 images × 2 seconds each = 10 seconds with DB connection held
+    // - 2-3 admins uploading simultaneously = connection pool exhausted
+    // SOLUTION: Upload ALL images outside transaction, then save to DB in one transaction
     public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-
-        int order = 0;
+        // STEP 1: Upload all images OUTSIDE transaction (no DB connection held)
+        List<String> uploadedUrls = new ArrayList<>();
+        
         for (MultipartFile file : imageFiles) {
             if (file != null && !file.isEmpty()) {
                 try {
                     String imageUrl = uploadService.saveProductImage(file);
                     if (imageUrl != null) {
-                        ProductImage productImage = new ProductImage();
-                        productImage.setProduct(product);
-                        productImage.setImageUrl(imageUrl);
-                        productImage.setDisplayOrder(order++);
-                        productImage.setIsPrimary(order == 1); // First image is primary
-                        productImageRepository.save(productImage);
-                        log.info("Saved product image: {} for product ID: {}", imageUrl, productId);
+                        uploadedUrls.add(imageUrl);
+                        log.info("Successfully uploaded product image: {}", imageUrl);
                     }
                 } catch (Exception e) {
                     log.error("Error uploading product image: {}", e.getMessage(), e);
+                    // Continue with other images even if one fails
                 }
             }
         }
+        
+        // STEP 2: Save all image URLs to database in single transaction (fast)
+        if (!uploadedUrls.isEmpty()) {
+            saveProductImagesToDB(productId, uploadedUrls);
+        }
+    }
+    
+    /**
+     * VULN #21 FIX: Separate transactional method for DB operations only
+     * Saves multiple image URLs to database in a single transaction
+     */
+    @Transactional
+    protected void saveProductImagesToDB(Integer productId, List<String> imageUrls) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        int order = 0;
+        for (String imageUrl : imageUrls) {
+            ProductImage productImage = new ProductImage();
+            productImage.setProduct(product);
+            productImage.setImageUrl(imageUrl);
+            productImage.setDisplayOrder(order++);
+            productImage.setIsPrimary(order == 1); // First image is primary
+            productImageRepository.save(productImage);
+        }
+        
+        log.info("Saved {} product images to database for product ID: {}", imageUrls.size(), productId);
     }
 
     @Transactional

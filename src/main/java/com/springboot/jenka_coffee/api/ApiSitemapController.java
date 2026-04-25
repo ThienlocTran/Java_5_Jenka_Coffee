@@ -102,15 +102,28 @@ public class ApiSitemapController {
         }
 
         // ── Tin tức ──────────────────────────────────────────────────
+        // VULN #23 FIX: Memory Pressure DoS - Paginate news loading
+        // PROBLEM: findByAvailableTrueOrderByCreateDateDesc() loads ALL news into RAM
+        // - 5000+ news articles = significant memory pressure
+        // - Googlebot crawls frequently → repeated memory spikes
+        // - Can cause GC pressure, latency increase, potential OOM
+        // SOLUTION: Paginate news loading like products
         try {
-            List<News> newsList = newsRepository.findByAvailableTrueOrderByCreateDateDesc();
-            for (News n : newsList) {
-                String url = SITE_URL + "/news/detail/" + n.getId();
-                String lastmod = n.getCreateDate() != null
-                        ? n.getCreateDate().format(W3C_DATE)
-                        : today;
-                addUrl(xml, url, "0.7", "monthly", lastmod);
-            }
+            int newsPage = 0;
+            int newsPageSize = 100;
+            Page<News> newsPageResult;
+            do {
+                newsPageResult = newsRepository.findByAvailableTrueOrderByCreateDateDesc(
+                        PageRequest.of(newsPage, newsPageSize));
+                for (News n : newsPageResult.getContent()) {
+                    String url = SITE_URL + "/news/detail/" + n.getId();
+                    String lastmod = n.getCreateDate() != null
+                            ? n.getCreateDate().format(W3C_DATE)
+                            : today;
+                    addUrl(xml, url, "0.7", "monthly", lastmod);
+                }
+                newsPage++;
+            } while (newsPageResult.hasNext());
         } catch (Exception e) {
             // Log nhưng không fail toàn bộ sitemap
         }

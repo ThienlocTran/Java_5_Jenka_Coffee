@@ -28,6 +28,18 @@ public class ApiNewsController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "9") int size) {
 
+        // VULN #22 FIX: Prevent public OOM DoS via pagination abuse
+        // PROBLEM: No validation on size parameter → attacker can request size=Integer.MAX_VALUE
+        // - Public endpoint (no authentication required)
+        // - JVM tries to allocate huge list → OutOfMemoryError
+        // - Single request can crash entire server
+        // SOLUTION: Enforce reasonable limits
+        // - Min size: 1 (prevent zero/negative)
+        // - Max size: 100 (reasonable for news pagination)
+        // - Min page: 0 (prevent negative)
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
+
         Pageable pageable = PageRequest.of(page, size);
         Page<News> newsPage = newsService.findAvailableNewsPaginated(pageable);
 
