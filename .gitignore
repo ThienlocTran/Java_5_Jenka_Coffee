@@ -17,6 +17,8 @@ docker-compose.yml
 README.md
 
 src/main/resources/application.properties
+application.properties
+.env
 ### IntelliJ IDEA ###
 .idea
 *.iws

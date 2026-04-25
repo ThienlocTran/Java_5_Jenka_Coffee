@@ -1,0 +1,1195 @@
+{
+  "name": "Java_5_Jenka_Coffee",
+  "path": "c:\\Users\\Lenovo T495\\Desktop\\Jenka\\Java_5_Jenka_Coffee",
+  "type": "directory",
+  "children": [
+    {
+      "name": ".mvn",
+      "type": "folder",
+      "icon": "📁",
+      "children": [
+        {
+          "name": "wrapper",
+          "type": "folder",
+          "icon": "📁",
+          "children": [
+            {
+              "name": "maven-wrapper.properties",
+              "type": "file",
+              "icon": "📄"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "src",
+      "type": "folder",
+      "icon": "📁",
+      "children": [
+        {
+          "name": "main",
+          "type": "folder",
+          "icon": "📁",
+          "children": [
+            {
+              "name": "java",
+              "type": "folder",
+              "icon": "📁",
+              "children": [
+                {
+                  "name": "com",
+                  "type": "folder",
+                  "icon": "📁",
+                  "children": [
+                    {
+                      "name": "springboot",
+                      "type": "folder",
+                      "icon": "📁",
+                      "children": [
+                        {
+                          "name": "jenka_coffee",
+                          "type": "folder",
+                          "icon": "📁",
+                          "children": [
+                            {
+                              "name": "api",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "admin",
+                                  "type": "folder",
+                                  "icon": "📁",
+                                  "children": [
+                                    {
+                                      "name": "ApiAdminAccountController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminBannerController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminBookingController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminCategoryController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminContactController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminDashboardController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminFeedbackController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminNewsController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminNotificationController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminOrderController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminProductController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminReportController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ApiAdminVoucherController.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "ApiAuthController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiBannerController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiBookingController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiCartController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiCategoryController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiContactController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiCsrfController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiErrorController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiFeedbackController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiNewsController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiOrderController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiProductController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiProfileController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiSitemapController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiVisitorController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ApiVoucherController.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "config",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "AsyncConfig.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "CloudinaryConfig.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "I18nConfig.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "RateLimitFilter.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "SecurityConfig.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "SecurityHeadersFilter.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "WebConfig.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "dto",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "request",
+                                  "type": "folder",
+                                  "icon": "📁",
+                                  "children": [
+                                    {
+                                      "name": "AccountRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "BookingRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CategoryRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CheckoutRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ContactRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ForgotPasswordRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "GoogleLoginRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "NewsRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ProductRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ProfileUpdateRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ResetPasswordRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "StoreFeedbackRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "VerifyOtpRequest.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "response",
+                                  "type": "folder",
+                                  "icon": "📁",
+                                  "children": [
+                                    {
+                                      "name": "AuthResult.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "AuthStatus.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CartItem.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "DashboardCountsDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "OrderStatsDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ProductDetailDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "RevenueReportDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "TopCustomerDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "TopProductDTO.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "ApiResponse.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "LoginRequest.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "SignupRequest.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "entity",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "Account.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BannerImage.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BannerSet.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Category.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Contact.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "News.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Order.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "OrderDetail.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Payment.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "PointHistory.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Product.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ProductImage.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ServiceBooking.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "StoreFeedback.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "Voucher.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "VoucherUsage.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "exception",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "BusinessRuleException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "DuplicateResourceException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "GlobalExceptionHandler.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "InsufficientStockException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "InvalidFileException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ResourceNotFoundException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ValidationException.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "repository",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "AccountRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BannerImageRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BannerSetRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "CategoryRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ContactRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "NewsRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "OrderDetailRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "OrderRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "PaymentRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "PointHistoryRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ProductImageRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ProductRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ServiceBookingRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "StoreFeedbackRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "VoucherRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "VoucherUsageRepository.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "security",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "JwtAuthFilter.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "JwtService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "service",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "impl",
+                                  "type": "folder",
+                                  "icon": "📁",
+                                  "children": [
+                                    {
+                                      "name": "AccountServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "BannerSetServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "BookingServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CartServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CategoryServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ContactServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "CookieServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "EmailServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "GoogleOAuthServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "JwtBlacklistServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "NewsServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "OTPServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "OrderServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ProductServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ProfileServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "ReportServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "StoreFeedbackServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "UploadServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "VercelWebhookServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    },
+                                    {
+                                      "name": "VoucherServiceImpl.java",
+                                      "type": "file",
+                                      "icon": "📄"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "AccountService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BannerSetService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "BookingService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "CartService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "CategoryService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ContactService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "CookieService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "EmailService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "GoogleOAuthService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "JwtBlacklistService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "NewsService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "OTPService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "OrderService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ProductService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ProfileService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "ReportService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "StoreFeedbackService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "UploadService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "VercelWebhookService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "VoucherService.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "util",
+                              "type": "folder",
+                              "icon": "📁",
+                              "children": [
+                                {
+                                  "name": "ImageUtils.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "PasswordSecurity.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "SlugUtils.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                },
+                                {
+                                  "name": "SqlUtils.java",
+                                  "type": "file",
+                                  "icon": "📄"
+                                }
+                              ]
+                            },
+                            {
+                              "name": "JenkaCoffeeApplication.java",
+                              "type": "file",
+                              "icon": "📄"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "resources",
+              "type": "folder",
+              "icon": "📁",
+              "children": [
+                {
+                  "name": "db",
+                  "type": "folder",
+                  "icon": "📁",
+                  "children": [
+                    {
+                      "name": "migration",
+                      "type": "folder",
+                      "icon": "📁",
+                      "children": [
+                        {
+                          "name": "V16__add_security_fixes.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "V17__fix_bugs_41_44.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "V18__add_featured_products.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "V19__create_store_feedbacks.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "V1__Create_ProductImages_Table.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "V20__improve_admin_dashboard.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "check_duplicate_emails.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "fix_email_simple.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        },
+                        {
+                          "name": "fix_empty_emails.sql",
+                          "type": "file",
+                          "icon": "📄"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "banner.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "database.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "database2.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "database3.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "insert.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "schema.sql",
+                      "type": "file",
+                      "icon": "📄"
+                    }
+                  ]
+                },
+                {
+                  "name": "i18n",
+                  "type": "folder",
+                  "icon": "📁",
+                  "children": [
+                    {
+                      "name": "messages_en.properties",
+                      "type": "file",
+                      "icon": "📄"
+                    },
+                    {
+                      "name": "messages_vi.properties",
+                      "type": "file",
+                      "icon": "📄"
+                    }
+                  ]
+                },
+                {
+                  "name": "static",
+                  "type": "folder",
+                  "icon": "📁",
+                  "children": [
+                    {
+                      "name": "css",
+                      "type": "folder",
+                      "icon": "📁",
+                      "children": [
+                        {
+                          "name": "admin.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "auth.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "error.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "login.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "otp.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "profile.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "signup.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        },
+                        {
+                          "name": "style.css",
+                          "type": "file",
+                          "icon": "🎨"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "js",
+                      "type": "folder",
+                      "icon": "📁",
+                      "children": [
+                        {
+                          "name": "admin-filter.js",
+                          "type": "file",
+                          "icon": "📜"
+                        },
+                        {
+                          "name": "admin.js",
+                          "type": "file",
+                          "icon": "📜"
+                        },
+                        {
+                          "name": "cart.js",
+                          "type": "file",
+                          "icon": "📜"
+                        },
+                        {
+                          "name": "product-list.js",
+                          "type": "file",
+                          "icon": "📜"
+                        },
+                        {
+                          "name": "quick-view.js",
+                          "type": "file",
+                          "icon": "📜"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "favicon.ico",
+                      "type": "file",
+                      "icon": "📄"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "test",
+          "type": "folder",
+          "icon": "📁",
+          "children": [
+            {
+              "name": "java",
+              "type": "folder",
+              "icon": "📁",
+              "children": [
+                {
+                  "name": "com",
+                  "type": "folder",
+                  "icon": "📁",
+                  "children": [
+                    {
+                      "name": "springboot",
+                      "type": "folder",
+                      "icon": "📁",
+                      "children": [
+                        {
+                          "name": "jenka_coffee",
+                          "type": "folder",
+                          "icon": "📁",
+                          "children": [
+                            {
+                              "name": "JenkaCoffeeApplicationTests.java",
+                              "type": "file",
+                              "icon": "📄"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uploads",
+      "type": "folder",
+      "icon": "📁"
+    },
+    {
+      "name": ".gitignore",
+      "type": "file",
+      "icon": "📁"
+    },
+    {
+      "name": "AGENTS.md",
+      "type": "file",
+      "icon": "📝"
+    },
+    {
+      "name": "CLAUDE.md",
+      "type": "file",
+      "icon": "📝"
+    },
+    {
+      "name": "LICENSE",
+      "type": "file",
+      "icon": "📄"
+    },
+    {
+      "name": "error.txt",
+      "type": "file",
+      "icon": "📄"
+    },
+    {
+      "name": "jenka_coffee_erd.drawio",
+      "type": "file",
+      "icon": "📄"
+    },
+    {
+      "name": "mvnw",
+      "type": "file",
+      "icon": "📄"
+    },
+    {
+      "name": "mvnw.cmd",
+      "type": "file",
+      "icon": "📄"
+    },
+    {
+      "name": "railway.toml",
+      "type": "file",
+      "icon": "⚙️"
+    }
+  ],
+  "metadata": {
+    "generated": "2026-04-25T06:10:00.716Z",
+    "generator": "FileTree Pro Extension",
+    "version": "0.2.0",
+    "showIcons": true,
+    "maxDepth": 10
+  }
+}
