@@ -46,11 +46,19 @@ public class OTPServiceImpl implements OTPService {
             AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
             if (attempts.count.get() >= MAX_ATTEMPTS) {
                 otpStore.remove(phone);
+                attemptStore.remove(phone);
+                phoneLocks.remove(phone); // VULN #13 FIX: Cleanup lock on max attempts
                 throw new ValidationException("Quá nhiều lần thử sai. OTP đã bị khóa. Vui lòng yêu cầu mã mới!");
             }
 
             OTPData stored = otpStore.get(phone);
-            if (stored == null) return false;
+            
+            // VULN #13 FIX: Cleanup lock when OTP doesn't exist
+            if (stored == null) {
+                attemptStore.remove(phone);
+                phoneLocks.remove(phone);
+                return false;
+            }
 
             if (stored.expiry.isBefore(LocalDateTime.now())) {
                 otpStore.remove(phone);
@@ -71,6 +79,8 @@ public class OTPServiceImpl implements OTPService {
                 return true;
             }
 
+            // Failed attempt - increment counter but keep lock for retry
+            // Lock will be cleaned up by scheduled task or on next success/expiry
             attempts.count.incrementAndGet();
             return false;
         }
@@ -80,16 +90,62 @@ public class OTPServiceImpl implements OTPService {
     public String resendOTP(String phone) {
         otpStore.remove(phone);
         attemptStore.remove(phone);
+        phoneLocks.remove(phone); // VULN #13 FIX: Cleanup lock on resend
         return generateOTP(phone);
     }
 
-    /** Dọn dẹp OTP và attempt data hết hạn mỗi 10 phút */
+    /** 
+     * VULN #13 FIX: Cleanup expired OTP data AND orphaned locks
+     * Dọn dẹp OTP và attempt data hết hạn mỗi 10 phút 
+
+     * MEMORY LEAK FIX: Also cleanup phoneLocks map to prevent unbounded growth
+     * Problem: phoneLocks grows indefinitely with every unique phone number
+     * - Failed OTP attempts don't cleanup locks
+     * - Random/spam phone numbers accumulate over time
+     * - Eventually causes OutOfMemoryError (delayed DoS)
+
+     * Solution: Remove locks for phones that no longer have active OTP
+     */
     @Scheduled(fixedDelay = 600_000)
     public void evictExpired() {
         LocalDateTime now = LocalDateTime.now();
-        otpStore.entrySet().removeIf(e -> e.getValue().expiry.isBefore(now));
-        // Xóa attempt data của các phone không còn OTP
-        attemptStore.keySet().removeIf(phone -> !otpStore.containsKey(phone));
+        
+        // Remove expired OTP entries
+        int removedOtps = 0;
+        for (var entry : otpStore.entrySet()) {
+            if (entry.getValue().expiry.isBefore(now)) {
+                otpStore.remove(entry.getKey());
+                removedOtps++;
+            }
+        }
+        
+        // Remove attempt data for phones without active OTP
+        int removedAttempts = 0;
+        for (String phone : attemptStore.keySet()) {
+            if (!otpStore.containsKey(phone)) {
+                attemptStore.remove(phone);
+                removedAttempts++;
+            }
+        }
+        
+        // VULN #13 FIX: Remove orphaned locks to prevent memory leak
+        // A lock is orphaned if there's no active OTP for that phone
+        int removedLocks = 0;
+        for (String phone : phoneLocks.keySet()) {
+            if (!otpStore.containsKey(phone)) {
+                phoneLocks.remove(phone);
+                removedLocks++;
+            }
+        }
+        
+        if (removedOtps > 0 || removedAttempts > 0 || removedLocks > 0) {
+            System.out.println(String.format(
+                "OTP cleanup: removed %d expired OTPs, %d attempts, %d locks. " +
+                "Current sizes: otpStore=%d, attemptStore=%d, phoneLocks=%d",
+                removedOtps, removedAttempts, removedLocks,
+                otpStore.size(), attemptStore.size(), phoneLocks.size()
+            ));
+        }
     }
 
     private record OTPData(String otp, LocalDateTime expiry) {

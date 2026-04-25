@@ -70,16 +70,35 @@ public class ProfileServiceImpl implements ProfileService {
             }
         }
         
-        // VULN-IDENTITY-SPOOFING FIX: Reset phoneVerified when phone changes
-        if (StringUtils.hasText(request.getPhone())) {
+        // VULN #14 FIX: Allow users to delete phone number (privacy/data control)
+        // PROBLEM: StringUtils.hasText("") returns false, so empty string is ignored
+        // SOLUTION: Check for null explicitly to distinguish between "don't update" and "delete"
+        // - request.getPhone() == null → don't update phone
+        // - request.getPhone() == "" → delete phone (set to null)
+        // - request.getPhone() == "0123456789" → update phone
+        if (request.getPhone() != null) {
             String newPhone = request.getPhone().trim();
-            String oldPhone = account.getPhone();
             
-            // If phone is changing, reset verification status
-            if (!newPhone.equals(oldPhone)) {
-                account.setPhone(newPhone);
-                account.setPhoneVerified(false);
-                log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
+            if (newPhone.isEmpty()) {
+                // User wants to delete phone - check if they have email as backup
+                if (account.getEmail() == null || account.getEmail().trim().isEmpty()) {
+                    throw new ValidationException(
+                            "Không thể xóa số điện thoại vì bạn chưa có email. " +
+                            "Vui lòng thêm email trước khi xóa số điện thoại để đảm bảo có thể khôi phục tài khoản.");
+                }
+                account.setPhone(null);
+                account.setPhoneVerified(false); // Reset verification status
+                log.info("User '{}' deleted their phone number", username);
+            } else {
+                // User wants to update phone
+                String oldPhone = account.getPhone();
+                
+                // If phone is changing, reset verification status
+                if (!newPhone.equals(oldPhone)) {
+                    account.setPhone(newPhone);
+                    account.setPhoneVerified(false);
+                    log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
+                }
             }
         }
         
@@ -178,20 +197,31 @@ public class ProfileServiceImpl implements ProfileService {
             }
         }
         
-        // Validate phone
-        if (StringUtils.hasText(request.getPhone())) {
+        // VULN #14 FIX: Validate phone update/deletion
+        if (request.getPhone() != null) {
             String phone = request.getPhone().trim();
-            if (!phone.matches("^[0-9]{10,11}$")) {
-                throw new ValidationException("Số điện thoại phải có 10-11 chữ số");
-            }
             
-            // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
-            String currentPhone = currentAccount.getPhone();
-            boolean phoneChanging = !phone.equals(currentPhone);
-            
-            // Check if phone already exists (excluding current user)
-            if (accountRepository.existsByPhone(phone) && phoneChanging) {
-                throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+            if (phone.isEmpty()) {
+                // User wants to delete phone - ensure they have email as backup
+                if (currentAccount.getEmail() == null || currentAccount.getEmail().trim().isEmpty()) {
+                    throw new ValidationException(
+                            "Không thể xóa số điện thoại vì bạn chưa có email. " +
+                            "Vui lòng thêm email trước khi xóa số điện thoại.");
+                }
+            } else {
+                // User wants to update phone - validate format
+                if (!phone.matches("^[0-9]{10,11}$")) {
+                    throw new ValidationException("Số điện thoại phải có 10-11 chữ số");
+                }
+                
+                // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
+                String currentPhone = currentAccount.getPhone();
+                boolean phoneChanging = !phone.equals(currentPhone);
+                
+                // Check if phone already exists (excluding current user)
+                if (accountRepository.existsByPhone(phone) && phoneChanging) {
+                    throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+                }
             }
         }
         
