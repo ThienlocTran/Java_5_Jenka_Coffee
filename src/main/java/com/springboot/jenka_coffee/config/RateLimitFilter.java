@@ -51,6 +51,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // VULN-RATE-LIMIT-GAPS FIX: Rate limit for public product search to prevent DB DoS
     // Limit: 100 requests per minute per IP (prevents expensive search/filter/sort queries)
     private final Cache<String, Bucket> productBuckets = buildCache(Duration.ofMinutes(1));
+    // VULN #16 FIX: Rate limit for feedback submission to prevent storage DoS
+    // Limit: 2 feedbacks per hour per IP (prevents database/storage spam)
+    private final Cache<String, Bucket> feedbackBuckets = buildCache(Duration.ofHours(1));
 
     private Cache<String, Bucket> buildCache(Duration ttl) {
         return Caffeine.newBuilder()
@@ -143,6 +146,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             } else if (path.startsWith("/api/vouchers/check")) {
                 // VULN-BRUTE-002 FIX: 20 requests/phút để ngăn voucher enumeration
                 bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/feedbacks")) {
+                // VULN #16 FIX: Rate limit feedback submission to prevent storage DoS
+                // Limit: 2 feedbacks per hour per IP
+                // Prevents: database spam, storage exhaustion, disk full
+                bucket = feedbackBuckets.get(ip, k -> buildBucket(2, Duration.ofHours(1)));
             }
         }
         

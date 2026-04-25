@@ -87,30 +87,36 @@ public class SecurityConfig {
                     "/api/news/**", "/api/banners/**",
                     "/sitemap.xml", "/robots.txt").permitAll()
                 .requestMatchers(
+                    // VULN #15 FIX: Sync with actual controller endpoints
+                    // Auth endpoints - must match @PostMapping/@GetMapping paths in ApiAuthController
                     "/api/auth/login",
-                    "/api/auth/register",
+                    "/api/auth/signup",           // FIX: was /register, actual endpoint is /signup
+                    "/api/auth/activate",         // FIX: was missing
+                    "/api/auth/forgot-password",  // FIX: was missing
+                    "/api/auth/reset-password",   // FIX: was missing
                     "/api/auth/google-login",
                     "/api/auth/refresh",
                     "/api/auth/logout",
-                    "/api/auth/check-remember", // Check remember me cookie
+                    "/api/auth/check-remember",   // Check remember me cookie
                     "/api/auth/send-otp",
+                    "/api/auth/resend-otp",       // FIX: was missing
                     "/api/auth/verify-otp",
-                    "/api/auth/reset-password",
-                    "/api/csrf-token", // CSRF token endpoint
+                    "/api/csrf-token",            // CSRF token endpoint
                     "/api/contacts",
                     "/api/contact/**",
-                    "/api/feedbacks", // Feedback popup - public access
+                    "/api/feedbacks",             // Feedback popup - public access
                     "/api/bookings",
                     "/api/booking/**",
                     "/api/visitors/**",
-                    "/api/cart/**", // Allow anonymous cart (session-based)
+                    "/api/cart/**",               // Allow anonymous cart (session-based)
                     "/api/error",
                     "/uploads/**").permitAll()
                 // Admin — phải có ROLE_ADMIN
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // User — phải đăng nhập
                 .requestMatchers(
-                    "/api/auth/update-phone", // Requires authentication
+                    "/api/auth/me",               // FIX: moved from permitAll to authenticated
+                    "/api/auth/update-phone",     // Requires authentication
                     "/api/orders/**",
                     "/api/profile/**").hasRole("USER")
                 // Mọi endpoint không match → deny (secure by default)

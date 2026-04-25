@@ -71,15 +71,16 @@ public class ProfileServiceImpl implements ProfileService {
         }
         
         // VULN #14 FIX: Allow users to delete phone number (privacy/data control)
-        // PROBLEM: StringUtils.hasText("") returns false, so empty string is ignored
-        // SOLUTION: Check for null explicitly to distinguish between "don't update" and "delete"
+        // VULN #17 FIX: Normalize phone number to handle DTO validation format
+        // PROBLEM: DTO accepts "+84901234567" but service only accepts "0901234567"
+        // SOLUTION: Normalize phone to remove non-digits and convert +84 to 0
         // - request.getPhone() == null → don't update phone
         // - request.getPhone() == "" → delete phone (set to null)
-        // - request.getPhone() == "0123456789" → update phone
+        // - request.getPhone() == "+84901234567" → normalize to "0901234567" and update
         if (request.getPhone() != null) {
-            String newPhone = request.getPhone().trim();
+            String rawPhone = request.getPhone().trim();
             
-            if (newPhone.isEmpty()) {
+            if (rawPhone.isEmpty()) {
                 // User wants to delete phone - check if they have email as backup
                 if (account.getEmail() == null || account.getEmail().trim().isEmpty()) {
                     throw new ValidationException(
@@ -90,12 +91,13 @@ public class ProfileServiceImpl implements ProfileService {
                 account.setPhoneVerified(false); // Reset verification status
                 log.info("User '{}' deleted their phone number", username);
             } else {
-                // User wants to update phone
+                // User wants to update phone - normalize format
+                String normalizedPhone = normalizePhoneNumber(rawPhone);
                 String oldPhone = account.getPhone();
                 
                 // If phone is changing, reset verification status
-                if (!newPhone.equals(oldPhone)) {
-                    account.setPhone(newPhone);
+                if (!normalizedPhone.equals(oldPhone)) {
+                    account.setPhone(normalizedPhone);
                     account.setPhoneVerified(false);
                     log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
                 }
@@ -198,6 +200,7 @@ public class ProfileServiceImpl implements ProfileService {
         }
         
         // VULN #14 FIX: Validate phone update/deletion
+        // VULN #17 FIX: Normalize phone before validation
         if (request.getPhone() != null) {
             String phone = request.getPhone().trim();
             
@@ -209,17 +212,20 @@ public class ProfileServiceImpl implements ProfileService {
                             "Vui lòng thêm email trước khi xóa số điện thoại.");
                 }
             } else {
-                // User wants to update phone - validate format
-                if (!phone.matches("^[0-9]{10,11}$")) {
-                    throw new ValidationException("Số điện thoại phải có 10-11 chữ số");
+                // User wants to update phone - normalize and validate
+                String normalizedPhone = normalizePhoneNumber(phone);
+                
+                // Validate normalized format (should be 10-11 digits starting with 0)
+                if (!normalizedPhone.matches("^0[0-9]{9,10}$")) {
+                    throw new ValidationException("Số điện thoại không hợp lệ sau khi chuẩn hóa");
                 }
                 
                 // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
                 String currentPhone = currentAccount.getPhone();
-                boolean phoneChanging = !phone.equals(currentPhone);
+                boolean phoneChanging = !normalizedPhone.equals(currentPhone);
                 
                 // Check if phone already exists (excluding current user)
-                if (accountRepository.existsByPhone(phone) && phoneChanging) {
+                if (accountRepository.existsByPhone(normalizedPhone) && phoneChanging) {
                     throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
                 }
             }
@@ -289,5 +295,32 @@ public class ProfileServiceImpl implements ProfileService {
         account.setLastPasswordResetDate(LocalDateTime.now());
 
         log.warn("SECURITY: Password changed for user '{}'", account.getUsername());
+    }
+    
+    /**
+     * VULN #17 FIX: Normalize phone number to handle different formats
+     * Converts: "+84901234567" → "0901234567"
+     * Converts: "+84 90 123 4567" → "0901234567"
+     * Converts: "0901234567" → "0901234567"
+     * 
+     * This ensures consistency between DTO validation (accepts +84) and service layer (expects 0)
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        
+        // Remove all non-digit characters (spaces, dots, dashes)
+        String digitsOnly = phone.replaceAll("[^0-9+]", "");
+        
+        // Convert +84 prefix to 0
+        if (digitsOnly.startsWith("+84")) {
+            digitsOnly = "0" + digitsOnly.substring(3);
+        } else if (digitsOnly.startsWith("84") && digitsOnly.length() >= 11) {
+            // Handle case where user enters 84901234567 without +
+            digitsOnly = "0" + digitsOnly.substring(2);
+        }
+        
+        return digitsOnly;
     }
 }
