@@ -13,57 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/// BUG-50 WARNING: Analytics Data Manipulation Risk
-/// PROBLEM: Visitor ping endpoint is open (permitAll) with no authentication
-/// - Endpoint: POST /api/visitors/ping
-/// - No JWT token required, no session validation
-/// - No fingerprinting or cryptographic proof of legitimacy
-/// - Attacker can spam requests to inflate visitor counts
-/// ATTACK SCENARIO:
-/// 1. Competitor runs script: while(true) { fetch('/api/visitors/ping', {method:'POST'}) }
-/// 2. Dashboard shows "1 BILLION VISITORS" - completely fake data
-/// 3. Charts break, business decisions based on fake metrics
-/// 4. Customer loses trust when they discover data can be manipulated
-/// CURRENT MITIGATION:
-/// 1. Rate limiting: 60 requests per 10 minutes per IP (RateLimitFilter)
-/// 2. Unique client ID: IP + User-Agent combination
-/// 3. Trusted proxy logic: Prevents IP spoofing via X-Forwarded-For
-/// 4. 5-minute timeout: Users inactive for 5 minutes removed from online count
-/// 5. Cleanup job: Removes expired users every minute
-/// LIMITATIONS:
-/// - Attacker with botnet (multiple IPs) can bypass rate limiting
-/// - User-Agent can be spoofed easily
-/// - No cryptographic proof that request came from legitimate frontend
-/// - In-memory counters are volatile (lost on restart)
-/// PRODUCTION RECOMMENDATIONS:
-/// 1. Issue short-lived session token on first page load:
-///    - Generate JWT with 1-hour expiration
-///    - Store in HttpOnly cookie
-///    - Require token for all /ping requests
-///    - Prevents automated scripts without browser
-/// 2. Implement device fingerprinting:
-///    - Canvas fingerprinting
-///    - WebGL fingerprinting
-///    - Browser feature detection
-///    - Combine with IP for unique ID
-/// 3. Use Redis for distributed rate limiting:
-///    - Current Caffeine cache is per-instance
-///    - Redis works across load-balanced servers
-///    - Prevents attacker from hitting different servers
-/// 4. Persist analytics to database:
-///    - Current counters reset on restart (volatile)
-///    - Save to DB every N minutes via @Scheduled
-///    - Use write-through cache pattern
-/// 5. Implement anomaly detection:
-///    - Alert when visitor count spikes abnormally
-///    - Track request patterns (timing, frequency)
-///    - Flag suspicious IPs for manual review
-/// 6. Add CAPTCHA for suspicious traffic:
-///    - If rate limit exceeded, require CAPTCHA
-///    - Prevents automated bots
-///    - Only affects suspicious users
-/// RISK LEVEL: Medium (requires effort but possible with botnets)
-/// BUSINESS IMPACT: High (fake metrics damage credibility and decisions)
+// BUG-50 WARNING: Analytics Data Manipulation Risk
 @RestController
 @RequestMapping("/api/visitors")
 public class ApiVisitorController {

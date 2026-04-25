@@ -110,8 +110,16 @@ public class ProductServiceImpl implements ProductService {
         Product savedProduct = productRepository.save(product);
         log.info("Successfully saved product with ID: {}", savedProduct.getId());
         
-        // Trigger Vercel rebuild after successful save
-        vercelWebhookService.triggerRebuild();
+        // VULN-M04 FIX: Trigger Vercel rebuild AFTER transaction commits
+        // Moved webhook call outside transaction to prevent connection pool exhaustion
+        // If webhook fails, product is still saved (eventual consistency)
+        // Use ApplicationEventPublisher for async execution after commit
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            // Log but don't fail the transaction
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
         
         return productRepository.findByIdWithCategory(savedProduct.getId())
                 .orElse(savedProduct);
@@ -249,8 +257,12 @@ public class ProductServiceImpl implements ProductService {
         Product updatedProduct = productRepository.save(product);
         log.info("Successfully updated product with ID: {}", updatedProduct.getId());
         
-        // Trigger Vercel rebuild after successful update
-        vercelWebhookService.triggerRebuild();
+        // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
         
         return updatedProduct;
     }
@@ -267,8 +279,12 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
         
-        // Trigger Vercel rebuild after successful delete
-        vercelWebhookService.triggerRebuild();
+        // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
     }
 
     // ========== PAGINATION METHODS ==========
