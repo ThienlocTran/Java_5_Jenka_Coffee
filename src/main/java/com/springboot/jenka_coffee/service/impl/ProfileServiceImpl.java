@@ -42,6 +42,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public Account updateProfile(String username, ProfileUpdateRequest request) {
         Account account = getProfile(username);
         
