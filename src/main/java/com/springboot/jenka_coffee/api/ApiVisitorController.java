@@ -27,6 +27,11 @@ public class ApiVisitorController {
     // Track online users by IP + last activity timestamp
     private final ConcurrentHashMap<String, Long> onlineUsers = new ConcurrentHashMap<>();
     private static final long ONLINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+    
+    // FIX: Track unique visitors per day/month to prevent duplicate counting
+    private final ConcurrentHashMap<String, LocalDate> dailyVisitors = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> monthlyVisitors = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Boolean> totalVisitors = new ConcurrentHashMap<>();
 
     private LocalDate currentDay   = LocalDate.now();
     private int       currentMonth = LocalDate.now().getMonthValue();
@@ -34,6 +39,12 @@ public class ApiVisitorController {
     /**
      * POST /api/visitors/ping — gọi khi user load trang.
      * Tăng counter và trả về stats hiện tại.
+     * 
+     * FIX: Prevent duplicate counting
+     * - Total: Count once per unique visitor (lifetime)
+     * - Today: Count once per unique visitor per day
+     * - Month: Count once per unique visitor per month
+     * - Online: Update activity timestamp
      */
     @PostMapping("/ping")
     public ResponseEntity<ApiResponse<Map<String, Long>>> ping(HttpServletRequest request) {
@@ -41,17 +52,31 @@ public class ApiVisitorController {
         
         String clientId = getClientIdentifier(request);
         long now = System.currentTimeMillis();
+        LocalDate today = LocalDate.now();
+        int currentMonthValue = today.getMonthValue();
         
-        // Chỉ tăng visit counter nếu là lần đầu trong ngày (dựa vào IP)
-        Long lastVisit = onlineUsers.get(clientId);
-        if (lastVisit == null || (now - lastVisit) > ONLINE_TIMEOUT_MS) {
+        // 1. Update online status (always)
+        onlineUsers.put(clientId, now);
+        
+        // 2. Count TOTAL visits (once per unique visitor, lifetime)
+        if (!totalVisitors.containsKey(clientId)) {
             totalVisits.incrementAndGet();
-            todayVisits.incrementAndGet();
-            monthVisits.incrementAndGet();
+            totalVisitors.put(clientId, true);
         }
         
-        // Update last activity timestamp
-        onlineUsers.put(clientId, now);
+        // 3. Count TODAY visits (once per unique visitor per day)
+        LocalDate lastDailyVisit = dailyVisitors.get(clientId);
+        if (lastDailyVisit == null || !lastDailyVisit.equals(today)) {
+            todayVisits.incrementAndGet();
+            dailyVisitors.put(clientId, today);
+        }
+        
+        // 4. Count MONTH visits (once per unique visitor per month)
+        Integer lastMonthVisit = monthlyVisitors.get(clientId);
+        if (lastMonthVisit == null || lastMonthVisit != currentMonthValue) {
+            monthVisits.incrementAndGet();
+            monthlyVisitors.put(clientId, currentMonthValue);
+        }
 
         return ResponseEntity.ok(ApiResponse.success("OK", buildStats()));
     }
@@ -74,6 +99,7 @@ public class ApiVisitorController {
     @Scheduled(cron = "0 0 0 * * *")
     public void resetDaily() {
         todayVisits.set(0);
+        dailyVisitors.clear(); // Clear daily tracking map
         currentDay = LocalDate.now();
     }
 
@@ -81,6 +107,7 @@ public class ApiVisitorController {
     @Scheduled(cron = "0 0 0 1 * *")
     public void resetMonthly() {
         monthVisits.set(0);
+        monthlyVisitors.clear(); // Clear monthly tracking map
         currentMonth = LocalDate.now().getMonthValue();
     }
 
@@ -97,10 +124,12 @@ public class ApiVisitorController {
         LocalDate today = LocalDate.now();
         if (!today.equals(currentDay)) {
             todayVisits.set(0);
+            dailyVisitors.clear(); // Clear daily tracking
             currentDay = today;
         }
         if (today.getMonthValue() != currentMonth) {
             monthVisits.set(0);
+            monthlyVisitors.clear(); // Clear monthly tracking
             currentMonth = today.getMonthValue();
         }
     }
