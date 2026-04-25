@@ -108,6 +108,16 @@ public class OrderServiceImpl implements OrderService {
                 .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // VULN-H02 FIX: Validate max order value to prevent abuse
+        // Maximum order value: 500 million VND (reasonable for B2C coffee equipment)
+        BigDecimal MAX_ORDER_VALUE = new BigDecimal("500000000"); // 500M VND
+        if (totalAmount.compareTo(MAX_ORDER_VALUE) > 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Giá trị đơn hàng vượt quá giới hạn cho phép (" + 
+                    MAX_ORDER_VALUE.divide(new BigDecimal("1000000")).intValue() + " triệu VNĐ). " +
+                    "Vui lòng liên hệ trực tiếp để được hỗ trợ đặt hàng số lượng lớn.");
+        }
+
         // VULN-C02 FIX: Validate + consume trong cùng 1 transaction với PESSIMISTIC_WRITE
         // VULN-VOUCHER-SIPHON FIX: Check user usage count against maxUsesPerUser limit
         // VULN-COMPILATION-ERROR FIX: Require login for all vouchers to prevent guest abuse

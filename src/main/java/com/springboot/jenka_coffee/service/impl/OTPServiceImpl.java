@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -31,34 +32,38 @@ public class OTPServiceImpl implements OTPService {
 
     @Override
     public boolean verifyOTP(String phone, String otp) {
-        AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
-        if (attempts.count.get() >= MAX_ATTEMPTS) {
-            otpStore.remove(phone);
-            throw new ValidationException("Quá nhiều lần thử sai. OTP đã bị khóa. Vui lòng yêu cầu mã mới!");
-        }
+        // VULN-M02 FIX: Synchronized block to prevent race condition
+        // Without synchronization, concurrent requests can bypass MAX_ATTEMPTS check
+        synchronized (this) {
+            AttemptData attempts = attemptStore.computeIfAbsent(phone, k -> new AttemptData());
+            if (attempts.count.get() >= MAX_ATTEMPTS) {
+                otpStore.remove(phone);
+                throw new ValidationException("Quá nhiều lần thử sai. OTP đã bị khóa. Vui lòng yêu cầu mã mới!");
+            }
 
-        OTPData stored = otpStore.get(phone);
-        if (stored == null) return false;
+            OTPData stored = otpStore.get(phone);
+            if (stored == null) return false;
 
-        if (stored.expiry.isBefore(LocalDateTime.now())) {
-            otpStore.remove(phone);
-            attemptStore.remove(phone);
+            if (stored.expiry.isBefore(LocalDateTime.now())) {
+                otpStore.remove(phone);
+                attemptStore.remove(phone);
+                return false;
+            }
+
+            // VULN-H03 FIX: Constant-time comparison — ngăn timing side-channel attack
+            boolean match = MessageDigest.isEqual(
+                    stored.otp.getBytes(StandardCharsets.UTF_8),
+                    otp.getBytes(StandardCharsets.UTF_8));
+
+            if (match) {
+                otpStore.remove(phone);
+                attemptStore.remove(phone);
+                return true;
+            }
+
+            attempts.count.incrementAndGet();
             return false;
         }
-
-        // VULN-H03 FIX: Constant-time comparison — ngăn timing side-channel attack
-        boolean match = java.security.MessageDigest.isEqual(
-                stored.otp.getBytes(StandardCharsets.UTF_8),
-                otp.getBytes(StandardCharsets.UTF_8));
-
-        if (match) {
-            otpStore.remove(phone);
-            attemptStore.remove(phone);
-            return true;
-        }
-
-        attempts.count.incrementAndGet();
-        return false;
     }
 
     @Override
@@ -77,10 +82,7 @@ public class OTPServiceImpl implements OTPService {
         attemptStore.keySet().removeIf(phone -> !otpStore.containsKey(phone));
     }
 
-    private static class OTPData {
-        final String otp;
-        final LocalDateTime expiry;
-        OTPData(String otp, LocalDateTime expiry) { this.otp = otp; this.expiry = expiry; }
+    private record OTPData(String otp, LocalDateTime expiry) {
     }
 
     private static class AttemptData {

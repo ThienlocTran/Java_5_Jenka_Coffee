@@ -45,6 +45,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // Prevents attacker from bombing victim's email with password reset/activation emails
     // Limit: 1 email per minute per email address (prevents Gmail/SendGrid suspension)
     private final Cache<String, Bucket> emailBuckets = buildCache(Duration.ofMinutes(60));
+    // VULN-H03 FIX: Rate limit for /api/auth/me to prevent DB spam
+    // Limit: 60 requests per minute per IP (prevents DB query flooding with stolen token)
+    private final Cache<String, Bucket> authMeBuckets = buildCache(Duration.ofMinutes(1));
 
     private Cache<String, Bucket> buildCache(Duration ttl) {
         return Caffeine.newBuilder()
@@ -150,6 +153,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
             (path.startsWith("/api/admin/accounts/check-username") || 
              path.startsWith("/api/admin/accounts/check-email"))) {
             bucket = adminCheckBuckets.get(ip, k -> buildBucket(30, Duration.ofMinutes(5)));
+        }
+        
+        // VULN-H03 FIX: Rate limit cho /api/auth/me - 60 requests/phút
+        // Prevents DB spam attack with stolen token
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/auth/me")) {
+            bucket = authMeBuckets.get(ip, k -> buildBucket(60, Duration.ofMinutes(1)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {
