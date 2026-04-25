@@ -21,7 +21,13 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+// VULN #11 FIX: Removed class-level @Transactional to prevent connection pool exhaustion
+// PROBLEM: Class-level @Transactional applies to ALL methods, including updateAvatar()
+// - DB connection held during Cloudinary upload (network I/O, 1-3 seconds)
+// - Multiple concurrent avatar uploads exhaust connection pool
+// SOLUTION: Apply @Transactional selectively on methods that need it
+// - Methods with only DB operations: @Transactional
+// - Methods with network I/O: No @Transactional, or split into two methods
 public class ProfileServiceImpl implements ProfileService {
 
     private final AccountRepository accountRepository;

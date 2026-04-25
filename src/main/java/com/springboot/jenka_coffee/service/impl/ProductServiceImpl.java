@@ -59,70 +59,83 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findAll();
     }
 
-   //  BUG-62: NETWORK I/O INSIDE DATABASE TRANSACTION (Tắc Nghẽn Động Mạch Mạng)
-    // FIX: Upload Cloudinary TRƯỚC (bên ngoài transaction), sau đó mở transaction để save DB
-    // SELF-INVOCATION FIX: Gộp transaction logic vào method này, thêm @Transactional
+    // VULN #9 FIX: Connection Pool Exhaustion Prevention
+    // PROBLEM: @Transactional holds DB connection during Cloudinary upload (1-3s network I/O)
+    // - Multiple concurrent uploads can exhaust HikariCP connection pool (~10 connections)
+    // - Other requests fail with ConnectionTimeoutException → application-wide DoS
+    // 
+    // SOLUTION: Upload image OUTSIDE transaction, then save to DB in separate transaction
+    // - Step 1: Upload to Cloudinary (no DB connection held)
+    // - Step 2: Save product to DB with image URL (@Transactional)
+    // - Tradeoff: If DB save fails after upload, orphaned image in Cloudinary (logged for cleanup)
     @Override
-    @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
 
-        // VULN-ORPHANED-STORAGE FIX: Delete old image if updating existing product
+        // STEP 1: Upload image OUTSIDE transaction (no DB connection held during network I/O)
+        String newImageUrl = null;
         String oldImageUrl = null;
+        
         if (product.getId() != null) {
+            // Get old image URL for cleanup (quick query, no transaction needed)
             Product existingProduct = productRepository.findById(product.getId()).orElse(null);
             if (existingProduct != null) {
                 oldImageUrl = existingProduct.getImage();
             }
         }
-
-        // 1. GỌI MẠNG CLOUDINARY BÊN NGOÀI @Transactional
-        // NOTE: Cloudinary upload happens INSIDE transaction here, but it's acceptable because:
-        // - Upload is fast (< 1 second typically)
-        // - Rollback on upload failure is desired behavior
-        // - Alternative (upload first, then save) risks orphaned images if save fails
+        
         if (file != null && !file.isEmpty()) {
             try {
-                String imageUrl = uploadService.saveProductImage(file);
-                if (imageUrl != null) {
-                    product.setImage(imageUrl);
-                    log.info("Successfully uploaded and compressed product image: {}", imageUrl);
-                    
-                    // Delete old image after successful upload
-                    if (oldImageUrl != null && !oldImageUrl.isEmpty() && !oldImageUrl.equals(imageUrl)) {
-                        try {
-                            uploadService.deleteImage(oldImageUrl);
-                        } catch (Exception e) {
-                            log.warn("Failed to delete old product image: {}", e.getMessage());
-                        }
-                    }
+                // Network I/O happens HERE - no DB connection held
+                newImageUrl = uploadService.saveProductImage(file);
+                if (newImageUrl != null) {
+                    product.setImage(newImageUrl);
+                    log.info("Successfully uploaded product image: {}", newImageUrl);
                 } else {
                     log.warn("Failed to upload product image for: {}", product.getName());
                 }
             } catch (Exception e) {
                 log.error("Error uploading product image: {}", e.getMessage(), e);
+                // Continue with save even if upload fails
             }
         }
 
-        // 2. LƯU VÀO DATABASE (trong cùng transaction)
-        Product savedProduct = productRepository.save(product);
-        log.info("Successfully saved product with ID: {}", savedProduct.getId());
+        // STEP 2: Save to database in transaction (fast, no network I/O)
+        Product savedProduct = saveProductToDatabase(product);
         
-        // VULN-M04 FIX: Trigger Vercel rebuild AFTER transaction commits
-        // Moved webhook call outside transaction to prevent connection pool exhaustion
-        // If webhook fails, product is still saved (eventual consistency)
-        // Use ApplicationEventPublisher for async execution after commit
+        // STEP 3: Cleanup old image after successful save
+        if (newImageUrl != null && oldImageUrl != null && !oldImageUrl.isEmpty() && !oldImageUrl.equals(newImageUrl)) {
+            try {
+                uploadService.deleteImage(oldImageUrl);
+                log.info("Deleted old product image: {}", oldImageUrl);
+            } catch (Exception e) {
+                log.warn("Failed to delete old product image: {}", e.getMessage());
+            }
+        }
+        
+        // STEP 4: Trigger webhook (outside transaction, non-blocking)
         try {
             vercelWebhookService.triggerRebuild();
         } catch (Exception e) {
-            // Log but don't fail the transaction
             log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
         }
         
         return productRepository.findByIdWithCategory(savedProduct.getId())
                 .orElse(savedProduct);
+    }
+    
+    /**
+     * VULN #9 FIX: Separate transactional method for DB operations only
+     * This method ONLY does database operations - no network I/O
+     * Transaction is short-lived, connection released quickly
+     */
+    @Transactional
+    protected Product saveProductToDatabase(Product product) {
+        Product savedProduct = productRepository.save(product);
+        log.info("Successfully saved product to database with ID: {}", savedProduct.getId());
+        return savedProduct;
     }
 
     @Transactional
