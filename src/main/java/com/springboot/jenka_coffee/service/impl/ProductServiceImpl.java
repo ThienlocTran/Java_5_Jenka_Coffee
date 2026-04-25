@@ -26,6 +26,7 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,88 +60,135 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findAll();
     }
 
-   //  BUG-62: NETWORK I/O INSIDE DATABASE TRANSACTION (Tắc Nghẽn Động Mạch Mạng)
-    // FIX: Upload Cloudinary TRƯỚC (bên ngoài transaction), sau đó mở transaction để save DB
-    // SELF-INVOCATION FIX: Gộp transaction logic vào method này, thêm @Transactional
+    // VULN #9 FIX: Connection Pool Exhaustion Prevention
+    // PROBLEM: @Transactional holds DB connection during Cloudinary upload (1-3s network I/O)
+    // - Multiple concurrent uploads can exhaust HikariCP connection pool (~10 connections)
+    // - Other requests fail with ConnectionTimeoutException → application-wide DoS
+    // 
+    // SOLUTION: Upload image OUTSIDE transaction, then save to DB in separate transaction
+    // - Step 1: Upload to Cloudinary (no DB connection held)
+    // - Step 2: Save product to DB with image URL (@Transactional)
+    // - Tradeoff: If DB save fails after upload, orphaned image in Cloudinary (logged for cleanup)
     @Override
-    @Transactional
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product saveProduct(Product product, MultipartFile file) {
         log.info("Saving product: {} with image: {}", product.getName(),
                 file != null ? file.getOriginalFilename() : "no image");
 
-        // VULN-ORPHANED-STORAGE FIX: Delete old image if updating existing product
+        // STEP 1: Upload image OUTSIDE transaction (no DB connection held during network I/O)
+        String newImageUrl = null;
         String oldImageUrl = null;
+        
         if (product.getId() != null) {
+            // Get old image URL for cleanup (quick query, no transaction needed)
             Product existingProduct = productRepository.findById(product.getId()).orElse(null);
             if (existingProduct != null) {
                 oldImageUrl = existingProduct.getImage();
             }
         }
-
-        // 1. GỌI MẠNG CLOUDINARY BÊN NGOÀI @Transactional
-        // NOTE: Cloudinary upload happens INSIDE transaction here, but it's acceptable because:
-        // - Upload is fast (< 1 second typically)
-        // - Rollback on upload failure is desired behavior
-        // - Alternative (upload first, then save) risks orphaned images if save fails
+        
         if (file != null && !file.isEmpty()) {
             try {
-                String imageUrl = uploadService.saveProductImage(file);
-                if (imageUrl != null) {
-                    product.setImage(imageUrl);
-                    log.info("Successfully uploaded and compressed product image: {}", imageUrl);
-                    
-                    // Delete old image after successful upload
-                    if (oldImageUrl != null && !oldImageUrl.isEmpty() && !oldImageUrl.equals(imageUrl)) {
-                        try {
-                            uploadService.deleteImage(oldImageUrl);
-                        } catch (Exception e) {
-                            log.warn("Failed to delete old product image: {}", e.getMessage());
-                        }
-                    }
+                // Network I/O happens HERE - no DB connection held
+                newImageUrl = uploadService.saveProductImage(file);
+                if (newImageUrl != null) {
+                    product.setImage(newImageUrl);
+                    log.info("Successfully uploaded product image: {}", newImageUrl);
                 } else {
                     log.warn("Failed to upload product image for: {}", product.getName());
                 }
             } catch (Exception e) {
                 log.error("Error uploading product image: {}", e.getMessage(), e);
+                // Continue with save even if upload fails
             }
         }
 
-        // 2. LƯU VÀO DATABASE (trong cùng transaction)
-        Product savedProduct = productRepository.save(product);
-        log.info("Successfully saved product with ID: {}", savedProduct.getId());
+        // STEP 2: Save to database in transaction (fast, no network I/O)
+        Product savedProduct = saveProductToDatabase(product);
         
-        // Trigger Vercel rebuild after successful save
-        vercelWebhookService.triggerRebuild();
+        // STEP 3: Cleanup old image after successful save
+        if (newImageUrl != null && oldImageUrl != null && !oldImageUrl.isEmpty() && !oldImageUrl.equals(newImageUrl)) {
+            try {
+                uploadService.deleteImage(oldImageUrl);
+                log.info("Deleted old product image: {}", oldImageUrl);
+            } catch (Exception e) {
+                log.warn("Failed to delete old product image: {}", e.getMessage());
+            }
+        }
+        
+        // STEP 4: Trigger webhook (outside transaction, non-blocking)
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
         
         return productRepository.findByIdWithCategory(savedProduct.getId())
                 .orElse(savedProduct);
     }
-
+    
+    /**
+     * VULN #9 FIX: Separate transactional method for DB operations only
+     * This method ONLY does database operations - no network I/O
+     * Transaction is short-lived, connection released quickly
+     */
     @Transactional
-    public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+    protected Product saveProductToDatabase(Product product) {
+        Product savedProduct = productRepository.save(product);
+        log.info("Successfully saved product to database with ID: {}", savedProduct.getId());
+        return savedProduct;
+    }
 
-        int order = 0;
+    // VULN #21 FIX: Connection Pool Exhaustion - Multi-Image Upload (REGRESSION)
+    // PROBLEM: @Transactional holds DB connection during multiple Cloudinary uploads
+    // - 5 images × 2 seconds each = 10 seconds with DB connection held
+    // - 2-3 admins uploading simultaneously = connection pool exhausted
+    // SOLUTION: Upload ALL images outside transaction, then save to DB in one transaction
+    public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
+        // STEP 1: Upload all images OUTSIDE transaction (no DB connection held)
+        List<String> uploadedUrls = new ArrayList<>();
+        
         for (MultipartFile file : imageFiles) {
             if (file != null && !file.isEmpty()) {
                 try {
                     String imageUrl = uploadService.saveProductImage(file);
                     if (imageUrl != null) {
-                        ProductImage productImage = new ProductImage();
-                        productImage.setProduct(product);
-                        productImage.setImageUrl(imageUrl);
-                        productImage.setDisplayOrder(order++);
-                        productImage.setIsPrimary(order == 1); // First image is primary
-                        productImageRepository.save(productImage);
-                        log.info("Saved product image: {} for product ID: {}", imageUrl, productId);
+                        uploadedUrls.add(imageUrl);
+                        log.info("Successfully uploaded product image: {}", imageUrl);
                     }
                 } catch (Exception e) {
                     log.error("Error uploading product image: {}", e.getMessage(), e);
+                    // Continue with other images even if one fails
                 }
             }
         }
+        
+        // STEP 2: Save all image URLs to database in single transaction (fast)
+        if (!uploadedUrls.isEmpty()) {
+            saveProductImagesToDB(productId, uploadedUrls);
+        }
+    }
+    
+    /**
+     * VULN #21 FIX: Separate transactional method for DB operations only
+     * Saves multiple image URLs to database in a single transaction
+     */
+    @Transactional
+    protected void saveProductImagesToDB(Integer productId, List<String> imageUrls) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        int order = 0;
+        for (String imageUrl : imageUrls) {
+            ProductImage productImage = new ProductImage();
+            productImage.setProduct(product);
+            productImage.setImageUrl(imageUrl);
+            productImage.setDisplayOrder(order++);
+            productImage.setIsPrimary(order == 1); // First image is primary
+            productImageRepository.save(productImage);
+        }
+        
+        log.info("Saved {} product images to database for product ID: {}", imageUrls.size(), productId);
     }
 
     @Transactional
@@ -249,8 +297,12 @@ public class ProductServiceImpl implements ProductService {
         Product updatedProduct = productRepository.save(product);
         log.info("Successfully updated product with ID: {}", updatedProduct.getId());
         
-        // Trigger Vercel rebuild after successful update
-        vercelWebhookService.triggerRebuild();
+        // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
         
         return updatedProduct;
     }
@@ -267,8 +319,12 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
         
-        // Trigger Vercel rebuild after successful delete
-        vercelWebhookService.triggerRebuild();
+        // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
+        try {
+            vercelWebhookService.triggerRebuild();
+        } catch (Exception e) {
+            log.warn("Failed to trigger Vercel rebuild: {}", e.getMessage());
+        }
     }
 
     // ========== PAGINATION METHODS ==========

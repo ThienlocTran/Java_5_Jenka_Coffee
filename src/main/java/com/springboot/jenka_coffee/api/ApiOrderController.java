@@ -102,8 +102,21 @@ public class ApiOrderController {
                     .body(ApiResponse.error("Không tìm thấy đơn hàng"));
         }
         
-        // Security check: Only allow user to view their own orders
-        if (order.getAccount() != null && !order.getAccount().getUsername().equals(username)) {
+        // VULN-IDOR FIX: Proper authorization check for both logged-in and guest orders
+        // Guest orders (account == null) cannot be accessed via this API
+        // Guest users must create account or contact support to view order
+        if (order.getAccount() == null) {
+            // Guest order - deny access via API
+            // TODO: Implement access token mechanism for guest orders
+            // For now, guest must contact support with order ID
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(
+                        "Đơn hàng này được đặt bởi khách vãng lai. " +
+                        "Vui lòng đăng ký tài khoản hoặc liên hệ hotline để tra cứu đơn hàng."));
+        }
+        
+        // Logged-in user - check ownership
+        if (!order.getAccount().getUsername().equals(username)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Bạn không có quyền xem đơn hàng này"));
         }

@@ -32,6 +32,17 @@ public class ApiAdminCategoryController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
+        // VULN #20 FIX: Prevent deep pagination DoS
+        // PROBLEM: No limit on size parameter → attacker can request size=Integer.MAX_VALUE
+        // - JVM tries to allocate huge list → OutOfMemoryError
+        // - Only requires admin account or insider access
+        // SOLUTION: Enforce reasonable limits
+        // - Min size: 1 (prevent zero/negative)
+        // - Max size: 100 (reasonable for admin pagination)
+        // - Min page: 0 (prevent negative)
+        size = Math.min(Math.max(size, 1), 100);
+        page = Math.max(page, 0);
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<Category> categoryPage = categoryService.findAllPaginated(pageable);
 

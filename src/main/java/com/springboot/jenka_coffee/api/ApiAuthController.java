@@ -311,9 +311,10 @@ public class ApiAuthController {
         addTokenCookie(response, "refresh_token", refreshToken, 604800);
         
         Map<String, Object> data = buildUserData(account);
-        // Return accessToken for sessionStorage (needed for Authorization header fallback in dev mode)
-        // HttpOnly cookie is primary auth method, but dev mode needs header due to CORS
-        data.put("accessToken", accessToken);
+        // VULN-M01 FIX: Do NOT return accessToken in JSON response body
+        // Token should only be in HttpOnly cookie to prevent XSS theft
+        // Frontend will use cookie automatically, no need for sessionStorage
+        // data.put("accessToken", accessToken); // REMOVED
         data.put("needsPhone", needsPhone);
         
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));

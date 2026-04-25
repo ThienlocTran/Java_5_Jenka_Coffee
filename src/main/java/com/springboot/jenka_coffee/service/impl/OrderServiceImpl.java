@@ -108,6 +108,16 @@ public class OrderServiceImpl implements OrderService {
                 .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // VULN-H02 FIX: Validate max order value to prevent abuse
+        // Maximum order value: 500 million VND (reasonable for B2C coffee equipment)
+        BigDecimal MAX_ORDER_VALUE = new BigDecimal("500000000"); // 500M VND
+        if (totalAmount.compareTo(MAX_ORDER_VALUE) > 0) {
+            throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                    "Giá trị đơn hàng vượt quá giới hạn cho phép (" + 
+                    MAX_ORDER_VALUE.divide(new BigDecimal("1000000")).intValue() + " triệu VNĐ). " +
+                    "Vui lòng liên hệ trực tiếp để được hỗ trợ đặt hàng số lượng lớn.");
+        }
+
         // VULN-C02 FIX: Validate + consume trong cùng 1 transaction với PESSIMISTIC_WRITE
         // VULN-VOUCHER-SIPHON FIX: Check user usage count against maxUsesPerUser limit
         // VULN-COMPILATION-ERROR FIX: Require login for all vouchers to prevent guest abuse
@@ -274,9 +284,24 @@ public class OrderServiceImpl implements OrderService {
         order.setCreateDate(LocalDateTime.now());
         order.setStatus(0); // NEW
 
-        // VULN-058 FIX: Sanitize note
+        // VULN #12 FIX: XSS Prevention in Order Notes
+        // PROBLEM: Regex sanitization <[^>]*> is insufficient
+        // - Doesn't match incomplete tags: <img src=x onerror=alert(1)
+        // - Regex is NOT a proper HTML sanitizer
+        // SOLUTION: Use proper HTML escaping (converts < to &lt;, > to &gt;, etc.)
+        // - If frontend uses v-html, browser won't execute escaped HTML as code
+        // - Simple, safe, and effective for plain text fields
         if (request.getNote() != null && !request.getNote().isBlank()) {
-            order.setNote(request.getNote().replaceAll("<[^>]*>", "").trim());
+            String sanitizedNote = org.springframework.web.util.HtmlUtils.htmlEscape(request.getNote().trim());
+            order.setNote(sanitizedNote);
+            
+            // Log if potential XSS attempt detected
+            if (!sanitizedNote.equals(request.getNote().trim())) {
+                log.warn("SECURITY: Potential XSS attempt in order note from account={}, original length={}, escaped length={}",
+                        account != null ? account.getUsername() : "guest",
+                        request.getNote().length(),
+                        sanitizedNote.length());
+            }
         }
 
         return order;

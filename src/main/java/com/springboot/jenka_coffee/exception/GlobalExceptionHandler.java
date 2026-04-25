@@ -327,6 +327,55 @@ public class GlobalExceptionHandler {
         return ResponseEntity.notFound().build();
     }
 
+    // ================================================================
+    // SECURITY EXCEPTION HANDLERS (VULN #28 FIX)
+    // ================================================================
+    // These handlers MUST be defined BEFORE the catch-all Exception handler
+    // to prevent security exceptions from being swallowed and returned as 500
+    
+    /**
+     * Handle Spring Security AccessDeniedException (403 Forbidden)
+     * Thrown when authenticated user lacks required role/permission
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex,
+            HttpServletRequest request) {
+        logger.warn("Access denied at {}: {}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Bạn không có quyền truy cập tài nguyên này!"));
+    }
+    
+    /**
+     * Handle Spring Security AuthenticationException (401 Unauthorized)
+     * Thrown when user is not authenticated (missing/invalid token)
+     */
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationError(
+            org.springframework.security.core.AuthenticationException ex,
+            HttpServletRequest request) {
+        logger.warn("Authentication failed at {}: {}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Vui lòng đăng nhập để tiếp tục!"));
+    }
+    
+    /**
+     * Handle missing required headers (400 Bad Request)
+     * Thrown when required header (e.g., Authorization) is missing
+     */
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingHeader(
+            org.springframework.web.bind.MissingRequestHeaderException ex,
+            HttpServletRequest request) {
+        logger.warn("Missing required header at {}: {}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Thiếu thông tin xác thực trong request!"));
+    }
+    
+    // ================================================================
+    // CATCH-ALL EXCEPTION HANDLER (MUST BE LAST)
+    // ================================================================
+    
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalError(Exception ex, HttpServletRequest request) {
         // Ignore client abort exceptions (user closed browser/tab before response completed)

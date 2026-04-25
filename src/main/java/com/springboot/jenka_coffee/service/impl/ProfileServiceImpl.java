@@ -21,7 +21,13 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+// VULN #11 FIX: Removed class-level @Transactional to prevent connection pool exhaustion
+// PROBLEM: Class-level @Transactional applies to ALL methods, including updateAvatar()
+// - DB connection held during Cloudinary upload (network I/O, 1-3 seconds)
+// - Multiple concurrent avatar uploads exhaust connection pool
+// SOLUTION: Apply @Transactional selectively on methods that need it
+// - Methods with only DB operations: @Transactional
+// - Methods with network I/O: No @Transactional, or split into two methods
 public class ProfileServiceImpl implements ProfileService {
 
     private final AccountRepository accountRepository;
@@ -36,6 +42,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public Account updateProfile(String username, ProfileUpdateRequest request) {
         Account account = getProfile(username);
         
@@ -63,16 +70,37 @@ public class ProfileServiceImpl implements ProfileService {
             }
         }
         
-        // VULN-IDENTITY-SPOOFING FIX: Reset phoneVerified when phone changes
-        if (StringUtils.hasText(request.getPhone())) {
-            String newPhone = request.getPhone().trim();
-            String oldPhone = account.getPhone();
+        // VULN #14 FIX: Allow users to delete phone number (privacy/data control)
+        // VULN #17 FIX: Normalize phone number to handle DTO validation format
+        // PROBLEM: DTO accepts "+84901234567" but service only accepts "0901234567"
+        // SOLUTION: Normalize phone to remove non-digits and convert +84 to 0
+        // - request.getPhone() == null → don't update phone
+        // - request.getPhone() == "" → delete phone (set to null)
+        // - request.getPhone() == "+84901234567" → normalize to "0901234567" and update
+        if (request.getPhone() != null) {
+            String rawPhone = request.getPhone().trim();
             
-            // If phone is changing, reset verification status
-            if (!newPhone.equals(oldPhone)) {
-                account.setPhone(newPhone);
-                account.setPhoneVerified(false);
-                log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
+            if (rawPhone.isEmpty()) {
+                // User wants to delete phone - check if they have email as backup
+                if (account.getEmail() == null || account.getEmail().trim().isEmpty()) {
+                    throw new ValidationException(
+                            "Không thể xóa số điện thoại vì bạn chưa có email. " +
+                            "Vui lòng thêm email trước khi xóa số điện thoại để đảm bảo có thể khôi phục tài khoản.");
+                }
+                account.setPhone(null);
+                account.setPhoneVerified(false); // Reset verification status
+                log.info("User '{}' deleted their phone number", username);
+            } else {
+                // User wants to update phone - normalize format
+                String normalizedPhone = normalizePhoneNumber(rawPhone);
+                String oldPhone = account.getPhone();
+                
+                // If phone is changing, reset verification status
+                if (!normalizedPhone.equals(oldPhone)) {
+                    account.setPhone(normalizedPhone);
+                    account.setPhoneVerified(false);
+                    log.warn("SECURITY: Phone changed for user '{}', phoneVerified reset to false", username);
+                }
             }
         }
         
@@ -87,26 +115,29 @@ public class ProfileServiceImpl implements ProfileService {
         return savedAccount;
     }
 
+    // VULN #11 FIX: Connection Pool Exhaustion Prevention in Avatar Upload
+    // PROBLEM: Class-level @Transactional held DB connection during Cloudinary upload
+    // SOLUTION: Split into two steps - upload outside transaction, save inside transaction
     @Override
     public Account updateAvatar(String username, MultipartFile avatarFile) {
+        // STEP 1: Get old avatar URL (quick query, no transaction needed)
         Account account = getProfile(username);
-
-        // VULN-ORPHANED-STORAGE FIX: Delete old avatar before uploading new one
         String oldAvatarUrl = account.getPhoto();
         
-        // Upload directly to Cloudinary — no local resize needed
+        // STEP 2: Upload to Cloudinary OUTSIDE transaction (no DB connection held during network I/O)
         String avatarUrl = uploadService.saveImage(avatarFile);
         if (avatarUrl == null) {
             throw new BusinessRuleException("Không thể tải lên ảnh đại diện");
         }
 
-        account.setPhoto(avatarUrl);
-        Account savedAccount = accountRepository.save(account);
+        // STEP 3: Save to database in separate transaction (fast, no network I/O)
+        Account savedAccount = updateAvatarInDatabase(username, avatarUrl);
         
-        // Delete old avatar after successful update (async - don't block response)
+        // STEP 4: Cleanup old avatar after successful update (async - don't block response)
         if (oldAvatarUrl != null && !oldAvatarUrl.isEmpty()) {
             try {
                 uploadService.deleteImage(oldAvatarUrl);
+                log.info("Deleted old avatar for user: {}", username);
             } catch (Exception e) {
                 log.warn("Failed to delete old avatar for user {}: {}", username, e.getMessage());
                 // Don't throw - deletion failure shouldn't block the update
@@ -116,8 +147,26 @@ public class ProfileServiceImpl implements ProfileService {
         log.info("Updated avatar for user: {}", username);
         return savedAccount;
     }
+    
+    /**
+     * VULN #11 FIX: Separate transactional method for DB operations only
+     * This method ONLY does database operations - no network I/O
+     * Transaction is short-lived, connection released quickly
+     */
+    @Transactional
+    protected Account updateAvatarInDatabase(String username, String avatarUrl) {
+        Account account = accountRepository.findById(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
+        
+        account.setPhoto(avatarUrl);
+        Account savedAccount = accountRepository.save(account);
+        log.info("Saved avatar URL to database for user: {}", username);
+        
+        return savedAccount;
+    }
 
     @Override
+    @Transactional
     public void changePassword(String username, String currentPassword, String newPassword) {
         Account account = getProfile(username);
         changePasswordInternal(account, currentPassword, newPassword);
@@ -150,20 +199,35 @@ public class ProfileServiceImpl implements ProfileService {
             }
         }
         
-        // Validate phone
-        if (StringUtils.hasText(request.getPhone())) {
+        // VULN #14 FIX: Validate phone update/deletion
+        // VULN #17 FIX: Normalize phone before validation
+        if (request.getPhone() != null) {
             String phone = request.getPhone().trim();
-            if (!phone.matches("^[0-9]{10,11}$")) {
-                throw new ValidationException("Số điện thoại phải có 10-11 chữ số");
-            }
             
-            // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
-            String currentPhone = currentAccount.getPhone();
-            boolean phoneChanging = !phone.equals(currentPhone);
-            
-            // Check if phone already exists (excluding current user)
-            if (accountRepository.existsByPhone(phone) && phoneChanging) {
-                throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+            if (phone.isEmpty()) {
+                // User wants to delete phone - ensure they have email as backup
+                if (currentAccount.getEmail() == null || currentAccount.getEmail().trim().isEmpty()) {
+                    throw new ValidationException(
+                            "Không thể xóa số điện thoại vì bạn chưa có email. " +
+                            "Vui lòng thêm email trước khi xóa số điện thoại.");
+                }
+            } else {
+                // User wants to update phone - normalize and validate
+                String normalizedPhone = normalizePhoneNumber(phone);
+                
+                // Validate normalized format (should be 10-11 digits starting with 0)
+                if (!normalizedPhone.matches("^0[0-9]{9,10}$")) {
+                    throw new ValidationException("Số điện thoại không hợp lệ sau khi chuẩn hóa");
+                }
+                
+                // VULN-IDENTITY-SPOOFING FIX: Check if new phone is different from current
+                String currentPhone = currentAccount.getPhone();
+                boolean phoneChanging = !normalizedPhone.equals(currentPhone);
+                
+                // Check if phone already exists (excluding current user)
+                if (accountRepository.existsByPhone(normalizedPhone) && phoneChanging) {
+                    throw new ValidationException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+                }
             }
         }
         
@@ -231,5 +295,32 @@ public class ProfileServiceImpl implements ProfileService {
         account.setLastPasswordResetDate(LocalDateTime.now());
 
         log.warn("SECURITY: Password changed for user '{}'", account.getUsername());
+    }
+    
+    /**
+     * VULN #17 FIX: Normalize phone number to handle different formats
+     * Converts: "+84901234567" → "0901234567"
+     * Converts: "+84 90 123 4567" → "0901234567"
+     * Converts: "0901234567" → "0901234567"
+     * 
+     * This ensures consistency between DTO validation (accepts +84) and service layer (expects 0)
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        
+        // Remove all non-digit characters (spaces, dots, dashes)
+        String digitsOnly = phone.replaceAll("[^0-9+]", "");
+        
+        // Convert +84 prefix to 0
+        if (digitsOnly.startsWith("+84")) {
+            digitsOnly = "0" + digitsOnly.substring(3);
+        } else if (digitsOnly.startsWith("84") && digitsOnly.length() >= 11) {
+            // Handle case where user enters 84901234567 without +
+            digitsOnly = "0" + digitsOnly.substring(2);
+        }
+        
+        return digitsOnly;
     }
 }

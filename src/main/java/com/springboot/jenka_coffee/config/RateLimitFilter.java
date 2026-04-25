@@ -45,6 +45,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     // Prevents attacker from bombing victim's email with password reset/activation emails
     // Limit: 1 email per minute per email address (prevents Gmail/SendGrid suspension)
     private final Cache<String, Bucket> emailBuckets = buildCache(Duration.ofMinutes(60));
+    // VULN-H03 FIX: Rate limit for /api/auth/me to prevent DB spam
+    // Limit: 60 requests per minute per IP (prevents DB query flooding with stolen token)
+    private final Cache<String, Bucket> authMeBuckets = buildCache(Duration.ofMinutes(1));
+    // VULN-RATE-LIMIT-GAPS FIX: Rate limit for public product search to prevent DB DoS
+    // Limit: 100 requests per minute per IP (prevents expensive search/filter/sort queries)
+    private final Cache<String, Bucket> productBuckets = buildCache(Duration.ofMinutes(1));
+    // VULN #16 FIX: Rate limit for feedback submission to prevent storage DoS
+    // Limit: 2 feedbacks per hour per IP (prevents database/storage spam)
+    private final Cache<String, Bucket> feedbackBuckets = buildCache(Duration.ofHours(1));
 
     private Cache<String, Bucket> buildCache(Duration ttl) {
         return Caffeine.newBuilder()
@@ -129,9 +138,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     }
                 }
                 bucket = contactBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(30)));
+            } else if (path.startsWith("/api/orders/checkout")) {
+                // VULN-ORDER-FLOODING FIX: Rate limit checkout to prevent spam orders
+                // Limit: 3 checkouts per 10 minutes per IP
+                // Prevents: fake orders, email spam, inventory manipulation
+                bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
             } else if (path.startsWith("/api/vouchers/check")) {
                 // VULN-BRUTE-002 FIX: 20 requests/phút để ngăn voucher enumeration
                 bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
+            } else if (path.startsWith("/api/feedbacks")) {
+                // VULN #16 FIX: Rate limit feedback submission to prevent storage DoS
+                // Limit: 2 feedbacks per hour per IP
+                // Prevents: database spam, storage exhaustion, disk full
+                bucket = feedbackBuckets.get(ip, k -> buildBucket(2, Duration.ofHours(1)));
             }
         }
         
@@ -150,6 +169,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
             (path.startsWith("/api/admin/accounts/check-username") || 
              path.startsWith("/api/admin/accounts/check-email"))) {
             bucket = adminCheckBuckets.get(ip, k -> buildBucket(30, Duration.ofMinutes(5)));
+        }
+        
+        // VULN-H03 FIX: Rate limit cho /api/auth/me - 60 requests/phút
+        // Prevents DB spam attack with stolen token
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/auth/me")) {
+            bucket = authMeBuckets.get(ip, k -> buildBucket(60, Duration.ofMinutes(1)));
+        }
+        
+        // VULN-RATE-LIMIT-GAPS FIX: Rate limit cho /api/products - 100 requests/phút
+        // Prevents DB DoS via expensive search/filter/sort queries
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/products")) {
+            bucket = productBuckets.get(ip, k -> buildBucket(100, Duration.ofMinutes(1)));
         }
 
         if (bucket != null && !bucket.tryConsume(1)) {
