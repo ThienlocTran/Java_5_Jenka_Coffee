@@ -20,7 +20,19 @@ public class BannerSet {
     @Column(nullable = false, length = 100)
     private String name;
 
-    /** fade | slide | zoom | kenburns */
+    /** 
+     * Banner transition effect:
+     * - fade: Mờ dần (default)
+     * - slide: Trượt ngang
+     * - zoom: Phóng to/thu nhỏ
+     * - kenburns: Zoom + Pan (cinematic)
+     * - cube: Xoay 3D như khối lập phương
+     * - flip: Lật 3D
+     * - curtain: Rèm kéo (wipe effect)
+     * - dissolve: Tan biến (blur + fade)
+     * - scale-rotate: Phóng to + xoay
+     * - push: Đẩy sang ngang
+     */
     @Column(nullable = false, length = 30)
     private String effect = "fade";
 
