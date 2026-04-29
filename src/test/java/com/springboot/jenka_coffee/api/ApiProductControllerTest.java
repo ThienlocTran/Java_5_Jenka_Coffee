@@ -219,7 +219,7 @@ class ApiProductControllerTest {
                         .param("categoryId", "MAY_PHA")
                         .param("minPrice", "3000000")
                         .param("maxPrice", "6000000"))
-                .andExpect(status().isOk())
+                    .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.items.length()").value(1));
