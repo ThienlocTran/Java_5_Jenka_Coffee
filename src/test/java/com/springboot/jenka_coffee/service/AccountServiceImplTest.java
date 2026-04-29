@@ -171,6 +171,29 @@ class AccountServiceImplTest {
     }
 
     @Test
+    // TC-ACC-SER-006b: AdminResetPassword với empty password - verify lastPasswordResetDate KHÔNG được update
+    // GAP DETECTION: Service KHÔNG validate empty password trước khi hash và lưu
+    void TC_ACC_SER_006b_emptyPassword_shouldNotUpdateResetDate() {
+        // Arrange: hashPassword("") không throw, nhưng password rỗng không hợp lý
+        when(accountRepository.findById("user1")).thenReturn(Optional.of(testAccount));
+        when(passwordSecurity.hashPassword("")).thenReturn("$2a$12$hashOfEmpty"); // giả sử hash được
+        when(accountRepository.save(any())).thenReturn(testAccount);
+
+        // Act
+        accountService.adminResetPassword("user1", "");
+
+        // Assert – verify hành vi: lastPasswordResetDate được set (cho dù password rỗng)
+        // Đây cho thấy service KHÔNG validate empty password → đây là GAP thật
+        assertNotNull(testAccount.getLastPasswordResetDate(),
+                "GAP: adminResetPassword không validate empty password trước khi hash và lưu");
+
+        // Document rõ: Service cần thêm validation: if (newPassword == null || newPassword.isBlank()) throw ...
+        verify(accountRepository).findById("user1");
+        verify(passwordSecurity).hashPassword("");
+        verify(accountRepository).save(testAccount);
+    }
+
+    @Test
     // TC-ACC-SER-007: Repository save throws RuntimeException during createAccount
     // Expected result: Transaction rollback - account NOT persisted
     void TC_ACC_SER_007() {

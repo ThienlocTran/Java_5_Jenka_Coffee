@@ -23,10 +23,15 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 
 /**
- * Test Case Document: AUTH MODULE - PUBLIC ENDPOINTS
- * Tests for ApiAuthController PUBLIC endpoints (no authentication required)
+ * Controller-layer unit test: ApiAuthController PUBLIC endpoints
+ * 
+ * ⚠️ SCOPE: Test controller logic ONLY (request mapping, response format, service delegation)
+ * ⚠️ NOT TESTED HERE: JWT validation, rate limiting, security filters
+ * 
+ * Security/filter tests → see AuthSecurityFilterTest.java
  * 
  * Coverage:
  * - Login with valid/invalid credentials
@@ -37,11 +42,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 
  * ✅ STRATEGY:
  * - Use addFilters = false to disable ALL filters (including Security)
- * - Test only PUBLIC endpoints that don't require authentication
+ * - Test only controller logic, NOT security behavior
+ * - Mock all services (AccountService, JwtService, etc.)
  * - For AUTHENTICATED endpoints, see ApiAuthControllerAuthenticatedTest
+ * - For SECURITY/FILTER tests, see AuthSecurityFilterTest
  */
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)  // ✅ Disable filters for public endpoints
+@AutoConfigureMockMvc(addFilters = false)  // Intentional: controller-only test
 @DisplayName("API Auth Controller - Public Endpoints Tests")
 class ApiAuthControllerPublicTest {
 
@@ -117,7 +124,11 @@ class ApiAuthControllerPublicTest {
                 .andExpect(jsonPath("$.message").value("Đăng nhập thành công"))
                 .andExpect(jsonPath("$.data.username").value("testuser"))
                 .andExpect(jsonPath("$.data.fullname").value("Test User"))
-                .andExpect(jsonPath("$.data.isAdmin").value(false));
+                .andExpect(jsonPath("$.data.isAdmin").value(false))
+                // Verify token được gửi qua cookie, KHÔNG phải trong response body
+                .andExpect(cookie().exists("access_token"))          // cookie phải được set
+                .andExpect(cookie().httpOnly("access_token", true))  // phải httpOnly
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist()); // KHÔNG có token trong body
 
         verify(accountService).authenticateWithResult("testuser", "password123");
         verify(jwtService).generateAccessToken("testuser", false);

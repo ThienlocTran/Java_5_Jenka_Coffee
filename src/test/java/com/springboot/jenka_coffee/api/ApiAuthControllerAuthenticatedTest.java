@@ -80,15 +80,15 @@ class ApiAuthControllerAuthenticatedTest {
 
     @Test
     @WithMockUser(username = "customer1", roles = "USER")
-    @DisplayName("TC-AUTH-002: Access Admin API with customer role - Return 403 Forbidden")
-    void TC_AUTH_002() throws Exception {
-        // This test would be for admin endpoints like /api/admin/**
-        // /api/auth/me requires ROLE_USER, so it will pass
-        // For a real 403 test, we need to test an admin endpoint
+    @DisplayName("TC-AUTH-002: ROLE_USER accesses /api/admin/** - Return 403 Forbidden")
+    void TC_AUTH_002_roleUser_callsAdminEndpoint_returns403() throws Exception {
+        // ROLE_USER gọi admin endpoint → phải bị 403 (không phải 401)
+        // SecurityConfig: .requestMatchers("/api/admin/**").hasRole("ADMIN")
+        mockMvc.perform(get("/api/admin/products"))
+                .andExpect(status().isForbidden()); // 403 – nếu 200 → BUG SecurityConfig
         
-        // Example: If we had an admin-only endpoint in ApiAuthController
-        // mockMvc.perform(get("/api/admin/users"))
-        //         .andExpect(status().isForbidden());
+        // Verify service KHÔNG được gọi (bị block trước khi vào controller)
+        verify(accountService, never()).findById(anyString());
     }
 
     @Test
