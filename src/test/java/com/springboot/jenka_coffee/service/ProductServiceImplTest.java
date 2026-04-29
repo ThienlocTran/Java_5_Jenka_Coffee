@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.service;
 import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductImage;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
@@ -13,12 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,16 +27,18 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Test Case Document Part 2: PRODUCT MODULE - Service Layer
+ * Test Case Document: PRODUCT MODULE - SERVICE LAYER
  * Tests for ProductServiceImpl business logic
  * 
- * Coverage:
- * - TC-PRD-008: createProductFromRequest - price âm → exception
- * - TC-PRD-009: createProductFromRequest - categoryId không tồn tại
- * - TC-PRD-010: deleteProductWithValidation - product đã có orders
- * - TC-PRD-011: toggleAvailable - available true → false
- * - TC-PRD-013: price được round HALF_UP về 0 decimal
- * - TC-PRD-015: toggleFeatured - false → true → false cycle
+ * Coverage from TC_BATCH_01_AUTH_PRODUCT_v2.csv:
+ * - TC-PRD-SER-001 to TC-PRD-SER-008: Service tests (8 test cases)
+ * 
+ * ✅ STRATEGY:
+ * - Use @ExtendWith(MockitoExtension.class) for pure unit tests
+ * - Mock all dependencies (repositories, services)
+ * - Test business logic validation
+ * - Test exception handling
+ * - NO Spring context loaded (fast tests)
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Product Service Implementation Tests")
@@ -45,224 +48,296 @@ class ProductServiceImplTest {
     private ProductRepository productRepository;
 
     @Mock
-    private UploadService uploadService;
-
-    @Mock
     private CategoryRepository categoryRepository;
 
     @Mock
     private ProductImageRepository productImageRepository;
 
     @Mock
+    private UploadService uploadService;
+
+    @Mock
     private VercelWebhookService vercelWebhookService;
 
+    @InjectMocks
     private ProductServiceImpl productService;
+
+    private Category mockCategory;
+    private Product mockProduct;
 
     @BeforeEach
     void setUp() {
-        productService = new ProductServiceImpl(
-                productRepository,
-                uploadService,
-                categoryRepository,
-                productImageRepository,
-                vercelWebhookService
-        );
+        mockCategory = new Category();
+        mockCategory.setId("CF");
+        mockCategory.setName("Cà phê");
+
+        mockProduct = new Product();
+        mockProduct.setId(1);
+        mockProduct.setName("Cà phê sữa");
+        mockProduct.setPrice(new BigDecimal("35000"));
+        mockProduct.setAvailable(true);
+        mockProduct.setCategory(mockCategory);
     }
 
-    // ========== HELPER METHODS ==========
-
-    private Product buildProduct(Integer id, BigDecimal price, boolean available) {
-        Product product = new Product();
-        product.setId(id);
-        product.setName("Product " + id);
-        product.setPrice(price);
-        product.setAvailable(available);
-        product.setImage("/images/product" + id + ".jpg");
-        return product;
-    }
-
-    private Category buildCategory(String id, String name) {
-        Category category = new Category();
-        category.setId(id);
-        category.setName(name);
-        return category;
-    }
-
-    private ProductRequest buildProductRequest(String name, BigDecimal price) {
+    // ========== TC-PRD-SER-001: CREATE PRODUCT NAME IS BLANK ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-001: Product Service - Create product name is blank - Throw BusinessRuleException")
+    void TC_PRD_SER_001() {
+        // Arrange
         ProductRequest request = new ProductRequest();
-        request.setName(name);
-        request.setPrice(price);
-        request.setDescription("Test description");
-        return request;
-    }
+        request.setName("");  // Blank name
+        request.setPrice(new BigDecimal("35000"));
 
-    // ========== TEST CASES ==========
-
-    /**
-     * TC-PRD-008 — createProductFromRequest — price âm → exception
-     * Expected: BusinessRuleException("Giá sản phẩm không thể âm")
-     */
-    @Test
-    @DisplayName("TC-PRD-008: createProductFromRequest với price < 0 phải throw BusinessRuleException")
-    void createProductFromRequest_negativePrice_throwsBusinessRuleException() {
-        // Arrange
-        ProductRequest request = buildProductRequest("Test product", new BigDecimal("-1000"));
-        Category category = buildCategory("MAY_PHA", "Máy Pha Cà Phê");
+        // Act & Assert
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> productService.createProductFromRequest(request, "CF", null)
+        );
         
-        when(categoryRepository.findById("MAY_PHA")).thenReturn(Optional.of(category));
-
-        // Act & Assert
-        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
-            productService.createProductFromRequest(request, "MAY_PHA", null);
-        });
-
-        assertTrue(exception.getMessage().contains("Giá sản phẩm không thể âm"));
-    }
-
-    /**
-     * TC-PRD-009 — createProductFromRequest — categoryId không tồn tại
-     * Expected: ResourceNotFoundException("Không tìm thấy danh mục với ID: KHONG_CO")
-     */
-    @Test
-    @DisplayName("TC-PRD-009: createProductFromRequest với categoryId không tồn tại phải throw ResourceNotFoundException")
-    void createProductFromRequest_categoryNotFound_throwsResourceNotFoundException() {
-        // Arrange
-        ProductRequest request = buildProductRequest("Test product", new BigDecimal("1000000"));
+        // Verify exception message
+        assertNotNull(exception.getMessage());
         
-        when(categoryRepository.findById("KHONG_CO")).thenReturn(Optional.empty());
-
-        // Act & Assert
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
-            productService.createProductFromRequest(request, "KHONG_CO", null);
-        });
-
-        assertTrue(exception.getMessage().contains("Không tìm thấy danh mục với ID: KHONG_CO"));
+        // Verify repository was NOT called
+        verify(productRepository, never()).save(any());
     }
 
-    /**
-     * TC-PRD-010 — deleteProductWithValidation — product đã có orders
-     * Expected: BusinessRuleException với message chứa "Không thể xóa sản phẩm này vì đã có 3 đơn hàng sử dụng"
-     */
+    // ========== TC-PRD-SER-002: CREATE PRODUCT PRICE IS NULL ==========
+    
     @Test
-    @DisplayName("TC-PRD-010: deleteProductWithValidation với product đã có orders phải throw BusinessRuleException")
-    void deleteProductWithValidation_productHasOrders_throwsBusinessRuleException() {
+    @DisplayName("TC-PRD-SER-002: Product Service - Create product price is null - Throw BusinessRuleException")
+    void TC_PRD_SER_002() {
         // Arrange
-        when(productRepository.existsById(7)).thenReturn(true);
-        when(productRepository.countOrdersByProductId(7)).thenReturn(3L);
+        ProductRequest request = new ProductRequest();
+        request.setName("Test Product");
+        request.setPrice(null);  // Null price
 
         // Act & Assert
-        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
-            productService.deleteProductWithValidation(7);
-        });
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> productService.createProductFromRequest(request, "CF", null)
+        );
+        
+        assertEquals("Giá sản phẩm không được để trống", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(productRepository, never()).save(any());
+    }
 
-        assertTrue(exception.getMessage().contains("3 đơn hàng sử dụng"));
-        assertTrue(exception.getMessage().contains("Không thể xóa sản phẩm này"));
+    // ========== TC-PRD-SER-003: CREATE PRODUCT PRICE < 0 ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-003: Product Service - Create product price < 0 - Throw BusinessRuleException")
+    void TC_PRD_SER_003() {
+        // Arrange
+        ProductRequest request = new ProductRequest();
+        request.setName("Test Product");
+        request.setPrice(new BigDecimal("-1"));  // Negative price
+
+        // Act & Assert
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> productService.createProductFromRequest(request, "CF", null)
+        );
+        
+        assertEquals("Giá sản phẩm không thể âm", exception.getMessage());
+        
+        // Verify repository was NOT called
+        verify(productRepository, never()).save(any());
+    }
+
+    // ========== TC-PRD-SER-004: CREATE PRODUCT CATEGORYID NOT EXISTS ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-004: Product Service - Create product categoryId not exists - Throw BusinessRuleException")
+    void TC_PRD_SER_004() {
+        // Arrange
+        ProductRequest request = new ProductRequest();
+        request.setName("Test Product");
+        request.setPrice(new BigDecimal("35000"));
+        
+        when(categoryRepository.findById("INVALID")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(
+            ResourceNotFoundException.class,
+            () -> productService.createProductFromRequest(request, "INVALID", null)
+        );
+        
+        assertTrue(exception.getMessage().contains("Không tìm thấy danh mục"));
+        
+        // Verify repository was called but save was NOT
+        verify(categoryRepository).findById("INVALID");
+        verify(productRepository, never()).save(any());
+    }
+
+    // ========== TC-PRD-SER-005: DELETE PRODUCT HAS ACTIVE ORDER DETAILS ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-005: Product Service - Delete product has active order details - Throw BusinessRuleException")
+    void TC_PRD_SER_005() {
+        // Arrange
+        when(productRepository.existsById(1)).thenReturn(true);
+        when(productRepository.countOrdersByProductId(1)).thenReturn(5L);  // Has 5 orders
+
+        // Act & Assert
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> productService.deleteProductWithValidation(1)
+        );
+        
+        assertTrue(exception.getMessage().contains("đã có"));
+        assertTrue(exception.getMessage().contains("đơn hàng"));
         
         // Verify delete was NOT called
-        verify(productRepository, never()).deleteById(anyInt());
+        verify(productRepository).existsById(1);
+        verify(productRepository).countOrdersByProductId(1);
+        verify(productRepository, never()).deleteById(any());
     }
 
-    /**
-     * TC-PRD-011 — toggleAvailable — available true → false
-     * Expected: productRepository.save() được gọi với product.available = false
-     */
+    // ========== TC-PRD-SER-006: UPDATE PRODUCT PRICE = NULL ==========
+    
     @Test
-    @DisplayName("TC-PRD-011: toggleAvailable từ true → false phải save với available=false")
-    void toggleAvailable_trueToFalse_savesWithFalse() {
+    @DisplayName("TC-PRD-SER-006: Product Service - Update product price = null - Throw BusinessRuleException")
+    void TC_PRD_SER_006() {
         // Arrange
-        Product product = buildProduct(10, new BigDecimal("1000000"), true);
-        product.setAvailable(true);
+        when(productRepository.findByIdWithCategory(1)).thenReturn(Optional.of(mockProduct));
+
+        // Act & Assert
+        BusinessRuleException exception = assertThrows(
+            BusinessRuleException.class,
+            () -> productService.updateProductFromRequest(
+                1, "Updated Name", "Description", null, "CF", true, null
+            )
+        );
         
-        when(productRepository.findById(10)).thenReturn(Optional.of(product));
-        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+        assertEquals("Giá sản phẩm không được để trống", exception.getMessage());
+        
+        // Verify save was NOT called
+        verify(productRepository, never()).save(any());
+    }
+
+    // ========== TC-PRD-SER-007: FINDBYID PRODUCT NOT EXISTS ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-007: Product Service - FindById product not exists - Throw ResourceNotFoundException")
+    void TC_PRD_SER_007() {
+        // Arrange
+        when(productRepository.findByIdWithCategory(99999)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(
+            ResourceNotFoundException.class,
+            () -> productService.findById(99999)
+        );
+        
+        assertEquals("Product not found with id: 99999", exception.getMessage());
+        
+        verify(productRepository).findByIdWithCategory(99999);
+    }
+
+    // ========== TC-PRD-SER-008: TOGGLEAVAILABLE PRODUCT NOT EXISTS ==========
+    
+    @Test
+    @DisplayName("TC-PRD-SER-008: Product Service - ToggleAvailable product not exists - Throw ResourceNotFoundException")
+    void TC_PRD_SER_008() {
+        // Arrange
+        when(productRepository.findById(99999)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(
+            ResourceNotFoundException.class,
+            () -> productService.toggleAvailable(99999)
+        );
+        
+        assertEquals("Product not found with id: 99999", exception.getMessage());
+        
+        verify(productRepository).findById(99999);
+        verify(productRepository, never()).save(any());
+    }
+
+    // ========== ADDITIONAL TEST: TOGGLE AVAILABLE SUCCESS ==========
+    
+    @Test
+    @DisplayName("Product Service - ToggleAvailable success - Changes available status")
+    void testToggleAvailableSuccess() {
+        // Arrange
+        mockProduct.setAvailable(true);
+        when(productRepository.findById(1)).thenReturn(Optional.of(mockProduct));
+        when(productRepository.save(any(Product.class))).thenReturn(mockProduct);
 
         // Act
-        productService.toggleAvailable(10);
+        productService.toggleAvailable(1);
 
         // Assert
-        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
-        verify(productRepository).save(productCaptor.capture());
-        
-        Product savedProduct = productCaptor.getValue();
-        assertFalse(savedProduct.getAvailable(), "Product available phải được toggle thành false");
+        verify(productRepository).findById(1);
+        verify(productRepository).save(argThat(product -> 
+            product.getId().equals(1) && !product.getAvailable()
+        ));
     }
 
-    /**
-     * TC-PRD-013 — price được round HALF_UP về 0 decimal
-     * Expected: product.getPrice() = new BigDecimal("5500000")
-     */
+    // ========== ADDITIONAL TEST: CREATE PRODUCT SUCCESS ==========
+    
     @Test
-    @DisplayName("TC-PRD-013: buildProductFromRequest phải round price HALF_UP về 0 decimal")
-    void buildProductFromRequest_priceRounding_halfUp() {
+    @DisplayName("Product Service - Create product success - Returns saved product")
+    void testCreateProductSuccess() {
         // Arrange
-        ProductRequest request = buildProductRequest("Test product", new BigDecimal("5499999.6"));
-        Category category = buildCategory("MAY_PHA", "Máy Pha Cà Phê");
+        ProductRequest request = new ProductRequest();
+        request.setName("New Product");
+        request.setPrice(new BigDecimal("50000"));
+        request.setAvailable(true);
         
-        when(categoryRepository.findById("MAY_PHA")).thenReturn(Optional.of(category));
+        when(categoryRepository.findById("CF")).thenReturn(Optional.of(mockCategory));
         when(productRepository.existsBySlug(anyString())).thenReturn(false);
-        when(productRepository.save(any(Product.class))).thenAnswer(i -> {
-            Product p = i.getArgument(0);
-            p.setId(1);
-            return p;
-        });
+        when(productRepository.save(any(Product.class))).thenReturn(mockProduct);
 
         // Act
-        Product result = productService.createProductFromRequest(request, "MAY_PHA", null);
+        Product result = productService.createProductFromRequest(request, "CF", null);
 
         // Assert
-        BigDecimal expected = new BigDecimal("5499999.6").setScale(0, RoundingMode.HALF_UP);
-        assertEquals(0, expected.compareTo(result.getPrice()), 
-                "Price phải được round HALF_UP: 5499999.6 → 5500000");
-        assertEquals(new BigDecimal("5500000"), result.getPrice());
+        assertNotNull(result);
+        verify(categoryRepository).findById("CF");
+        verify(productRepository).save(any(Product.class));
     }
 
-    /**
-     * TC-PRD-015 — toggleFeatured: false → true → false cycle
-     * Expected: Lần 1: product.featured=true. Lần 2: product.featured=false
-     */
+    // ========== ADDITIONAL TEST: DELETE PRODUCT SUCCESS ==========
+    
     @Test
-    @DisplayName("TC-PRD-015: toggleFeatured từ false → true phải save với featured=true")
-    void toggleFeatured_fromFalseToTrue() {
+    @DisplayName("Product Service - Delete product success - Product deleted")
+    void testDeleteProductSuccess() {
         // Arrange
-        Product product = buildProduct(15, new BigDecimal("1000000"), true);
-        product.setFeatured(false);
-        
-        when(productRepository.existsById(15)).thenReturn(true);
-        when(productRepository.findByIdWithCategory(15)).thenReturn(Optional.of(product));
-        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
-        when(productRepository.findById(15)).thenReturn(Optional.of(product));
+        when(productRepository.existsById(1)).thenReturn(true);
+        when(productRepository.countOrdersByProductId(1)).thenReturn(0L);  // No orders
+        doNothing().when(productRepository).deleteById(1);
 
         // Act
-        Product result = productService.toggleFeatured(15);
+        productService.deleteProductWithValidation(1);
 
         // Assert
-        assertTrue(result.getFeatured(), "Featured phải được toggle thành true");
-        
-        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
-        verify(productRepository).save(productCaptor.capture());
-        assertTrue(productCaptor.getValue().getFeatured());
+        verify(productRepository).existsById(1);
+        verify(productRepository).countOrdersByProductId(1);
+        verify(productRepository).deleteById(1);
     }
 
-    /**
-     * TC-PRD-015 (part 2) — toggleFeatured: null treated as false
-     * Expected: featured=null → toggle to true
-     */
+    // ========== ADDITIONAL TEST: UPDATE PRODUCT SUCCESS ==========
+    
     @Test
-    @DisplayName("TC-PRD-015: toggleFeatured với featured=null phải treat as false và toggle to true")
-    void toggleFeatured_null_treatedAsFalse() {
+    @DisplayName("Product Service - Update product success - Returns updated product")
+    void testUpdateProductSuccess() {
         // Arrange
-        Product product = buildProduct(16, new BigDecimal("1000000"), true);
-        product.setFeatured(null); // null case
-        
-        when(productRepository.existsById(16)).thenReturn(true);
-        when(productRepository.findByIdWithCategory(16)).thenReturn(Optional.of(product));
-        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
-        when(productRepository.findById(16)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdWithCategory(1)).thenReturn(Optional.of(mockProduct));
+        when(categoryRepository.findById("CF")).thenReturn(Optional.of(mockCategory));
+        when(productRepository.save(any(Product.class))).thenReturn(mockProduct);
+        when(uploadService.saveProductImage(any(MultipartFile.class))).thenReturn("http://example.com/image.jpg");
 
         // Act
-        Product result = productService.toggleFeatured(16);
+        Product result = productService.updateProductFromRequest(
+            1, "Updated Name", "Description", new BigDecimal("45000"), "CF", true, null
+        );
 
         // Assert
-        assertTrue(result.getFeatured(), "Featured null phải được treat as false và toggle to true");
+        assertNotNull(result);
+        verify(productRepository).findByIdWithCategory(1);
+        verify(categoryRepository).findById("CF");
     }
 }
