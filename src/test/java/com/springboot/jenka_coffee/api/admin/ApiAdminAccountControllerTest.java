@@ -38,15 +38,11 @@ public class ApiAdminAccountControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Account testUser;
-    private Account admin1;
-    private Account admin2;
-
     @BeforeEach
     void setUp() {
         accountRepository.deleteAll(); // Clean state before each test
 
-        testUser = new Account();
+        Account testUser = new Account();
         testUser.setUsername("user1");
         testUser.setFullname("Test User");
         testUser.setEmail("user1@test.com");
@@ -56,7 +52,7 @@ public class ApiAdminAccountControllerTest {
         testUser.setAdmin(false);
         accountRepository.save(testUser);
 
-        admin1 = new Account();
+        Account admin1 = new Account();
         admin1.setUsername("admin1");
         admin1.setFullname("Admin One");
         admin1.setEmail("admin1@test.com");
@@ -65,7 +61,7 @@ public class ApiAdminAccountControllerTest {
         admin1.setAdmin(true);
         accountRepository.save(admin1);
 
-        admin2 = new Account();
+        Account admin2 = new Account();
         admin2.setUsername("admin2");
         admin2.setFullname("Admin Two");
         admin2.setEmail("admin2@test.com");

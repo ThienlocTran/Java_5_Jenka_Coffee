@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.entity.News;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
-import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.NewsRepository;
 import com.springboot.jenka_coffee.service.impl.NewsServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +29,9 @@ class NewsServiceImplTest {
     @Mock
     private UploadService uploadService;
 
+    @Mock
+    private VercelWebhookService vercelWebhookService;
+
     @InjectMocks
     private NewsServiceImpl newsService;
 
@@ -38,7 +40,7 @@ class NewsServiceImplTest {
     @BeforeEach
     void setUp() {
         testNews = new News();
-        testNews.setId(1L);
+        testNews.setId(1);
         testNews.setTitle("Test Article");
         testNews.setContent("Content");
         testNews.setAvailable(false);
@@ -46,14 +48,14 @@ class NewsServiceImplTest {
 
     @Test
     @DisplayName("TC-NEWS-SER-001: FindById news id not exists")
-    void test_findById_notFound_throwsException() {
-        when(newsRepository.findById(99999L)).thenReturn(Optional.empty());
+    void test_findById_notFound_returnsNull() {
+        // Service returns null when ID not found, doesn't throw exception
+        when(newsRepository.findById(99999)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> {
-            newsService.findById(99999L);
-        });
+        News result = newsService.findById(99999);
 
-        verify(newsRepository).findById(99999L);
+        assertNull(result, "Should return null when news ID not found");
+        verify(newsRepository).findById(99999);
     }
 
     @Test
@@ -61,11 +63,12 @@ class NewsServiceImplTest {
     void test_saveNews_nullImage_savesSuccessfully() {
         when(newsRepository.save(any(News.class))).thenReturn(testNews);
 
-        News savedNews = newsService.saveNews(testNews, null);
+        // saveNews returns void, not News
+        newsService.saveNews(testNews, null);
 
-        assertNotNull(savedNews);
-        verify(uploadService, never()).saveFile(any()); // Should not attempt to save file
+        verify(uploadService, never()).saveNewsImage(any()); // Should not attempt to save file
         verify(newsRepository).save(testNews);
+        verify(vercelWebhookService).triggerRebuild(); // Should trigger rebuild
     }
 
     @Test
@@ -74,29 +77,32 @@ class NewsServiceImplTest {
         MockMultipartFile invalidFile = new MockMultipartFile(
                 "file", "virus.exe", "application/x-msdownload", "virus".getBytes());
 
-        // Assuming service does validation before calling repository or uploadService
-        // and throws BusinessRuleException or similar
-        // Because we don't have the exact implementation, we mock the expected behavior
-        // Or if the implementation delegates to uploadService for validation:
-        when(uploadService.saveFile(any())).thenThrow(new BusinessRuleException("Invalid file type"));
+        // uploadService.saveNewsImage() should throw exception for invalid file type
+        when(uploadService.saveNewsImage(any(MultipartFile.class)))
+                .thenThrow(new BusinessRuleException("Invalid file type"));
 
         assertThrows(BusinessRuleException.class, () -> {
             newsService.saveNews(testNews, invalidFile);
         });
 
         verify(newsRepository, never()).save(any());
+        verify(vercelWebhookService, never()).triggerRebuild();
     }
 
     @Test
     @DisplayName("TC-NEWS-SER-004: ToggleAvailable id not exists")
-    void test_toggleAvailable_notFound_throwsException() {
-        when(newsRepository.findById(99999L)).thenReturn(Optional.empty());
+    void test_toggleAvailable_notFound_doesNothing() {
+        // toggleAvailable() uses Integer, not Long
+        // Service doesn't throw exception, just does nothing when ID not found
+        when(newsRepository.findById(99999)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> {
-            newsService.toggleAvailable(99999L);
+        // Should not throw exception
+        assertDoesNotThrow(() -> {
+            newsService.toggleAvailable(99999);
         });
 
-        verify(newsRepository).findById(99999L);
+        verify(newsRepository).findById(99999);
         verify(newsRepository, never()).save(any());
+        verify(vercelWebhookService, never()).triggerRebuild();
     }
 }

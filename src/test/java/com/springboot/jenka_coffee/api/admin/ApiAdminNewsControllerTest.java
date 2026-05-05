@@ -14,6 +14,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -48,7 +49,7 @@ public class ApiAdminNewsControllerTest {
         testNews = new News();
         testNews.setTitle("Test Title");
         testNews.setContent("Test Content");
-        testNews.setCreateDate(new Date());
+        testNews.setCreateDate(LocalDateTime.now());
         testNews.setAvailable(true);
         newsRepository.save(testNews);
     }

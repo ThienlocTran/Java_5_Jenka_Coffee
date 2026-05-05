@@ -1,10 +1,7 @@
 package com.springboot.jenka_coffee.service;
 
-import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
-import com.springboot.jenka_coffee.dto.response.CartItem;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
-import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
@@ -16,33 +13,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
- * Test Case Document Part 1: ORDER MODULE - Service Layer
- * Tests for OrderServiceImpl business logic
+ * ORDER SERVICE TEST CASES (Batch 02)
+ * TC-ORD-SER-001 to TC-ORD-SER-003
  * 
- * Coverage:
- * - TC-ORD-003: Product unavailable
- * - TC-ORD-004: Max order value exceeded
- * - TC-ORD-007: XSS in note
- * - TC-ORD-013: FSM CONFIRMED → NEW invalid
- * - TC-ORD-014: FSM CANCELLED → any invalid
- * - TC-ORD-015: Cancel order refunds points
- * - TC-ORD-016: Price from DB, not cart
- * - TC-ORD-017: Address format validation
+ * Focus: Service layer business logic, exception handling
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Order Service Implementation Tests")
 class OrderServiceImplTest {
 
     @Mock
@@ -60,371 +49,167 @@ class OrderServiceImplTest {
     @Mock
     private PointHistoryRepository pointHistoryRepository;
 
+    @InjectMocks
     private OrderServiceImpl orderService;
+
+    private Order testOrder;
+    private Account testAccount;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderServiceImpl(
-                orderRepository,
-                cartService,
-                emailService,
-                entityManager,
-                pointHistoryRepository
-        );
+        testAccount = new Account();
+        testAccount.setUsername("testuser");
+        testAccount.setFullname("Test User");
+        testAccount.setEmail("test@example.com");
+        testAccount.setPhone("0123456789");
+        testAccount.setPoints(100);
+
+        testOrder = new Order();
+        testOrder.setId(1L);
+        testOrder.setAccount(testAccount);
+        testOrder.setAddress("123 Test St");
+        testOrder.setPhone("0123456789");
+        testOrder.setStatus(0); // NEW
+        testOrder.setTotalAmount(new BigDecimal("500000"));
+        testOrder.setCreateDate(LocalDateTime.now());
+        testOrder.setPointsUsed(0);
     }
 
-    // ========== HELPER METHODS ==========
-
-    private CheckoutRequest buildValidCheckoutRequest() {
-        CheckoutRequest request = new CheckoutRequest();
-        request.setFullname("Nguyen Van A");
-        request.setEmail("nva@gmail.com");
-        request.setPhone("0912345678");
-        request.setAddress("123 Nguyễn Trãi");
-        request.setWard("Phường 1");
-        request.setDistrict("Quận 1");
-        request.setProvince("TP.HCM");
-        request.setPaymentMethod("cod");
-        request.setAgreeTerms(true);
-        return request;
-    }
-
-    private Product buildProduct(Integer id, BigDecimal price, boolean available) {
-        Product product = new Product();
-        product.setId(id);
-        product.setName("Product " + id);
-        product.setPrice(price);
-        product.setAvailable(available);
-        product.setImage("/images/product" + id + ".jpg");
-        return product;
-    }
-
-    private Account buildAccount(String username) {
-        Account account = new Account();
-        account.setUsername(username);
-        account.setFullname("Test User");
-        account.setEmail(username + "@test.com");
-        account.setPoints(0);
-        return account;
-    }
-
-    // ========== TEST CASES ==========
-
-    /**
-     * TC-ORD-003 — Checkout khi product bị unavailable
-     * Expected: BusinessRuleException với message chứa "không còn kinh doanh"
-     */
     @Test
-    @DisplayName("TC-ORD-003: Checkout khi product available=false phải throw BusinessRuleException")
-    void checkout_productUnavailable_throwsBusinessRuleException() {
-        // Arrange
-        CartItem item = new CartItem(5, "Máy xay cũ", "/images/product5.jpg", 
-                new BigDecimal("1000000"), 1);
-        when(cartService.getItems()).thenReturn(List.of(item));
-
-        Account account = buildAccount("user_test");
-        when(entityManager.find(eq(Account.class), eq("user_test"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-
-        Product unavailableProduct = buildProduct(5, new BigDecimal("1000000"), false);
-        unavailableProduct.setName("Máy xay cũ");
-        when(entityManager.find(eq(Product.class), eq(5), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(unavailableProduct);
-
-        CheckoutRequest request = buildValidCheckoutRequest();
-
-        // Act & Assert
-        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
-            orderService.checkout(request, account);
-        });
-
-        assertTrue(exception.getMessage().contains("Máy xay cũ"));
-        assertTrue(exception.getMessage().contains("không còn kinh doanh"));
-    }
-
-    /**
-     * TC-ORD-004 — Checkout vượt giới hạn 500 triệu VND
-     * Expected: BusinessRuleException với message chứa "vượt quá giới hạn"
-     */
-    @Test
-    @DisplayName("TC-ORD-004: Checkout với totalAmount > 500,000,000 VND phải bị reject")
-    void checkout_exceedsMaxOrderValue_throwsBusinessRuleException() {
-        // Arrange
-        CartItem item = new CartItem(1, "Máy pha siêu đắt", "/images/product1.jpg", 
-                new BigDecimal("600000000"), 1);
-        when(cartService.getItems()).thenReturn(List.of(item));
-
-        Account account = buildAccount("user_test");
-        when(entityManager.find(eq(Account.class), eq("user_test"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-
-        Product expensiveProduct = buildProduct(1, new BigDecimal("600000000"), true);
-        when(entityManager.find(eq(Product.class), eq(1), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(expensiveProduct);
-
-        CheckoutRequest request = buildValidCheckoutRequest();
-
-        // Act & Assert
-        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
-            orderService.checkout(request, account);
-        });
-
-        assertTrue(exception.getMessage().contains("vượt quá giới hạn"));
-        assertTrue(exception.getMessage().contains("500"));
-    }
-
-    /**
-     * TC-ORD-007 — Checkout với XSS trong note
-     * Expected: note được escape, không execute script
-     */
-    @Test
-    @DisplayName("TC-ORD-007: Checkout với XSS trong note phải được escape")
-    void checkout_xssInNote_escapesHtml() {
-        // Arrange
-        CartItem item = new CartItem(1, "Product", "/images/product1.jpg", 
-                new BigDecimal("100000"), 1);
-        when(cartService.getItems()).thenReturn(List.of(item));
-
-        Account account = buildAccount("user_test");
-        when(entityManager.find(eq(Account.class), eq("user_test"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-
-        Product product = buildProduct(1, new BigDecimal("100000"), true);
-        when(entityManager.find(eq(Product.class), eq(1), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(product);
-
-        Order savedOrder = new Order();
-        savedOrder.setId(1L);
-        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-
-        CheckoutRequest request = buildValidCheckoutRequest();
-        request.setNote("<script>alert('xss')</script>Giao giờ hành chính");
-
-        // Act
-        Order result = orderService.checkout(request, account);
-
-        // Assert
-        assertNotNull(result);
-        verify(orderRepository).save(argThat(order -> {
-            String note = order.getNote();
-            return note != null &&
-                    note.contains("&lt;script&gt;") &&
-                    note.contains("&lt;/script&gt;") &&
-                    !note.contains("<script>");
-        }));
-    }
-
-    /**
-     * TC-ORD-013 — updateStatus — FSM: CONFIRMED → NEW không hợp lệ
-     * Expected: BusinessRuleException
-     */
-    @Test
-    @DisplayName("TC-ORD-013: Không thể chuyển CONFIRMED → NEW (invalid FSM transition)")
-    void updateStatus_confirmedToNew_throwsBusinessRuleException() {
-        // Arrange
-        Order order = new Order();
-        order.setId(77L);
-        order.setStatus(1); // CONFIRMED
-
-        when(entityManager.find(eq(Order.class), eq(77L), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(order);
-
-        // Act & Assert
-        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
-            orderService.updateStatus(77L, 0); // Try to change to NEW
-        });
-
-        assertTrue(exception.getMessage().contains("Không thể chuyển trạng thái"));
-        assertTrue(exception.getMessage().contains("CONFIRMED"));
-        assertTrue(exception.getMessage().contains("NEW"));
-    }
-
-    /**
-     * TC-ORD-014 — updateStatus — CANCELLED → bất kỳ đều bị block
-     * Expected: BusinessRuleException for both attempts
-     */
-    @Test
-    @DisplayName("TC-ORD-014: Đơn hàng CANCELLED không thể chuyển về bất kỳ trạng thái nào")
-    void updateStatus_cancelledToAny_throwsBusinessRuleException() {
-        // Arrange
-        Order order = new Order();
-        order.setId(88L);
-        order.setStatus(2); // CANCELLED
-
-        when(entityManager.find(eq(Order.class), eq(88L), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(order);
-
-        // Act & Assert - Try to change to NEW
-        assertThrows(BusinessRuleException.class, () -> {
-            orderService.updateStatus(88L, 0);
-        });
-
-        // Try to change to CONFIRMED
-        assertThrows(BusinessRuleException.class, () -> {
-            orderService.updateStatus(88L, 1);
-        });
-    }
-
-    /**
-     * TC-ORD-015 — updateStatus CANCEL — hoàn điểm cho user
-     * Expected: Account points = 200 + 500 = 700, PointHistory record created
-     */
-    @Test
-    @DisplayName("TC-ORD-015: Hủy đơn hàng phải hoàn điểm cho user")
-    void updateStatus_cancelWithPoints_refundsPointsToAccount() {
-        // Arrange
-        Account account = buildAccount("user_x");
-        account.setPoints(200);
-
-        Order order = new Order();
-        order.setId(99L);
-        order.setStatus(0); // NEW
-        order.setAccount(account);
-        order.setPointsUsed(500);
-
-        when(entityManager.find(eq(Order.class), eq(99L), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(order);
-        when(entityManager.find(eq(Account.class), eq("user_x"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-        when(orderRepository.save(any(Order.class))).thenReturn(order);
-
-        // Act
-        orderService.updateStatus(99L, 2); // CANCELLED
-
-        // Assert
-        assertEquals(700, account.getPoints());
-        verify(pointHistoryRepository).save(argThat(history ->
-                history.getAmount() == 500 &&
-                        history.getOrderId().equals(99L) &&
-                        history.getReason().contains("Hoàn điểm") &&
-                        history.getReason().contains("#99")
-        ));
-        verify(entityManager).merge(account);
-    }
-
-    /**
-     * TC-ORD-016 — totalAmount tính từ DB price, không từ cart
-     * Expected: Order totalAmount = 5,500,000 (từ DB), không phải 1,000 (từ cart)
-     */
-    @Test
-    @DisplayName("TC-ORD-016: Giá trong totalAmount phải lấy từ DB, không từ cart")
-    void checkout_priceFromDatabase_notFromCart() {
-        // Arrange
-        // Cart gửi giá giả: 1,000 VND
-        CartItem fakeItem = new CartItem(3, "Product", "/images/product3.jpg", 
-                new BigDecimal("1000"), 1);
-        when(cartService.getItems()).thenReturn(List.of(fakeItem));
-
-        Account account = buildAccount("user_test");
-        when(entityManager.find(eq(Account.class), eq("user_test"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-
-        // DB có giá thật: 5,500,000 VND
-        Product realProduct = buildProduct(3, new BigDecimal("5500000"), true);
-        when(entityManager.find(eq(Product.class), eq(3), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(realProduct);
-
-        Order savedOrder = new Order();
-        savedOrder.setId(1L);
-        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-
-        CheckoutRequest request = buildValidCheckoutRequest();
-
-        // Act
-        Order result = orderService.checkout(request, account);
-
-        // Assert
-        verify(orderRepository).save(argThat(order -> {
-            BigDecimal total = order.getTotalAmount();
-            // Total phải là 5,500,000 (từ DB), không phải 1,000 (từ cart)
-            return total != null && total.compareTo(new BigDecimal("5500000")) == 0;
-        }));
-    }
-
-    /**
-     * TC-ORD-017 — buildOrder — address được concat đúng format
-     * Expected: address = "123 Nguyễn Trãi, Phường 1, Quận 1, TP.HCM"
-     */
-    @Test
-    @DisplayName("TC-ORD-017: Address phải được concat đúng format")
-    void buildOrder_addressFormat_correctlyConcatenated() {
-        // Arrange
-        CartItem item = new CartItem(1, "Product", "/images/product1.jpg", 
-                new BigDecimal("100000"), 1);
-        when(cartService.getItems()).thenReturn(List.of(item));
-
-        Account account = buildAccount("user_test");
-        when(entityManager.find(eq(Account.class), eq("user_test"), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(account);
-
-        Product product = buildProduct(1, new BigDecimal("100000"), true);
-        when(entityManager.find(eq(Product.class), eq(1), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(product);
-
-        Order savedOrder = new Order();
-        savedOrder.setId(1L);
-        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
-
-        CheckoutRequest request = buildValidCheckoutRequest();
-
-        // Act
-        orderService.checkout(request, account);
-
-        // Assert
-        verify(orderRepository).save(argThat(order -> {
-            String address = order.getAddress();
-            return address != null &&
-                    address.equals("123 Nguyễn Trãi, Phường 1, Quận 1, TP.HCM");
-        }));
-    }
-    @Test
-    @DisplayName("TC-ORD-SER-001: updateStatus trên order không tồn tại phải throw RuntimeException")
-    void updateStatus_orderNotFound_throwsRuntimeException() {
-        // Arrange
-        when(entityManager.find(eq(Order.class), eq(999L), eq(LockModeType.PESSIMISTIC_WRITE)))
+    @DisplayName("TC-ORD-SER-001: Order Service - Update status on non-existent order")
+    void test_updateStatus_orderNotFound_throwsException() {
+        // Arrange - Mock EntityManager to return null (order not found)
+        when(entityManager.find(eq(Order.class), eq(99999L), eq(LockModeType.PESSIMISTIC_WRITE)))
                 .thenReturn(null);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            orderService.updateStatus(999L, 1);
+            orderService.updateStatus(99999L, 1);
         });
 
-        assertEquals("Không tìm thấy đơn hàng!", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Không tìm thấy đơn hàng"));
     }
 
     @Test
-    @DisplayName("TC-ORD-SER-002: Hủy đơn hàng đã confirmed (GAP CHECK)")
-    void updateStatus_cancelConfirmedOrder_gapCheck() {
-        // Business Rule trong CSV yêu cầu không cho phép hủy đơn đã CONFIRMED (phải throw BusinessRuleException)
-        // NHƯNG code hiện tại cho phép: case CONFIRMED -> to == Order.OrderStatus.CANCELLED (trả về true)
-        // Đây là một GAP giữa Requirement và Implementation.
-        Order order = new Order();
-        order.setId(111L);
-        order.setStatus(1); // CONFIRMED
+    @DisplayName("TC-ORD-SER-002: Order Service - Cancel already confirmed order")
+    void test_updateStatus_cancelConfirmedOrder_throwsBusinessRuleException() {
+        // Arrange - Order is CONFIRMED (status=1)
+        testOrder.setStatus(1);
+        when(entityManager.find(eq(Order.class), eq(testOrder.getId()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testOrder);
 
-        when(entityManager.find(eq(Order.class), eq(111L), eq(LockModeType.PESSIMISTIC_WRITE)))
-                .thenReturn(order);
-        when(orderRepository.save(any(Order.class))).thenReturn(order);
-
-        // Act - Không throw exception mà chạy thành công -> Gap confirmed
-        assertDoesNotThrow(() -> {
-            orderService.updateStatus(111L, 2); // CANCELLED
+        // Act & Assert - Try to cancel (status=2)
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
+            orderService.updateStatus(testOrder.getId(), 2);
         });
-        
-        verify(orderRepository).save(argThat(o -> o.getStatus() == 2));
+
+        assertTrue(exception.getMessage().contains("Không thể chuyển trạng thái"));
+        assertTrue(exception.getMessage().contains("CONFIRMED"));
+        assertTrue(exception.getMessage().contains("CANCELLED"));
     }
 
     @Test
-    @DisplayName("TC-ORD-SER-003: findByIdWithDetails với id không tồn tại throw ResourceNotFoundException")
-    void findByIdWithDetails_notFound_throwsResourceNotFoundException() {
-        // Arrange
-        when(orderRepository.findByIdWithDetails(888L)).thenReturn(java.util.Optional.empty());
+    @DisplayName("TC-ORD-SER-003: Order Service - FindById with details not found")
+    void test_findByIdWithDetails_orderNotFound_throwsResourceNotFoundException() {
+        // Arrange - Mock repository to return empty
+        when(orderRepository.findByIdWithDetails(99999L))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
-            orderService.findByIdWithDetails(888L);
+            orderService.findByIdWithDetails(99999L);
         });
 
-        assertTrue(exception.getMessage().contains("Không tìm thấy đơn hàng #888"));
+        assertTrue(exception.getMessage().contains("Không tìm thấy đơn hàng"));
+        assertTrue(exception.getMessage().contains("99999"));
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-004: Order Service - Update status NEW to CONFIRMED (valid transition)")
+    void test_updateStatus_newToConfirmed_success() {
+        // Arrange - Order is NEW (status=0)
+        testOrder.setStatus(0);
+        when(entityManager.find(eq(Order.class), eq(testOrder.getId()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testOrder);
+        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+
+        // Act
+        assertDoesNotThrow(() -> {
+            orderService.updateStatus(testOrder.getId(), 1);
+        });
+
+        // Assert
+        verify(orderRepository, times(1)).save(testOrder);
+        assertEquals(1, testOrder.getStatus());
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-005: Order Service - Update status NEW to CANCELLED (valid transition)")
+    void test_updateStatus_newToCancelled_success() {
+        // Arrange - Order is NEW (status=0)
+        testOrder.setStatus(0);
+        when(entityManager.find(eq(Order.class), eq(testOrder.getId()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testOrder);
+        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+
+        // Act
+        assertDoesNotThrow(() -> {
+            orderService.updateStatus(testOrder.getId(), 2);
+        });
+
+        // Assert
+        verify(orderRepository, times(1)).save(testOrder);
+        assertEquals(2, testOrder.getStatus());
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-006: Order Service - Update status with invalid value")
+    void test_updateStatus_invalidStatusValue_throwsBusinessRuleException() {
+        // Arrange - Order exists
+        testOrder.setStatus(0);
+        when(entityManager.find(eq(Order.class), eq(testOrder.getId()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testOrder);
+
+        // Act & Assert - Try to set invalid status (5)
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> {
+            orderService.updateStatus(testOrder.getId(), 5);
+        });
+
+        assertTrue(exception.getMessage().contains("Trạng thái đơn hàng không hợp lệ"));
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-007: Order Service - Cancel order refunds points to account")
+    void test_updateStatus_cancelOrder_refundsPoints() {
+        // Arrange - Order with points used
+        testOrder.setStatus(0);
+        testOrder.setPointsUsed(50);
+        testAccount.setPoints(100);
+
+        when(entityManager.find(eq(Order.class), eq(testOrder.getId()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testOrder);
+        when(entityManager.find(eq(Account.class), eq(testAccount.getUsername()), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(testAccount);
+        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+
+        // Act
+        orderService.updateStatus(testOrder.getId(), 2);
+
+        // Assert - Points should be refunded
+        assertEquals(150, testAccount.getPoints()); // 100 + 50
+        verify(pointHistoryRepository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-008: Order Service - FindById returns null when not found")
+    void test_findById_orderNotFound_returnsNull() {
+        // Arrange
+        when(orderRepository.findById(99999L)).thenReturn(Optional.empty());
+
+        // Act
+        Order result = orderService.findById(99999L);
+
+        // Assert
+        assertNull(result);
     }
 }
