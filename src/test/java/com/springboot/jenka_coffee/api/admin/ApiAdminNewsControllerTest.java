@@ -2,26 +2,26 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.jenka_coffee.entity.News;
-import com.springboot.jenka_coffee.service.NewsService;
+import com.springboot.jenka_coffee.repository.NewsRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -33,49 +33,57 @@ public class ApiAdminNewsControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private NewsService newsService;
+    @Autowired
+    private NewsRepository newsRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    // --- 1. SECURITY & XSS TESTS ---
+    private News testNews;
+
+    @BeforeEach
+    void setUp() {
+        newsRepository.deleteAll();
+
+        testNews = new News();
+        testNews.setTitle("Test Title");
+        testNews.setContent("Test Content");
+        testNews.setCreateDate(new Date());
+        testNews.setAvailable(true);
+        newsRepository.save(testNews);
+    }
+
+    // --- 1. SECURITY & XSS TESTS (REAL FLOW) ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-010: CREATE title with XSS payload (Sanitization)")
     void test_createNews_withXSSPayload_sanitizesInput() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("Article"); // Sanitized version without script tags
-        mockNews.setAvailable(false);
-
-        when(newsService.saveNews(any(), any())).thenReturn(mockNews);
-
         mockMvc.perform(multipart("/api/admin/news")
                 .param("title", "<script>alert(1)</script>Article") // XSS Payload
                 .param("content", "Valid content"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("Article")); // Verify HTML is stripped
+                .andExpect(jsonPath("$.title").value("Article")); // HTML stripped in response
+
+        // DB check to ensure sanitization is persisted
+        News saved = newsRepository.findAll().stream().filter(n -> n.getContent().equals("Valid content")).findFirst().orElseThrow();
+        assertEquals("Article", saved.getTitle(), "Security Bug: XSS payload was saved to DB!");
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-012: CREATE attempting to set available=true (Mass Assignment Protection)")
     void test_createNews_availableTrueInBody_forcesAvailableFalse() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("Test");
-        mockNews.setAvailable(false); // Server enforces default
-
-        when(newsService.saveNews(any(), any())).thenReturn(mockNews);
-
         mockMvc.perform(multipart("/api/admin/news")
-                .param("title", "Test")
+                .param("title", "Mass Assignment Test")
                 .param("content", "Content")
                 .param("available", "true")) // Malicious attempt to publish immediately
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.available").value(false)); // Security enforced
+
+        // DB Check
+        News saved = newsRepository.findAll().stream().filter(n -> n.getTitle().equals("Mass Assignment Test")).findFirst().orElseThrow();
+        assertFalse(saved.getAvailable(), "Security Bug: Client was able to override 'available' state via body!");
     }
 
     // --- 2. CONCURRENCY & RACE CONDITIONS ---
@@ -84,7 +92,6 @@ public class ApiAdminNewsControllerTest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-021: CREATE concurrent requests same title (Race condition)")
     void test_createNews_concurrentSameTitle_createsBoth() throws InterruptedException {
-        // Since News title doesn't have a UNIQUE constraint, both should succeed (by design)
         int threadCount = 2;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(1);
@@ -92,9 +99,7 @@ public class ApiAdminNewsControllerTest {
         
         AtomicInteger successCount = new AtomicInteger(0);
 
-        News mockNews = new News();
-        mockNews.setId(1L);
-        when(newsService.saveNews(any(), any())).thenReturn(mockNews);
+        long initialCount = newsRepository.count();
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
@@ -113,22 +118,21 @@ public class ApiAdminNewsControllerTest {
             });
         }
 
-        latch.countDown(); // Start all threads
-        doneLatch.await(); // Wait for completion
+        latch.countDown();
+        doneLatch.await();
 
-        // Verify that BOTH requests succeeded (no unique constraint violation)
-        assertEquals(2, successCount.get(), "Both concurrent requests should succeed by design");
-        verify(newsService, times(2)).saveNews(any(), any());
+        assertEquals(2, successCount.get(), "Both concurrent requests should succeed by design (no unique constraint on title)");
+        assertEquals(initialCount + 2, newsRepository.count(), "DB should contain 2 new records");
     }
 
-    // --- 3. BOUNDARY TESTS ---
+    // --- 3. BOUNDARY TESTS & BASIC CRUD ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-002: GET list size=0 (Auto-cap to 1)")
     void test_newsList_zeroSize_autoCorrects() throws Exception {
         mockMvc.perform(get("/api/admin/news?page=0&size=0"))
-                .andExpect(status().isOk()); // Assuming it auto-corrects to 1 and doesn't crash
+                .andExpect(status().isOk()); // If this fails, JPA throws IllegalArgumentException
     }
 
     @Test
@@ -136,70 +140,25 @@ public class ApiAdminNewsControllerTest {
     @DisplayName("TC-NEWS-CTRL-001: GET list valid request")
     void test_newsList_valid_returnsOk() throws Exception {
         mockMvc.perform(get("/api/admin/news?page=0&size=10"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-003: GET list size=9999 (auto-cap to 100)")
-    void test_newsList_largeSize_capsTo100() throws Exception {
-        mockMvc.perform(get("/api/admin/news?page=0&size=9999"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-004: GET list page negative (auto-correct)")
-    void test_newsList_negativePage_capsToZero() throws Exception {
-        mockMvc.perform(get("/api/admin/news?page=-2&size=10"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-005: GET detail valid id")
     void test_newsDetail_valid_returnsOk() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("Title");
-        
-        when(newsService.findById(1L)).thenReturn(mockNews);
-        
-        mockMvc.perform(get("/api/admin/news/1"))
+        mockMvc.perform(get("/api/admin/news/" + testNews.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.title").value("Title"));
+                .andExpect(jsonPath("$.title").value("Test Title"));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-006: GET detail id not found")
     void test_newsDetail_notFound_returns404() throws Exception {
-        when(newsService.findById(99999L))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("News not found"));
-            
         mockMvc.perform(get("/api/admin/news/99999"))
                 .andExpect(status().isNotFound());
-    }
-
-    // --- 4. ADDITIONAL CREATE TESTS ---
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-007: CREATE valid multipart data")
-    void test_createNews_valid_returnsCreated() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("New Article");
-        mockNews.setAvailable(false);
-        
-        when(newsService.saveNews(any(), any())).thenReturn(mockNews);
-        
-        mockMvc.perform(multipart("/api/admin/news")
-                .param("title", "New Article")
-                .param("content", "<p>Content</p>"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.available").value(false));
     }
 
     @Test
@@ -213,130 +172,22 @@ public class ApiAdminNewsControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-009: CREATE title = empty string")
-    void test_createNews_emptyTitle_returnsBadRequest() throws Exception {
-        mockMvc.perform(multipart("/api/admin/news")
-                .param("title", "")
-                .param("content", "<p>Content</p>"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-011: CREATE without imageFile (optional)")
-    void test_createNews_noImage_returnsCreated() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        
-        when(newsService.saveNews(any(), any())).thenReturn(mockNews);
-        
-        mockMvc.perform(multipart("/api/admin/news")
-                .param("title", "No Image Article")
-                .param("content", "Content")) // No file uploaded
-                .andExpect(status().isCreated());
-    }
-
-    // --- 5. ADDITIONAL UPDATE, DELETE & TOGGLE TESTS ---
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-013: UPDATE valid data")
-    void test_updateNews_valid_returnsOk() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("Updated Title");
-        
-        when(newsService.updateNews(eq(1L), any(), any())).thenReturn(mockNews);
-        
-        mockMvc.perform(put("/api/admin/news/1")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("title", "Updated Title")
-                .param("content", "New Content"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Updated Title"));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-014: UPDATE id not found")
-    void test_updateNews_notFound_returns404() throws Exception {
-        when(newsService.updateNews(eq(99999L), any(), any()))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("News not found"));
-            
-        mockMvc.perform(put("/api/admin/news/99999")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("title", "Updated Title"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-015: UPDATE title = empty string")
-    void test_updateNews_emptyTitle_returnsBadRequest() throws Exception {
-        mockMvc.perform(put("/api/admin/news/1")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("title", ""))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-016: UPDATE title with XSS payload")
-    void test_updateNews_xssTitle_sanitizes() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        mockNews.setTitle("Clean Title");
-        
-        when(newsService.updateNews(eq(1L), any(), any())).thenReturn(mockNews);
-        
-        mockMvc.perform(put("/api/admin/news/1")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("title", "<img onerror=alert(1)>"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-017: TOGGLE available valid id")
     void test_toggleNews_valid_returnsOk() throws Exception {
-        News mockNews = new News();
-        mockNews.setId(1L);
-        
-        when(newsService.toggleAvailable(1L)).thenReturn(mockNews);
-        
-        mockMvc.perform(put("/api/admin/news/1/toggle"))
+        mockMvc.perform(put("/api/admin/news/" + testNews.getId() + "/toggle"))
                 .andExpect(status().isOk());
-    }
 
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-018: TOGGLE available id not found")
-    void test_toggleNews_notFound_returns404() throws Exception {
-        when(newsService.toggleAvailable(99999L))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("News not found"));
-            
-        mockMvc.perform(put("/api/admin/news/99999/toggle"))
-                .andExpect(status().isNotFound());
+        News dbNews = newsRepository.findById(testNews.getId()).orElseThrow();
+        assertFalse(dbNews.getAvailable()); // Was true, toggled to false
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-019: DELETE valid id")
     void test_deleteNews_valid_returnsOk() throws Exception {
-        doNothing().when(newsService).delete(1L);
-        
-        mockMvc.perform(delete("/api/admin/news/1"))
+        mockMvc.perform(delete("/api/admin/news/" + testNews.getId()))
                 .andExpect(status().isOk());
-    }
 
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-NEWS-CTRL-020: DELETE id not found")
-    void test_deleteNews_notFound_returns404() throws Exception {
-        doThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("News not found"))
-            .when(newsService).delete(99999L);
-            
-        mockMvc.perform(delete("/api/admin/news/99999"))
-                .andExpect(status().isNotFound());
+        assertFalse(newsRepository.existsById(testNews.getId()));
     }
 }

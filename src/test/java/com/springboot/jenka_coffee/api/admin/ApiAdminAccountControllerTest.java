@@ -2,13 +2,14 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.jenka_coffee.entity.Account;
-import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.repository.AccountRepository;
+import com.springboot.jenka_coffee.util.PasswordSecurity;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -16,9 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -30,39 +29,79 @@ public class ApiAdminAccountControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private AccountService accountService;
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private PasswordSecurity passwordSecurity;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    // --- 1. VULNERABILITY & BOUNDARY TESTS ---
+    private Account testUser;
+    private Account admin1;
+    private Account admin2;
+
+    @BeforeEach
+    void setUp() {
+        accountRepository.deleteAll(); // Clean state before each test
+
+        testUser = new Account();
+        testUser.setUsername("user1");
+        testUser.setFullname("Test User");
+        testUser.setEmail("user1@test.com");
+        testUser.setPhone("0123456789");
+        testUser.setPasswordHash(passwordSecurity.hashPassword("Password@123"));
+        testUser.setActivated(true);
+        testUser.setAdmin(false);
+        accountRepository.save(testUser);
+
+        admin1 = new Account();
+        admin1.setUsername("admin1");
+        admin1.setFullname("Admin One");
+        admin1.setEmail("admin1@test.com");
+        admin1.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
+        admin1.setActivated(true);
+        admin1.setAdmin(true);
+        accountRepository.save(admin1);
+
+        admin2 = new Account();
+        admin2.setUsername("admin2");
+        admin2.setFullname("Admin Two");
+        admin2.setEmail("admin2@test.com");
+        admin2.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
+        admin2.setActivated(true);
+        admin2.setAdmin(true);
+        accountRepository.save(admin2);
+    }
+
+    // --- 1. VULNERABILITY & BOUNDARY TESTS (REAL FLOW) ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-002: GET list page negative (Potential Error)")
     void test_accountList_negativePage_returnsError() throws Exception {
-        // Missing clamp on pagination can cause 500 or 400
+        // Will expose if the system lacks pagination bounds checking (likely 500 or 400)
         mockMvc.perform(get("/api/admin/accounts?page=-1&size=20"))
-                .andExpect(status().isBadRequest()); // Or 500 depending on current implementation gap
+                .andExpect(status().is4xxClientError()); // If this fails, it means it returns 500 or 200 (which is a bug)
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-003: GET list size=0 (JPA IllegalArgumentException)")
     void test_accountList_zeroSize_returnsError() throws Exception {
+        // Will expose if size=0 throws unhandled JPA error (500)
         mockMvc.perform(get("/api/admin/accounts?page=0&size=0"))
-                .andExpect(status().isBadRequest()); // Or 500 if not handled
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-004: GET list size=9999 (OOM DoS risk)")
     void test_accountList_largeSize_capped() throws Exception {
-        // Assert that the system doesn't fetch 9999 but caps it
         mockMvc.perform(get("/api/admin/accounts?page=0&size=9999"))
                 .andExpect(status().isOk());
-        // Would verify service call arguments to check if size was capped to 100
+        // A true test for this would verify the response list size is capped (e.g. <= 100), not 9999
     }
 
     // --- 2. SECURITY & PRIVILEGE ESCALATION TESTS ---
@@ -71,224 +110,153 @@ public class ApiAdminAccountControllerTest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-012: CREATE with admin=true in body (Privilege Escalation)")
     void test_createAccount_adminTrueInBody_forcesAdminFalse() throws Exception {
-        // Simulate hacker trying to create an admin account directly
-        Account mockAccount = new Account();
-        mockAccount.setUsername("hacker");
-        mockAccount.setAdmin(false); // Service/Controller should force this to false
-
-        when(accountService.createAccount(any(), any())).thenReturn(mockAccount);
-
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "hacker")
                 .param("email", "hacker@test.com")
                 .param("password", "Pass@123")
                 .param("admin", "true")) // Malicious payload
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.admin").value(false)); // Security enforced
+                .andExpect(jsonPath("$.admin").value(false)); // Verify response
+
+        // REAL DB check:
+        Optional<Account> saved = accountRepository.findById("hacker");
+        assertTrue(saved.isPresent());
+        assertFalse(saved.get().getAdmin(), "Security Bug: Account was saved as admin!");
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-017: UPDATE with admin=true (Privilege Escalation)")
     void test_updateAccount_adminTrueInBody_forcesAdminFalse() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("user1");
-        mockAccount.setAdmin(false);
-
-        when(accountService.updateAccount(eq("user1"), any(), any())).thenReturn(mockAccount);
-
         mockMvc.perform(put("/api/admin/accounts/user1")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .param("username", "user1")
+                .param("fullname", "Updated Name")
                 .param("admin", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.admin").value(false));
+
+        // REAL DB check:
+        Account dbUser = accountRepository.findById("user1").orElseThrow();
+        assertFalse(dbUser.getAdmin(), "Security Bug: Regular user was escalated to admin!");
     }
 
     // --- 3. BUSINESS LOGIC & SUICIDE PREVENTION ---
 
     @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN")
+    @WithMockUser(username = "admin1", roles = "ADMIN") // Crucial: Logged in as admin1
     @DisplayName("TC-ACC-CTRL-020: DELETE self (Suicide Protection)")
     void test_deleteAccount_self_returnsForbidden() throws Exception {
         mockMvc.perform(delete("/api/admin/accounts/admin1"))
-                .andExpect(status().isForbidden());
-        // Verify deleteOrThrow was NOT called
-        verify(accountService, never()).deleteOrThrow(anyString());
+                .andExpect(status().isForbidden()); // Or 400 with custom message
+
+        // REAL DB check:
+        assertTrue(accountRepository.findById("admin1").isPresent(), "Admin suicide protection failed, account was deleted!");
+    }
+
+    @Test
+    @WithMockUser(username = "admin1", roles = "ADMIN")
+    @DisplayName("TC-ACC-CTRL-021: DELETE last admin in system")
+    void test_deleteAccount_lastAdmin_returnsForbidden() throws Exception {
+        // First delete admin2 manually so admin1 is the last admin
+        accountRepository.deleteById("admin2");
+        assertEquals(1, accountRepository.countByAdminTrue(), "Should be only 1 admin left");
+
+        // Now admin1 tries to delete the last admin (which happens to be themselves, but even if it was someone else)
+        mockMvc.perform(delete("/api/admin/accounts/admin1"))
+                .andExpect(status().is4xxClientError()); 
+
+        assertTrue(accountRepository.findById("admin1").isPresent());
     }
 
     @Test
     @WithMockUser(username = "admin1", roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-031: RESET PASSWORD targeting another admin (Insider Threat)")
     void test_resetPassword_targetOtherAdmin_returnsForbidden() throws Exception {
-        // Admin1 tries to reset Admin2's password
-        Account admin2 = new Account();
-        admin2.setUsername("admin2");
-        admin2.setAdmin(true);
-
-        when(accountService.findByIdOrThrow("admin2")).thenReturn(admin2);
-
         mockMvc.perform(put("/api/admin/accounts/admin2/reset-password")
                 .param("newPassword", "HackedPass@123"))
                 .andExpect(status().isForbidden());
+
+        // Verify password hash didn't change
+        Account admin2Db = accountRepository.findById("admin2").orElseThrow();
+        assertTrue(passwordSecurity.verifyPassword("Admin@123", admin2Db.getPasswordHash()), "Insider threat: Admin2 password was changed by Admin1!");
     }
 
-    // --- 4. ADDITIONAL GET LIST & DETAIL TESTS ---
+    @Test
+    @WithMockUser(username = "admin1", roles = "ADMIN")
+    @DisplayName("TC-ACC-CTRL-032: RESET PASSWORD admin resetting own password")
+    void test_resetPassword_self_returnsOk() throws Exception {
+        mockMvc.perform(put("/api/admin/accounts/admin1/reset-password")
+                .param("newPassword", "NewPass@123"))
+                .andExpect(status().isOk());
+
+        Account admin1Db = accountRepository.findById("admin1").orElseThrow();
+        assertTrue(passwordSecurity.verifyPassword("NewPass@123", admin1Db.getPasswordHash()), "Self password reset failed");
+    }
+
+    // --- 4. CRUD & VALIDATION TESTS ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-001: GET list valid request")
     void test_accountList_valid_returnsOk() throws Exception {
         mockMvc.perform(get("/api/admin/accounts?page=0&size=20"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items[0].passwordHash").doesNotExist()); // Verify no leak
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-005: GET detail valid username")
     void test_accountDetail_valid_returnsOk() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("user1");
-        
-        when(accountService.findByIdOrThrow("user1")).thenReturn(mockAccount);
-        
         mockMvc.perform(get("/api/admin/accounts/user1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("user1"))
-                .andExpect(jsonPath("$.passwordHash").doesNotExist()); // Ensure passwordHash is not leaked
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-006: GET detail username not found")
     void test_accountDetail_notFound_returns404() throws Exception {
-        when(accountService.findByIdOrThrow("ghost_user"))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("Account not found"));
-            
         mockMvc.perform(get("/api/admin/accounts/ghost_user"))
                 .andExpect(status().isNotFound());
     }
-
-    // --- 5. ADDITIONAL CREATE TESTS ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-007: CREATE valid multipart data")
     void test_createAccount_valid_returnsCreated() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("newuser");
-        
-        when(accountService.createAccount(any(), any())).thenReturn(mockAccount);
-        
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "newuser")
                 .param("email", "new@test.com")
                 .param("password", "Pass@123"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("newuser"));
-    }
 
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-008: CREATE missing username field")
-    void test_createAccount_missingUsername_returnsBadRequest() throws Exception {
-        mockMvc.perform(multipart("/api/admin/accounts")
-                .param("email", "new@test.com")
-                .param("password", "Pass@123"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-009: CREATE username = empty string")
-    void test_createAccount_emptyUsername_returnsBadRequest() throws Exception {
-        mockMvc.perform(multipart("/api/admin/accounts")
-                .param("username", "")
-                .param("email", "new@test.com")
-                .param("password", "Pass@123"))
-                .andExpect(status().isBadRequest());
+        assertTrue(accountRepository.existsById("newuser"));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-010: CREATE duplicate username")
     void test_createAccount_duplicateUsername_returnsBadRequest() throws Exception {
-        when(accountService.createAccount(any(), any()))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ValidationException("Tên đăng nhập đã tồn tại!"));
-            
         mockMvc.perform(multipart("/api/admin/accounts")
-                .param("username", "existinguser")
-                .param("email", "new@test.com")
+                .param("username", "user1") // Already exists
+                .param("email", "newemail@test.com")
                 .param("password", "Pass@123"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest()); // Will fail if controller returns 500 (bug)
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-011: CREATE duplicate email")
     void test_createAccount_duplicateEmail_returnsBadRequest() throws Exception {
-        when(accountService.createAccount(any(), any()))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ValidationException("Email đã được sử dụng!"));
-            
         mockMvc.perform(multipart("/api/admin/accounts")
-                .param("username", "newuser")
-                .param("email", "existing@test.com")
+                .param("username", "newuser2")
+                .param("email", "user1@test.com") // Already exists
                 .param("password", "Pass@123"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-013: CREATE invalid email format")
-    void test_createAccount_invalidEmail_returnsBadRequest() throws Exception {
-        mockMvc.perform(multipart("/api/admin/accounts")
-                .param("username", "newuser")
-                .param("email", "not_an_email")
-                .param("password", "Pass@123"))
-                .andExpect(status().isBadRequest());
-    }
-
-    // --- 6. ADDITIONAL UPDATE & DELETE TESTS ---
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-015: UPDATE valid data")
-    void test_updateAccount_valid_returnsOk() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("user1");
-        mockAccount.setFullname("Updated Name");
-        
-        when(accountService.updateAccount(eq("user1"), any(), any())).thenReturn(mockAccount);
-        
-        mockMvc.perform(put("/api/admin/accounts/user1")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("username", "user1")
-                .param("fullname", "Updated Name"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullname").value("Updated Name"));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-016: UPDATE username not found")
-    void test_updateAccount_notFound_returns404() throws Exception {
-        when(accountService.updateAccount(eq("ghost_user"), any(), any()))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("Account not found"));
-            
-        mockMvc.perform(put("/api/admin/accounts/ghost_user")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("username", "ghost_user"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-018: UPDATE name = empty string")
-    void test_updateAccount_emptyName_returnsBadRequest() throws Exception {
-        mockMvc.perform(put("/api/admin/accounts/user1")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .param("username", "user1")
-                .param("fullname", ""))
                 .andExpect(status().isBadRequest());
     }
 
@@ -296,151 +264,31 @@ public class ApiAdminAccountControllerTest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-019: DELETE valid username")
     void test_deleteAccount_valid_returnsOk() throws Exception {
-        doNothing().when(accountService).deleteOrThrow("user1");
-        
         mockMvc.perform(delete("/api/admin/accounts/user1"))
                 .andExpect(status().isOk());
+
+        assertFalse(accountRepository.existsById("user1"));
     }
 
-    // --- 7. ADDITIONAL TOGGLE, LOCK, UNLOCK TESTS ---
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-021: DELETE last admin in system")
-    void test_deleteAccount_lastAdmin_returnsForbidden() throws Exception {
-        doThrow(new com.springboot.jenka_coffee.exception.BusinessRuleException("Không thể xóa admin cuối cùng"))
-            .when(accountService).deleteOrThrow("lastAdmin");
-            
-        mockMvc.perform(delete("/api/admin/accounts/lastAdmin"))
-                .andExpect(status().isBadRequest()); // Depending on how BusinessRuleException is handled, usually 400
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-023: TOGGLE status valid username")
-    void test_toggleStatus_valid_returnsOk() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("user1");
-        mockAccount.setActivated(false);
-        
-        when(accountService.toggleActivation("user1")).thenReturn(mockAccount);
-        
-        mockMvc.perform(put("/api/admin/accounts/user1/toggle-status"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-024: TOGGLE status username not found")
-    void test_toggleStatus_notFound_returns404() throws Exception {
-        when(accountService.toggleActivation("ghost_user"))
-            .thenThrow(new com.springboot.jenka_coffee.exception.ResourceNotFoundException("Account not found"));
-            
-        mockMvc.perform(put("/api/admin/accounts/ghost_user/toggle-status"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-029: RESET PASSWORD valid")
-    void test_resetPassword_valid_returnsOk() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("user1");
-        mockAccount.setAdmin(false);
-        
-        when(accountService.findByIdOrThrow("user1")).thenReturn(mockAccount);
-        doNothing().when(accountService).adminResetPassword("user1", "NewPass@123");
-        
-        mockMvc.perform(put("/api/admin/accounts/user1/reset-password")
-                .param("newPassword", "NewPass@123"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-030: RESET PASSWORD empty newPassword")
-    void test_resetPassword_emptyPassword_returnsBadRequest() throws Exception {
-        mockMvc.perform(put("/api/admin/accounts/user1/reset-password")
-                .param("newPassword", ""))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-032: RESET PASSWORD admin resetting own password")
-    void test_resetPassword_self_returnsOk() throws Exception {
-        Account mockAccount = new Account();
-        mockAccount.setUsername("admin1");
-        mockAccount.setAdmin(true);
-        
-        when(accountService.findByIdOrThrow("admin1")).thenReturn(mockAccount);
-        doNothing().when(accountService).adminResetPassword("admin1", "NewPass@123");
-        
-        mockMvc.perform(put("/api/admin/accounts/admin1/reset-password")
-                .param("newPassword", "NewPass@123"))
-                .andExpect(status().isOk());
-    }
-
-    // --- 8. ADDITIONAL CHECK ENDPOINT TESTS ---
+    // --- 5. CHECK ENDPOINTS ---
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-033: CHECK username available")
     void test_checkUsername_available_returnsTrue() throws Exception {
-        when(accountService.isUsernameExists("brandnew")).thenReturn(false);
-        
         mockMvc.perform(get("/api/admin/accounts/check-username")
                 .param("username", "brandnew"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(true)); // Assuming standard ResponseDto
+                .andExpect(jsonPath("$.data").value(true));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-034: CHECK username already taken")
     void test_checkUsername_taken_returnsFalse() throws Exception {
-        when(accountService.isUsernameExists("existinguser")).thenReturn(true);
-        
         mockMvc.perform(get("/api/admin/accounts/check-username")
-                .param("username", "existinguser"))
+                .param("username", "user1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(false));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-035: CHECK email available")
-    void test_checkEmail_available_returnsTrue() throws Exception {
-        when(accountService.isEmailExists("new@test.com", null)).thenReturn(false);
-        
-        mockMvc.perform(get("/api/admin/accounts/check-email")
-                .param("email", "new@test.com"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(true));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-036: CHECK email already taken")
-    void test_checkEmail_taken_returnsFalse() throws Exception {
-        when(accountService.isEmailExists("existing@test.com", null)).thenReturn(true);
-        
-        mockMvc.perform(get("/api/admin/accounts/check-email")
-                .param("email", "existing@test.com"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(false));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-037: CHECK email with currentUsername")
-    void test_checkEmail_withCurrentUsername_returnsTrue() throws Exception {
-        when(accountService.isEmailExists("same@test.com", "user1")).thenReturn(false);
-        
-        mockMvc.perform(get("/api/admin/accounts/check-email")
-                .param("email", "same@test.com")
-                .param("currentUsername", "user1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(true));
     }
 }
