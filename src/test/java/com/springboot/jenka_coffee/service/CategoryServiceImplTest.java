@@ -64,11 +64,11 @@ class CategoryServiceImplTest {
     // ========== TEST CASES ==========
 
     /**
-     * TC-CAT-002 — deleteOrThrow — category có sản phẩm → block xóa
+     * TC-CAT-SER-002 — deleteOrThrow — category có sản phẩm → block xóa
      * Expected: BusinessRuleException với message "Không thể xóa loại hàng này vì còn 5 sản phẩm thuộc loại này!"
      */
     @Test
-    @DisplayName("TC-CAT-002: deleteOrThrow với category có sản phẩm phải throw BusinessRuleException")
+    @DisplayName("TC-CAT-SER-002: deleteOrThrow với category có sản phẩm phải throw BusinessRuleException")
     void deleteOrThrow_categoryHasProducts_throwsBusinessRuleException() {
         // Arrange
         Category category = buildCategory("MAY_PHA", "Máy Pha Cà Phê", "May_Pha_Ca_Phe.webp");
@@ -89,11 +89,11 @@ class CategoryServiceImplTest {
     }
 
     /**
-     * TC-CAT-003 — deleteOrThrow — category không tồn tại → 400
+     * TC-CAT-SER-003 — deleteOrThrow — category không tồn tại → 400
      * Expected: ResourceNotFoundException("Category", "id", "KHONG_CO")
      */
     @Test
-    @DisplayName("TC-CAT-003: deleteOrThrow với category không tồn tại phải throw ResourceNotFoundException")
+    @DisplayName("TC-CAT-SER-003: deleteOrThrow với category không tồn tại phải throw ResourceNotFoundException")
     void deleteOrThrow_categoryNotFound_throwsResourceNotFoundException() {
         // Arrange
         when(categoryRepository.findById("KHONG_CO")).thenReturn(Optional.empty());
