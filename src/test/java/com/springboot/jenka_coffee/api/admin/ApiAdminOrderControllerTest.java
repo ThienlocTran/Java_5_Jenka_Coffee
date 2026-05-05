@@ -57,11 +57,11 @@ class ApiAdminOrderControllerTest {
         // Create test account
         testAccount = new Account();
         testAccount.setUsername("testuser_order");
-        testAccount.setPassword("password");
+        testAccount.setPasswordHash("password");
         testAccount.setFullname("Test User");
         testAccount.setEmail("testuser@example.com");
         testAccount.setPhone("0123456789");
-        testAccount.setRole("USER");
+        testAccount.setAdmin(true);
         testAccount.setActivated(true);
         accountRepository.save(testAccount);
 

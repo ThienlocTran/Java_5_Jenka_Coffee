@@ -131,6 +131,12 @@ class ApiAdminProductAddendumTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-PRD-CTRL-042: DELETE concurrent requests (race condition)")
+    // WARNING: This test may be flaky due to class-level @Transactional
+    // Child threads in ExecutorService do NOT inherit the test transaction
+    // Each thread creates its own transaction, but test thread holds locks
+    // → Potential deadlock or unpredictable behavior
+    // RECOMMENDATION: Move this test to a separate test class WITHOUT @Transactional
+    // OR use @Transactional(propagation = Propagation.NOT_SUPPORTED) on this method
     void test_deleteProduct_concurrentRequests() throws Exception {
         int threads = 2;
         ExecutorService executor = Executors.newFixedThreadPool(threads);
@@ -158,6 +164,7 @@ class ApiAdminProductAddendumTest {
         latch.countDown();
         done.await();
 
+        // NOTE: This assertion may fail intermittently due to transaction isolation issues
         assertEquals(1, successCount.get(), "Only one deletion should succeed");
         assertFalse(productRepository.existsById(existingProduct.getId()));
     }

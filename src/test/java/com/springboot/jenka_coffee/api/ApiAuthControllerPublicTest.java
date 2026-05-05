@@ -178,7 +178,10 @@ class ApiAuthControllerPublicTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Sai tên đăng nhập hoặc mật khẩu!"));
+                // CRITICAL: message PHẢI khác với invalid credentials để user biết lý do
+                .andExpect(jsonPath("$.message").value("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email."))
+                // Verify: KHÔNG lộ thông tin nhạy cảm
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist());
     }
 
     @Test

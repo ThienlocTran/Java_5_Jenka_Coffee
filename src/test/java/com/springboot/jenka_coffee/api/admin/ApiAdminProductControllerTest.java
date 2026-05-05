@@ -254,10 +254,12 @@ class ApiAdminProductControllerTest {
                         .param("price", "35000")
                         .param("categoryId", "CF")
                         .param("available", "true"))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())  // 201 Created - khớp CSV spec
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1))
-                .andExpect(jsonPath("$.data.name").value("Cà phê sữa"));
+                .andExpect(jsonPath("$.data.name").value("Cà phê sữa"))
+                .andExpect(jsonPath("$.data.price").value(35000))
+                .andExpect(jsonPath("$.data.available").value(true));
 
         verify(productValidator).validateImageFile(any(MultipartFile.class));
         verify(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), any(MultipartFile.class));
