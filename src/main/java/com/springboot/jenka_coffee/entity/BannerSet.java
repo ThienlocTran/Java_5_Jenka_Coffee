@@ -26,12 +26,21 @@ public class BannerSet {
      * - slide: Trượt ngang
      * - zoom: Phóng to/thu nhỏ
      * - kenburns: Zoom + Pan (cinematic)
+     * - push: Đẩy sang ngang
+     * - curtain: Rèm kéo (wipe effect)
+     * - parallax: Thị sai đa lớp (hiện đại)
+     * - liquid: Vòng tròn mở rộng từ tâm
+     * - wave: Sóng quét từ dưới lên
+     * - magnetic: Trượt nghiêng đàn hồi
+     * - blur: Lấy nét ống kính
+     * - vortex: Xoáy vào từ tâm
+     * - glitch: Nhiễu số hiện đại
      * - cube: Xoay 3D như khối lập phương
      * - flip: Lật 3D
-     * - curtain: Rèm kéo (wipe effect)
      * - dissolve: Tan biến (blur + fade)
      * - scale-rotate: Phóng to + xoay
-     * - push: Đẩy sang ngang
+     * - prism: Lăng kính màu sắc
+     * - none: Không có hiệu ứng
      */
     @Column(nullable = false, length = 30)
     private String effect = "fade";

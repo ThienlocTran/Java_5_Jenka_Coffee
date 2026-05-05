@@ -340,4 +340,152 @@ class ProductServiceImplTest {
         verify(productRepository).findByIdWithCategory(1);
         verify(categoryRepository).findById("CF");
     }
+
+    // ========== TC-PRD-SER-009: REPOSITORY SAVE THROWS RUNTIMEEXCEPTION ==========
+
+    @Test
+    @DisplayName("TC-PRD-SER-009: [GAP] Repository save() throws RuntimeException - create() wraps it after 3 retries → RuntimeException propagates (NOT rolled back to BusinessRuleException)")
+    void TC_PRD_SER_009() {
+        // Source: create() has retry loop (3 attempts), catches DataIntegrityViolationException
+        // After 3 retries → throws RuntimeException("Không thể tạo sản phẩm sau nhiều lần thử...")
+        // This RuntimeException is NOT @Transactional-aware → DB state depends on JPA flush behavior
+        // CRITICAL: verify that no record persists after the exception
+
+        ProductRequest request = new ProductRequest();
+        request.setName("Test Product");
+        request.setPrice(new java.math.BigDecimal("35000"));
+        request.setAvailable(true);
+
+        when(categoryRepository.findById("CF")).thenReturn(java.util.Optional.of(mockCategory));
+        // After slug generation check (existsBySlug), save() throws DataIntegrityViolationException on all 3 attempts
+        when(productRepository.existsBySlug(anyString())).thenReturn(false);
+        when(productRepository.save(any(Product.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate key"));
+
+        // After 3 retries, create() wraps into RuntimeException
+        RuntimeException thrown = assertThrows(
+            RuntimeException.class,
+            () -> productService.createProductFromRequest(request, "CF", null)
+        );
+
+        // The wrapped message must contain meaningful info — not just "Internal Server Error"
+        assertNotNull(thrown.getMessage(), "RuntimeException message must NOT be null");
+        assertTrue(thrown.getMessage().contains("Không thể tạo sản phẩm"),
+            "Expected message about creation failure, got: " + thrown.getMessage());
+
+        // save() is called exactly 3 times (max retry attempts in create())
+        verify(productRepository, times(3)).save(any(Product.class));
+    }
+
+    // ========== TC-PRD-SER-010: UPDATE WITH NULL NAME ==========
+
+    @Test
+    @DisplayName("TC-PRD-SER-010: updateProductFromRequest() with name=null - service does NOT validate name → null set on entity (GAP)")
+    void TC_PRD_SER_010() {
+        // Source: updateProductFromRequest() only validates price (null check, < 0 check)
+        // There is NO name null/blank validation in service
+        // existing.setName(name) → name=null → Product.name=null → save() called with null name
+        // This is a GAP: PUT is full replace, null name should be rejected
+
+        when(productRepository.findByIdWithCategory(1)).thenReturn(java.util.Optional.of(mockProduct));
+        when(categoryRepository.findById("CF")).thenReturn(java.util.Optional.of(mockCategory));
+        // saveProduct() calls: uploadService (no file), then saveProductToDatabase() → productRepository.save()
+        when(productRepository.findById(1)).thenReturn(java.util.Optional.of(mockProduct));
+        when(productRepository.save(any(Product.class))).thenReturn(mockProduct);
+
+        // EXPECTATION: service accepts null name (GAP - no validation)
+        // If BusinessRuleException is thrown here → validation was added → test must be updated
+        assertDoesNotThrow(() ->
+            productService.updateProductFromRequest(
+                1, null, "Description", new java.math.BigDecimal("50000"), "CF", true, null
+            ),
+            "GAP: updateProductFromRequest accepts null name without throwing — name validation is missing"
+        );
+
+        // Verify that save() was called with name=null (the gap is confirmed)
+        verify(productRepository).save(argThat(p -> p.getName() == null));
+    }
+
+    // ========== TC-PRD-SER-011: TOGGLEAVAILABLE IDEMPOTENCY ==========
+
+    @Test
+    @DisplayName("TC-PRD-SER-011: toggleAvailable() called twice - state returns to original (true→false→true)")
+    void TC_PRD_SER_011() {
+        // This verifies the toggle is a pure flip — NOT a set-to-false
+        // Call 1: available=true → false; Call 2: available=false → true
+        mockProduct.setAvailable(true);
+
+        // First call: true → false
+        when(productRepository.findById(1)).thenReturn(java.util.Optional.of(mockProduct));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
+            Product p = invocation.getArgument(0);
+            mockProduct.setAvailable(p.getAvailable()); // persist the change in mock state
+            return p;
+        });
+
+        productService.toggleAvailable(1);
+        assertFalse(mockProduct.getAvailable(), "After 1st toggle: should be false");
+
+        // Second call: false → true
+        productService.toggleAvailable(1);
+        assertTrue(mockProduct.getAvailable(), "After 2nd toggle: should be back to true (idempotency confirmed)");
+
+        // save() must be called exactly twice
+        verify(productRepository, times(2)).save(any(Product.class));
+        // No side effects on other fields
+        verify(productRepository, never()).deleteById(any());
+    }
+
+    // ========== TC-PRD-SER-012: DELETE PRODUCT CASCADES IMAGE DELETION ==========
+
+    @Test
+    @DisplayName("TC-PRD-SER-012: deleteProductWithValidation() - images NOT cascade-deleted via productImageRepo (delete() only calls productRepository.deleteById)")
+    void TC_PRD_SER_012() {
+        // Source: deleteProductWithValidation() → calls delete(id) → productRepository.deleteById(id)
+        // delete() does NOT call productImageRepository.deleteByProductId()
+        // Image cascade must happen at DB level (e.g. ON DELETE CASCADE) — NOT in Java code
+        // This test documents actual behavior: productImageRepo is NEVER called explicitly
+
+        when(productRepository.existsById(1)).thenReturn(true);
+        when(productRepository.countOrdersByProductId(1)).thenReturn(0L);
+        doNothing().when(productRepository).deleteById(1);
+
+        productService.deleteProductWithValidation(1);
+
+        // Confirm product IS deleted
+        verify(productRepository).deleteById(1);
+
+        // CRITICAL: productImageRepository is NOT called explicitly in Java
+        // Cascade must rely on DB-level constraint — if DB has no cascade, images are orphaned
+        verify(productImageRepository, never()).deleteByProductId(1);
+
+        // If this verify fails (productImageRepo WAS called) → explicit Java cascade was added
+        // In that case: update this test to assert imageRepo.deleteByProductId() WAS called
+    }
+
+    // ========== TC-PRD-SER-013: DELETE PRODUCT SUCCEEDS BUT IMAGE DELETION FAILS ==========
+
+    @Test
+    @DisplayName("TC-PRD-SER-013: [GAP] deleteProductWithValidation() - no explicit image deletion in Java; if DB cascade missing, product deleted but images orphaned")
+    void TC_PRD_SER_013() {
+        // Source: deleteProductWithValidation() → delete(id) → productRepository.deleteById(id)
+        // No image deletion code in service → consistency depends entirely on DB schema cascade
+        // GAP: If DB schema has no ON DELETE CASCADE, ProductImages remain as orphan rows
+
+        when(productRepository.existsById(1)).thenReturn(true);
+        when(productRepository.countOrdersByProductId(1)).thenReturn(0L);
+        doNothing().when(productRepository).deleteById(1);
+
+        // Simulate: DB cascade exists → deleteById succeeds, no exception
+        assertDoesNotThrow(() -> productService.deleteProductWithValidation(1));
+
+        // Product was deleted
+        verify(productRepository).deleteById(1);
+
+        // Service does NOT call productImageRepository at all
+        // → Consistency guarantee is DB-schema responsibility, NOT Java code
+        // This test DOCUMENTS that Java does not protect against orphaned images if DB cascade is absent
+        verifyNoInteractions(productImageRepository);
+    }
 }
+

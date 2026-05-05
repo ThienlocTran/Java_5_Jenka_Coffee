@@ -40,7 +40,8 @@ public class ApiAdminBannerController {
         if (name == null || name.isBlank() || name.length() > 100) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Tên banner không hợp lệ (tối đa 100 ký tự)"));
         }
-        if (!effect.matches("^(fade|slide|zoom|kenburns|none)$")) {
+        // Updated to support all frontend effects
+        if (!effect.matches("^(fade|slide|zoom|kenburns|push|curtain|parallax|liquid|wave|magnetic|blur|vortex|glitch|cube|flip|dissolve|scale-rotate|prism|none)$")) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Hiệu ứng không hợp lệ"));
         }
         // Strip HTML từ name
@@ -57,8 +58,17 @@ public class ApiAdminBannerController {
             @RequestParam("name") String name,
             @RequestParam(value = "effect", defaultValue = "fade") String effect) {
 
+        // Validate name và effect
+        if (name == null || name.isBlank() || name.length() > 100) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Tên banner không hợp lệ (tối đa 100 ký tự)"));
+        }
+        if (!effect.matches("^(fade|slide|zoom|kenburns|push|curtain|parallax|liquid|wave|magnetic|blur|vortex|glitch|cube|flip|dissolve|scale-rotate|prism|none)$")) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Hiệu ứng không hợp lệ"));
+        }
+        String safeName = name.replaceAll("<[^>]*>", "").trim();
+
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thành công",
-            bannerSetService.updateMeta(id, name, effect)));
+            bannerSetService.updateMeta(id, safeName, effect)));
     }
 
     /** Thêm ảnh vào bộ đã có */
