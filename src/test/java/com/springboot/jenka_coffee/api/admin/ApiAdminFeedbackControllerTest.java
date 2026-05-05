@@ -66,7 +66,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.currentPage").value(0))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
@@ -91,7 +91,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.items[0].branch").value("HN"));
 
@@ -114,7 +114,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(feedbackService).findAll(any(PageRequest.class));
         verify(feedbackService, never()).findByBranch(anyString(), any());
@@ -134,7 +134,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(feedbackService).findAll(PageRequest.of(0, 1));
     }
@@ -153,7 +153,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "9999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(feedbackService).findAll(PageRequest.of(0, 100));
     }
@@ -168,7 +168,7 @@ class ApiAdminFeedbackControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/feedbacks/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.message").value("Xóa đánh giá thành công"));
 
         verify(feedbackService).delete(1L);
@@ -185,7 +185,7 @@ class ApiAdminFeedbackControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/feedbacks/99999"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Không tìm thấy đánh giá với ID: 99999"));
 
         verify(feedbackService).delete(99999L);
@@ -244,7 +244,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "-1")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(feedbackService).findAll(PageRequest.of(0, 20));
     }
@@ -264,7 +264,7 @@ class ApiAdminFeedbackControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(feedbackService).findByBranch(eq("hcm"), any(PageRequest.class));
     }

@@ -64,7 +64,7 @@ class ApiAdminContactControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.currentPage").value(0))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
@@ -157,7 +157,7 @@ class ApiAdminContactControllerTest {
         // Act & Assert
         mockMvc.perform(patch("/api/admin/contacts/1/read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.message").value("Đã đánh dấu đã đọc"));
 
         verify(contactService).markAsRead(1L);
@@ -173,7 +173,7 @@ class ApiAdminContactControllerTest {
         // Act & Assert - should return 200 OK (idempotent)
         mockMvc.perform(patch("/api/admin/contacts/1/read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(contactService).markAsRead(1L);
     }
@@ -188,7 +188,7 @@ class ApiAdminContactControllerTest {
         // Act & Assert - returns 200 even if ID doesn't exist (confusing behavior)
         mockMvc.perform(patch("/api/admin/contacts/99999/read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(contactService).markAsRead(99999L);
     }
@@ -203,7 +203,7 @@ class ApiAdminContactControllerTest {
         // Act & Assert
         mockMvc.perform(patch("/api/admin/contacts/mark-all-read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.message").value("Đã đánh dấu tất cả là đã đọc"));
 
         verify(contactService).markAllAsRead();
@@ -219,7 +219,7 @@ class ApiAdminContactControllerTest {
         // Act & Assert - should return 200 OK (idempotent)
         mockMvc.perform(patch("/api/admin/contacts/mark-all-read"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(contactService).markAllAsRead();
     }

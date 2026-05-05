@@ -60,7 +60,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/banners"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].id").value(1));
 
@@ -77,7 +77,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/banners"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data").isEmpty());
 
@@ -104,7 +104,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/banners/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.name").value("Test Banner"))
                 .andExpect(jsonPath("$.data.effect").value("fade"))
@@ -146,7 +146,7 @@ class ApiAdminBannerControllerTest {
                         .param("effect", "fade")
                         .param("titles", "Title 1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1));
 
         verify(bannerSetService).create(anyString(), anyString(), anyList(), anyList(), anyList());
@@ -161,7 +161,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "")
                         .param("effect", "fade"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Tên banner không hợp lệ (tối đa 100 ký tự)"));
 
         verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
@@ -179,7 +179,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", longName)
                         .param("effect", "fade"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Tên banner không hợp lệ (tối đa 100 ký tự)"));
 
         verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
@@ -194,7 +194,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "Test Banner")
                         .param("effect", "FLASH"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Hiệu ứng không hợp lệ"));
 
         verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
@@ -213,7 +213,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "<script>alert(1)</script>Banner")
                         .param("effect", "fade"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify service called with sanitized name (HTML stripped)
         verify(bannerSetService).create(eq("Banner"), anyString(), anyList(), anyList(), anyList());
@@ -232,7 +232,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "Empty Banner")
                         .param("effect", "fade"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).create(anyString(), anyString(), isNull(), isNull(), isNull());
     }
@@ -249,7 +249,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "New Name")
                         .param("effect", "slide"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).updateMeta(1L, "New Name", "slide");
     }
@@ -280,7 +280,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "Test")
                         .param("effect", "BOUNCE"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Hiệu ứng không hợp lệ"));
 
         verify(bannerSetService, never()).updateMeta(anyLong(), anyString(), anyString());
@@ -296,7 +296,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/banners/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).delete(1L);
     }
@@ -326,7 +326,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/banners/images/5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).removeImage(5L);
     }
@@ -341,7 +341,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/banners/images/99999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).removeImage(99999L);
     }
@@ -362,7 +362,7 @@ class ApiAdminBannerControllerTest {
                         .file(image)
                         .param("titles", "Title 1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).addImages(anyLong(), anyList(), anyList(), anyList());
     }
@@ -378,7 +378,7 @@ class ApiAdminBannerControllerTest {
         // Act & Assert
         mockMvc.perform(put("/api/admin/banners/1/activate"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.active").value(true));
 
         verify(bannerSetService).activate(1L);

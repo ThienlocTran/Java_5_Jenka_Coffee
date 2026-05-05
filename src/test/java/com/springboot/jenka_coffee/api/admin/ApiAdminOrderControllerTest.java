@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -86,7 +87,7 @@ class ApiAdminOrderControllerTest {
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))  // Fixed: use $.status not $.success
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.currentPage").value(0))
                 .andExpect(jsonPath("$.data.totalPages").exists())
@@ -103,7 +104,7 @@ class ApiAdminOrderControllerTest {
                         .param("page", "-3")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.currentPage").value(0));
     }
 
@@ -116,7 +117,7 @@ class ApiAdminOrderControllerTest {
                         .param("page", "0")
                         .param("size", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray());
         // Note: Cannot directly verify size=1 from response, but code ensures Math.max(size, 1)
     }
@@ -130,7 +131,7 @@ class ApiAdminOrderControllerTest {
                         .param("page", "0")
                         .param("size", "9999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.items.length()").value(lessThanOrEqualTo(100)));
     }
@@ -144,7 +145,7 @@ class ApiAdminOrderControllerTest {
                         .param("page", "9999")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.items").isEmpty())
                 .andExpect(jsonPath("$.data.totalItems").exists());
@@ -157,7 +158,7 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/orders/" + testOrder.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(testOrder.getId()))
                 .andExpect(jsonPath("$.data.address").exists())
                 .andExpect(jsonPath("$.data.phone").exists())
@@ -175,7 +176,7 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/orders/99999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(containsString("Không tìm thấy")));
     }
 
@@ -190,11 +191,11 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(put("/api/admin/orders/" + testOrder.getId() + "/status/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify status changed in DB
         Order updated = orderRepository.findById(testOrder.getId()).orElseThrow();
-        assert updated.getStatus() == 1;
+        assertEquals(1, updated.getStatus(), "Order status should be CONFIRMED (1)");
     }
 
     @Test
@@ -208,11 +209,11 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(put("/api/admin/orders/" + testOrder.getId() + "/status/2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify status changed in DB
         Order updated = orderRepository.findById(testOrder.getId()).orElseThrow();
-        assert updated.getStatus() == 2;
+        assertEquals(2, updated.getStatus(), "Order status should be CANCELLED (2)");
     }
 
     @Test
@@ -222,7 +223,7 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(put("/api/admin/orders/" + testOrder.getId() + "/status/-1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(containsString("không hợp lệ")));
     }
 
@@ -233,18 +234,26 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(put("/api/admin/orders/" + testOrder.getId() + "/status/5"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(containsString("không hợp lệ")));
     }
 
     @Test
-    @DisplayName("TC-ORD-CTRL-012: Order - UPDATE status order id not found")
+    @DisplayName("TC-ORD-CTRL-012: [FIX NEEDED] Order - UPDATE status order not found - should return 404, currently 500")
     @WithMockUser(roles = "ADMIN")
-    void test_updateOrderStatus_orderNotFound_returns500() throws Exception {
-        // Act & Assert - Currently returns 500, should be 404 (gap noted in CSV)
+    void test_updateOrderStatus_orderNotFound_shouldReturn404() throws Exception {
+        // CSV spec: should be 404 Not Found
+        // Current behavior: 500 Internal Server Error (unhandled exception)
+        // This test will FAIL until the gap is fixed in OrderService.updateStatus()
+        // Fix: catch RuntimeException from EntityManager.find() → throw ResourceNotFoundException → 404
+        
         mockMvc.perform(put("/api/admin/orders/99999/status/1"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isNotFound())  // ✅ Target: 404
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.message").value(containsString("Không tìm thấy đơn hàng")))
+                .andExpect(jsonPath("$.message").value(containsString("99999")));
+        
+        // If this fails with 500 → gap still exists, fix OrderService
     }
 
     @Test
@@ -258,7 +267,7 @@ class ApiAdminOrderControllerTest {
         // Act & Assert - Try to change to CONFIRMED
         mockMvc.perform(put("/api/admin/orders/" + testOrder.getId() + "/status/1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").exists());
     }
 
@@ -273,11 +282,11 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(post("/api/admin/orders/" + testOrder.getId() + "/cancel"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify status changed to CANCELLED (2)
         Order updated = orderRepository.findById(testOrder.getId()).orElseThrow();
-        assert updated.getStatus() == 2;
+        assertEquals(2, updated.getStatus(), "Order status should be CANCELLED (2)");
     }
 
     @Test
@@ -291,17 +300,23 @@ class ApiAdminOrderControllerTest {
         // Act & Assert
         mockMvc.perform(post("/api/admin/orders/" + testOrder.getId() + "/cancel"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 
     @Test
-    @DisplayName("TC-ORD-CTRL-016: Order - CANCEL order id not found (POST)")
+    @DisplayName("TC-ORD-CTRL-016: [FIX NEEDED] Order - CANCEL order id not found - should return 400, currently 500")
     @WithMockUser(roles = "ADMIN")
-    void test_cancelOrder_idNotFound_returns400() throws Exception {
-        // Act & Assert
+    void test_cancelOrder_idNotFound_shouldReturn400() throws Exception {
+        // CSV spec: should be 400 Bad Request
+        // Current behavior: 500 Internal Server Error (unhandled exception)
+        // This test will FAIL until the gap is fixed in OrderService.cancelOrder()
+        
         mockMvc.perform(post("/api/admin/orders/99999/cancel"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isBadRequest())  // ✅ CSV spec: 400
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.message").value(containsString("Không tìm thấy")));
+        
+        // If this fails with 500 → gap still exists, fix OrderService
     }
 
     @Test
@@ -315,10 +330,10 @@ class ApiAdminOrderControllerTest {
         // Act & Assert - DELETE delegates to cancelOrder
         mockMvc.perform(delete("/api/admin/orders/" + testOrder.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify status changed to CANCELLED (2)
         Order updated = orderRepository.findById(testOrder.getId()).orElseThrow();
-        assert updated.getStatus() == 2;
+        assertEquals(2, updated.getStatus(), "Order status should be CANCELLED (2)");
     }
 }

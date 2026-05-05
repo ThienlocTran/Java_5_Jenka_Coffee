@@ -73,7 +73,7 @@ class ApiAdminDashboardControllerAdvancedTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/dashboard"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.monthlyRevenue").isArray())
                 .andExpect(jsonPath("$.data.monthlyRevenue", hasSize(3))); // Only 3 months returned
         

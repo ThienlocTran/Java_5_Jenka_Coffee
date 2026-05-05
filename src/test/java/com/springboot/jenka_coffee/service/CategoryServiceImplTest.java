@@ -55,24 +55,29 @@ class CategoryServiceImplTest {
     }
 
     @Test
-    @DisplayName("TC-CAT-SER-001: Category Service - Create category with blank name")
-    void test_createCategory_blankName_throwsException() {
-        // Arrange - Request with blank name
-        testRequest.setName("   ");
-
-        // Act & Assert - Should throw exception during validation
-        // Note: Actual validation happens in @Valid annotation at controller level
-        // Service level can also validate
-        assertDoesNotThrow(() -> {
-            // If service doesn't validate, it will pass through
-            // This test documents current behavior
-            categoryService.createCategory(testRequest);
-        });
+    @DisplayName("TC-CAT-SER-001: [GAP] Category Service - Create category with blank name - validation bypassed at service layer")
+    void test_createCategory_blankName_documentsValidationGap() {
+        // Arrange
+        testRequest.setName("   "); // blank
+        when(categoryRepository.existsById("NEW_CAT")).thenReturn(false);
+        when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
         
-        // Alternative: If service validates, expect exception
-        // assertThrows(ConstraintViolationException.class, () -> {
-        //     categoryService.createCategory(testRequest);
-        // });
+        // GAP DOCUMENTATION:
+        // @Valid/@NotBlank only activates at Controller layer when @Valid annotation present
+        // Service layer does NOT auto-validate → blank name gets saved to DB
+        // EXPECTED production behavior: reject blank name → BusinessRuleException
+        // CURRENT behavior: accepted silently
+        
+        // Document the gap by verifying blank name is NOT rejected
+        assertDoesNotThrow(() -> categoryService.createCategory(testRequest),
+            "GAP CONFIRMED: blank name accepted at service layer — fix by adding explicit validation");
+        
+        // Verify DB save WAS called (gap confirmed: blank name went through)
+        verify(categoryRepository).save(argThat(cat -> cat.getName().isBlank()));
+        
+        // TODO: When gap is fixed, change to:
+        // assertThrows(BusinessRuleException.class, () -> categoryService.createCategory(testRequest));
+        // verify(categoryRepository, never()).save(any());
     }
 
     @Test

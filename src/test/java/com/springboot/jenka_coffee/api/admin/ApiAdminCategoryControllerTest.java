@@ -67,7 +67,7 @@ class ApiAdminCategoryControllerTest {
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.currentPage").value(0))
                 .andExpect(jsonPath("$.data.totalPages").exists())
@@ -83,7 +83,7 @@ class ApiAdminCategoryControllerTest {
                         .param("page", "0")
                         .param("size", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
@@ -96,7 +96,7 @@ class ApiAdminCategoryControllerTest {
                         .param("page", "0")
                         .param("size", "9999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.items.length()").value(lessThanOrEqualTo(100)));
     }
@@ -110,7 +110,7 @@ class ApiAdminCategoryControllerTest {
                         .param("page", "-1")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.currentPage").value(0));
     }
 
@@ -121,7 +121,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/" + testCategory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(testCategory.getId()))
                 .andExpect(jsonPath("$.data.name").value(testCategory.getName()));
     }
@@ -133,7 +133,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/NOT_EXIST"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 
     @Test
@@ -150,7 +150,7 @@ class ApiAdminCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value("NEWCAT"))
                 .andExpect(jsonPath("$.data.name").value("Danh mục mới"));
 
@@ -172,7 +172,7 @@ class ApiAdminCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(containsString("đã tồn tại")));
     }
 
@@ -221,20 +221,30 @@ class ApiAdminCategoryControllerTest {
     }
 
     @Test
-    @DisplayName("TC-CAT-CTRL-012: Category - CREATE id with special characters")
+    @DisplayName("TC-CAT-CTRL-012: [SECURITY GAP] Category - CREATE id with special characters - should reject")
     @WithMockUser(roles = "ADMIN")
-    void test_createCategory_idWithSpecialChars_returns400OrSuccess() throws Exception {
+    void test_createCategory_idWithSpecialChars_shouldReject() throws Exception {
         // Arrange
         CategoryRequest request = new CategoryRequest();
-        request.setId("CA T#1");
+        request.setId("CA T#1");  // space + # character - INVALID
         request.setName("Test");
 
-        // Act & Assert - May return 400 if validation exists, or succeed
-        // This test verifies no SQL injection occurs
+        // SECURITY GAP DOCUMENTATION:
+        // ID with spaces/# can cause URL encoding issues and potential SQL injection
+        // EXPECTED: reject with 400 Bad Request
+        // CURRENT: accepts with 200 OK (no pattern validation)
+        // This test will FAIL until validation is added to CategoryRequest
+        // Fix: Add @Pattern(regexp = "^[A-Z0-9_]+$") to CategoryRequest.id field
+        
+        // Act & Assert - Should reject special characters for security
         mockMvc.perform(post("/api/admin/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk()); // Currently no pattern validation
+                .andExpect(status().isBadRequest())  // ✅ Target: reject invalid ID
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.message").value(containsString("ID không hợp lệ")));
+        
+        // NOTE: If this test fails with 200 OK → validation gap exists
     }
 
     @Test
@@ -250,7 +260,7 @@ class ApiAdminCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.name").value("Cà phê đặc biệt"));
 
         // Verify in DB
@@ -271,7 +281,7 @@ class ApiAdminCategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 
     @Test
@@ -302,7 +312,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/categories/EMPTY_CAT"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // Verify deleted from DB
         assert !categoryRepository.existsById("EMPTY_CAT");
@@ -323,7 +333,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/categories/" + testCategory.getId()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(containsString("còn")));
     }
 
@@ -334,7 +344,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/admin/categories/NOT_EXIST"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"));
     }
 
     @Test
@@ -344,7 +354,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/check-id/BRANDNEW"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(true));
     }
 
@@ -355,7 +365,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/check-id/" + testCategory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(false));
     }
 
@@ -381,7 +391,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/product-count/" + testCategory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(greaterThanOrEqualTo(2)));
     }
 
@@ -392,7 +402,7 @@ class ApiAdminCategoryControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/categories/product-count/NOT_EXIST"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(0));
     }
 }
