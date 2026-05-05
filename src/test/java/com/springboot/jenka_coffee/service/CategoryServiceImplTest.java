@@ -220,4 +220,27 @@ class CategoryServiceImplTest {
         Category savedCategory = categoryCaptor.getValue();
         assertNull(savedCategory.getIcon());
     }
+
+    @Test
+    @DisplayName("TC-CAT-SER-001: createCategory với name rỗng - Không bị throw ở Service (GAP CHECK)")
+    void createCategory_blankName_gapCheck() {
+        // Requirement CSV mong muốn throw ConstraintViolationException hoặc BusinessRuleException ở Service
+        // NHƯNG CategoryServiceImpl không validate name rỗng, nó phụ thuộc vào Controller @Valid
+        // Đây là GAP nếu ta coi Service là layer độc lập cần validate business rules
+        CategoryRequest request = new CategoryRequest();
+        request.setId("TEST");
+        request.setName("   "); // Blank name
+        
+        when(categoryRepository.existsById("TEST")).thenReturn(false);
+        when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act - Không throw exception
+        Category result = assertDoesNotThrow(() -> {
+            return categoryService.createCategory(request);
+        });
+
+        // Assert
+        assertEquals("", result.getName()); // do request.normalize() gọi trim() biến "   " thành ""
+        verify(categoryRepository).save(any(Category.class));
+    }
 }

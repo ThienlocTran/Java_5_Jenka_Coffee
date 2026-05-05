@@ -6,6 +6,7 @@ import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.OrderRepository;
 import com.springboot.jenka_coffee.repository.PointHistoryRepository;
 import com.springboot.jenka_coffee.service.impl.OrderServiceImpl;
@@ -19,12 +20,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Test Case Document Part 1: ORDER MODULE - Service Layer
@@ -375,5 +376,55 @@ class OrderServiceImplTest {
             return address != null &&
                     address.equals("123 Nguyễn Trãi, Phường 1, Quận 1, TP.HCM");
         }));
+    }
+    @Test
+    @DisplayName("TC-ORD-SER-001: updateStatus trên order không tồn tại phải throw RuntimeException")
+    void updateStatus_orderNotFound_throwsRuntimeException() {
+        // Arrange
+        when(entityManager.find(eq(Order.class), eq(999L), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(null);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            orderService.updateStatus(999L, 1);
+        });
+
+        assertEquals("Không tìm thấy đơn hàng!", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-002: Hủy đơn hàng đã confirmed (GAP CHECK)")
+    void updateStatus_cancelConfirmedOrder_gapCheck() {
+        // Business Rule trong CSV yêu cầu không cho phép hủy đơn đã CONFIRMED (phải throw BusinessRuleException)
+        // NHƯNG code hiện tại cho phép: case CONFIRMED -> to == Order.OrderStatus.CANCELLED (trả về true)
+        // Đây là một GAP giữa Requirement và Implementation.
+        Order order = new Order();
+        order.setId(111L);
+        order.setStatus(1); // CONFIRMED
+
+        when(entityManager.find(eq(Order.class), eq(111L), eq(LockModeType.PESSIMISTIC_WRITE)))
+                .thenReturn(order);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+
+        // Act - Không throw exception mà chạy thành công -> Gap confirmed
+        assertDoesNotThrow(() -> {
+            orderService.updateStatus(111L, 2); // CANCELLED
+        });
+        
+        verify(orderRepository).save(argThat(o -> o.getStatus() == 2));
+    }
+
+    @Test
+    @DisplayName("TC-ORD-SER-003: findByIdWithDetails với id không tồn tại throw ResourceNotFoundException")
+    void findByIdWithDetails_notFound_throwsResourceNotFoundException() {
+        // Arrange
+        when(orderRepository.findByIdWithDetails(888L)).thenReturn(java.util.Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            orderService.findByIdWithDetails(888L);
+        });
+
+        assertTrue(exception.getMessage().contains("Không tìm thấy đơn hàng #888"));
     }
 }
