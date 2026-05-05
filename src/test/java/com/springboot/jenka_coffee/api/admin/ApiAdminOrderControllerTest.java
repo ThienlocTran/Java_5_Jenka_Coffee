@@ -1,6 +1,5 @@
 package com.springboot.jenka_coffee.api.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.repository.AccountRepository;
@@ -20,7 +19,8 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -187,10 +187,10 @@ class ApiAdminOrderControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ORD-CTRL-012: UPDATE status order id not found")
-    void test_updateOrderStatus_notFound_returns500() throws Exception {
-        // Gap check: if this throws 500 instead of 404
+    void test_updateOrderStatus_notFound_returns404() throws Exception {
+        // Correcting the expectation from 500 to 404 to DETECT the bug instead of accepting it
         mockMvc.perform(put("/api/admin/orders/99999/status/1"))
-                .andExpect(status().is5xxServerError()); 
+                .andExpect(status().isNotFound()); // Expect 404, if it throws 500, test will fail!
     }
 
     @Test

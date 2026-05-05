@@ -83,7 +83,7 @@ public class ApiAdminAccountControllerTest {
     void test_accountList_negativePage_returnsError() throws Exception {
         // Will expose if the system lacks pagination bounds checking (likely 500 or 400)
         mockMvc.perform(get("/api/admin/accounts?page=-1&size=20"))
-                .andExpect(status().is4xxClientError()); // If this fails, it means it returns 500 or 200 (which is a bug)
+                .andExpect(status().isBadRequest()); // Expect 400 Bad Request, NOT 500!
     }
 
     @Test
@@ -92,16 +92,15 @@ public class ApiAdminAccountControllerTest {
     void test_accountList_zeroSize_returnsError() throws Exception {
         // Will expose if size=0 throws unhandled JPA error (500)
         mockMvc.perform(get("/api/admin/accounts?page=0&size=0"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isBadRequest()); // Expect 400 Bad Request, NOT 500!
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-004: GET list size=9999 (OOM DoS risk)")
     void test_accountList_largeSize_capped() throws Exception {
-        mockMvc.perform(get("/api/admin/accounts?page=0&size=9999"))
-                .andExpect(status().isOk());
-        // A true test for this would verify the response list size is capped (e.g. <= 100), not 9999
+        mockMvc.perform(get("/api/admin/accounts?page=0&size=999999"))
+                .andExpect(status().isBadRequest()); // DoS prevention: reject abnormally large size with 400
     }
 
     // --- 2. SECURITY & PRIVILEGE ESCALATION TESTS ---
