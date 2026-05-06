@@ -15,11 +15,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,15 +37,32 @@ public class ApiAdminAccountControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     void setUp() {
-        accountRepository.deleteAll(); // Clean state before each test
+        // DON'T use deleteAll() - causes foreign key constraint violations with orders table
+        // @Transactional will rollback changes after each test automatically
+        
+        // Clean up only test accounts if they exist (idempotent)
+        accountRepository.deleteById("user1");
+        accountRepository.deleteById("admin1");
+        accountRepository.deleteById("admin2");
+        accountRepository.deleteById("hacker");
+        accountRepository.deleteById("newuser");
+        accountRepository.deleteById("newuser2");
+        accountRepository.deleteById("brandnew");
+        
+        // CRITICAL: Flush deletes before inserts to prevent duplicate key violations
+        entityManager.flush();
 
         Account testUser = new Account();
         testUser.setUsername("user1");
         testUser.setFullname("Test User");
         testUser.setEmail("user1@test.com");
-        testUser.setPhone("0123456789");
+        // DON'T set phone to avoid duplicate key conflicts
+        // testUser.setPhone("0123456789");
         testUser.setPasswordHash(passwordSecurity.hashPassword("Password@123"));
         testUser.setActivated(true);
         testUser.setAdmin(false);
@@ -56,6 +72,7 @@ public class ApiAdminAccountControllerTest {
         admin1.setUsername("admin1");
         admin1.setFullname("Admin One");
         admin1.setEmail("admin1@test.com");
+        // admin1.setPhone("0123456781"); // Unique phone if needed
         admin1.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
         admin1.setActivated(true);
         admin1.setAdmin(true);
@@ -65,10 +82,14 @@ public class ApiAdminAccountControllerTest {
         admin2.setUsername("admin2");
         admin2.setFullname("Admin Two");
         admin2.setEmail("admin2@test.com");
+        // admin2.setPhone("0123456782"); // Unique phone if needed
         admin2.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
         admin2.setActivated(true);
         admin2.setAdmin(true);
         accountRepository.save(admin2);
+        
+        // Flush inserts to ensure they're committed before tests run
+        entityManager.flush();
     }
 
     // --- 1. VULNERABILITY & BOUNDARY TESTS (REAL FLOW) ---
@@ -107,10 +128,12 @@ public class ApiAdminAccountControllerTest {
     void test_createAccount_adminTrueInBody_forcesAdminFalse() throws Exception {
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "hacker")
+                .param("fullname", "Hacker User")  // FIX: fullname is required
                 .param("email", "hacker@test.com")
                 .param("password", "Pass@123")
                 .param("admin", "true")) // Malicious payload
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 // Check BOTH possible response paths — adjust to match actual API
                 .andExpect(result -> {
                     String body = result.getResponse().getContentAsString();
@@ -141,6 +164,7 @@ public class ApiAdminAccountControllerTest {
                 .param("fullname", "Updated Name")
                 .param("admin", "true"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 // Check response body doesn't contain admin=true
                 .andExpect(result -> {
                     String body = result.getResponse().getContentAsString();
@@ -156,10 +180,28 @@ public class ApiAdminAccountControllerTest {
     // --- 3. BUSINESS LOGIC & SUICIDE PREVENTION ---
 
     @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN") // Crucial: Logged in as admin1
     @DisplayName("TC-ACC-CTRL-020: DELETE self (Suicide Protection)")
     void test_deleteAccount_self_returnsForbidden() throws Exception {
-        mockMvc.perform(delete("/api/admin/accounts/admin1"))
+        // FIX: Use custom SecurityContext instead of @WithMockUser
+        org.springframework.security.core.context.SecurityContext ctx = 
+            org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new org.springframework.security.core.userdetails.User(
+                    "admin1", 
+                    "password", 
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+                ),
+                null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+        
+        mockMvc.perform(delete("/api/admin/accounts/admin1")
+                .with(request -> {
+                    request.setUserPrincipal(ctx.getAuthentication());
+                    return request;
+                }))
                 .andExpect(status().isForbidden()); // Or 400 with custom message
 
         // REAL DB check:
@@ -167,26 +209,64 @@ public class ApiAdminAccountControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-021: DELETE last admin in system")
     void test_deleteAccount_lastAdmin_returnsForbidden() throws Exception {
         // First delete admin2 manually so admin1 is the last admin
         accountRepository.deleteById("admin2");
+        entityManager.flush();
         assertEquals(1, accountRepository.countByAdminTrue(), "Should be only 1 admin left");
 
+        // FIX: Use custom SecurityContext
+        org.springframework.security.core.context.SecurityContext ctx = 
+            org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new org.springframework.security.core.userdetails.User(
+                    "admin1", 
+                    "password", 
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+                ),
+                null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+
         // Now admin1 tries to delete the last admin (which happens to be themselves, but even if it was someone else)
-        mockMvc.perform(delete("/api/admin/accounts/admin1"))
+        mockMvc.perform(delete("/api/admin/accounts/admin1")
+                .with(request -> {
+                    request.setUserPrincipal(ctx.getAuthentication());
+                    return request;
+                }))
                 .andExpect(status().is4xxClientError()); 
 
         assertTrue(accountRepository.findById("admin1").isPresent());
     }
 
     @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-031: RESET PASSWORD targeting another admin (Insider Threat)")
     void test_resetPassword_targetOtherAdmin_returnsForbidden() throws Exception {
+        // FIX: Use custom SecurityContext instead of @WithMockUser
+        org.springframework.security.core.context.SecurityContext ctx = 
+            org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new org.springframework.security.core.userdetails.User(
+                    "admin1", 
+                    "password", 
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+                ),
+                null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+        
         mockMvc.perform(put("/api/admin/accounts/admin2/reset-password")
-                .param("newPassword", "HackedPass@123"))
+                .with(request -> {
+                    request.setUserPrincipal(ctx.getAuthentication());
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"newPassword\": \"HackedPass@123\"}"))
                 .andExpect(status().isForbidden());
 
         // Verify password hash didn't change
@@ -195,11 +275,31 @@ public class ApiAdminAccountControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin1", roles = "ADMIN")
     @DisplayName("TC-ACC-CTRL-032: RESET PASSWORD admin resetting own password")
     void test_resetPassword_self_returnsOk() throws Exception {
+        // FIX: @WithMockUser doesn't work with @AuthenticationPrincipal String
+        // Need to create custom SecurityContext with username as principal
+        org.springframework.security.core.context.SecurityContext ctx = 
+            org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                new org.springframework.security.core.userdetails.User(
+                    "admin1", 
+                    "password", 
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+                ),
+                null,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))
+            )
+        );
+        
         mockMvc.perform(put("/api/admin/accounts/admin1/reset-password")
-                .param("newPassword", "NewPass@123"))
+                .with(request -> {
+                    request.setUserPrincipal(ctx.getAuthentication());
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"newPassword\": \"NewPass@123\"}"))
                 .andExpect(status().isOk());
 
         Account admin1Db = accountRepository.findById("admin1").orElseThrow();
@@ -214,8 +314,9 @@ public class ApiAdminAccountControllerTest {
     void test_accountList_noPasswordHashLeak() throws Exception {
         mockMvc.perform(get("/api/admin/accounts?page=0&size=20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items").isArray())
-                .andExpect(jsonPath("$.items").isNotEmpty())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content").isNotEmpty())
                 // SECURITY: passwordHash must never appear anywhere in response
                 .andExpect(result -> {
                     String body = result.getResponse().getContentAsString();
@@ -224,12 +325,12 @@ public class ApiAdminAccountControllerTest {
                     assertFalse(body.contains("$2a$"),
                         "SECURITY BREACH: BCrypt hash leaked (starts with $2a$)!");
                 })
-                // Pagination must be accurate
-                .andExpect(jsonPath("$.currentPage").value(0))
-                .andExpect(jsonPath("$.totalItems").isNumber())
-                .andExpect(jsonPath("$.totalPages").isNumber());
+                // Pagination must be accurate (Spring Page structure)
+                .andExpect(jsonPath("$.data.number").value(0))
+                .andExpect(jsonPath("$.data.totalElements").isNumber())
+                .andExpect(jsonPath("$.data.totalPages").isNumber());
         
-        // The DB has user1 + admin1 + admin2 → totalItems >= 3
+        // The DB has user1 + admin1 + admin2 → totalElements >= 3
         // (actual count depends on other tests, but must be >= 1 since setUp created data)
     }
 
@@ -239,8 +340,9 @@ public class ApiAdminAccountControllerTest {
     void test_accountDetail_valid_returnsOk() throws Exception {
         mockMvc.perform(get("/api/admin/accounts/user1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("user1"))
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.username").value("user1"))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
     }
 
     @Test
@@ -257,10 +359,12 @@ public class ApiAdminAccountControllerTest {
     void test_createAccount_valid_returnsCreated() throws Exception {
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "newuser")
+                .param("fullname", "New User")  // FIX: fullname is required
                 .param("email", "new@test.com")
                 .param("password", "Pass@123"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("newuser"));
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.username").value("newuser"));
 
         assertTrue(accountRepository.existsById("newuser"));
     }
@@ -271,6 +375,7 @@ public class ApiAdminAccountControllerTest {
     void test_createAccount_duplicateUsername_returnsBadRequest() throws Exception {
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "user1") // Already exists
+                .param("fullname", "Duplicate User")  // FIX: fullname is required
                 .param("email", "newemail@test.com")
                 .param("password", "Pass@123"))
                 .andExpect(status().isBadRequest()); // Will fail if controller returns 500 (bug)
@@ -282,6 +387,7 @@ public class ApiAdminAccountControllerTest {
     void test_createAccount_duplicateEmail_returnsBadRequest() throws Exception {
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "newuser2")
+                .param("fullname", "Another User")  // FIX: fullname is required
                 .param("email", "user1@test.com") // Already exists
                 .param("password", "Pass@123"))
                 .andExpect(status().isBadRequest());
@@ -292,7 +398,8 @@ public class ApiAdminAccountControllerTest {
     @DisplayName("TC-ACC-CTRL-019: DELETE valid username")
     void test_deleteAccount_valid_returnsOk() throws Exception {
         mockMvc.perform(delete("/api/admin/accounts/user1"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         assertFalse(accountRepository.existsById("user1"));
     }
@@ -306,6 +413,7 @@ public class ApiAdminAccountControllerTest {
         mockMvc.perform(get("/api/admin/accounts/check-username")
                 .param("username", "brandnew"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(true));
     }
 
@@ -316,6 +424,7 @@ public class ApiAdminAccountControllerTest {
         mockMvc.perform(get("/api/admin/accounts/check-username")
                 .param("username", "user1"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").value(false));
     }
 }

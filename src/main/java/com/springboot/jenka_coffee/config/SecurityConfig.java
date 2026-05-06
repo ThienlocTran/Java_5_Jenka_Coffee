@@ -60,6 +60,14 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .logout(AbstractHttpConfigurer::disable)
+            // FIX: Add AuthenticationEntryPoint to return 401 for unauthenticated requests
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED); // 401
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Vui lòng đăng nhập để tiếp tục!\"}");
+                })
+            )
             .headers(headers -> headers
                 .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                 .contentTypeOptions(cto -> {})

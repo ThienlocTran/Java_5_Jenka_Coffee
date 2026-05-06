@@ -31,6 +31,21 @@ public class ApiAdminAccountController {
     public ResponseEntity<ApiResponse<Page<Account>>> listAccounts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        
+        // Validation: Prevent negative page, zero/negative size, and DoS attacks
+        if (page < 0) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số trang không được âm"));
+        }
+        if (size <= 0) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Kích thước trang phải lớn hơn 0"));
+        }
+        if (size > 100) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Kích thước trang không được vượt quá 100"));
+        }
+        
         Page<Account> result = accountService.findAllPaginated(PageRequest.of(page, size));
         result.forEach(a -> a.setPasswordHash(null));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", result));
@@ -57,7 +72,8 @@ public class ApiAdminAccountController {
         entity.setAdmin(false); // Force false — admin flag chỉ set qua DB hoặc super-admin endpoint
         Account account = accountService.createAccount(entity, photoFile);
         account.setPasswordHash(null);
-        return ResponseEntity.ok(ApiResponse.success("Thêm tài khoản mới thành công", account));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Thêm tài khoản mới thành công", account));
     }
 
     @PutMapping(value = "/{username}", consumes = { "multipart/form-data" })
@@ -77,7 +93,10 @@ public class ApiAdminAccountController {
     @DeleteMapping("/{username}")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
             @PathVariable String username,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal String currentAdmin) {
+            @org.springframework.security.core.annotation.AuthenticationPrincipal 
+            org.springframework.security.core.userdetails.UserDetails currentUser) {
+        
+        String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
         
         // BUG-54 FIX: Prevent admin self-deletion (suicide protection)
         if (username.equals(currentAdmin)) {
@@ -128,7 +147,10 @@ public class ApiAdminAccountController {
     public ResponseEntity<ApiResponse<Void>> adminResetPassword(
             @PathVariable String username,
             @RequestBody Map<String, String> body,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal String currentAdmin) {
+            @org.springframework.security.core.annotation.AuthenticationPrincipal 
+            org.springframework.security.core.userdetails.UserDetails currentUser) {
+        
+        String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
         
         String newPassword = body.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {

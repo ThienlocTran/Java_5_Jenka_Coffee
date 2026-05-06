@@ -48,7 +48,9 @@ public class ApiAdminBannerController {
         String safeName = name.replaceAll("<[^>]*>", "").trim();
 
         BannerSet saved = bannerSetService.create(safeName, effect, images, titles, subtitles);
-        return ResponseEntity.ok(ApiResponse.success("Tạo bộ banner thành công", saved));
+        // FIX: Return 201 Created for resource creation (REST standard)
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo bộ banner thành công", saved));
     }
 
     /** Cập nhật tên + hiệu ứng */
