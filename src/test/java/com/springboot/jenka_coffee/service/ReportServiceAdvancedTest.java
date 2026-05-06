@@ -182,10 +182,16 @@ class ReportServiceAdvancedTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(new BigDecimal("33.33"), result.getAvgOrderValue());
+        // Use compareTo() for BigDecimal comparison (scale-independent)
+        assertEquals(0, new BigDecimal("33.33").compareTo(result.getAvgOrderValue()),
+                "avgOrderValue must be 33.33 with scale=2, HALF_UP rounding");
         
         // Verify: Rounding mode HALF_UP, scale 2
         // 100.00 / 3 = 33.333... → 33.33
+        // 
+        // ⚠️ RISK: If service uses divide() without scale/rounding:
+        // BigDecimal.divide(divisor) → ArithmeticException: Non-terminating decimal expansion
+        // Must use: divide(divisor, 2, RoundingMode.HALF_UP)
     }
 
     @Test

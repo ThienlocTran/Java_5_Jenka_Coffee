@@ -75,11 +75,16 @@ class ApiAdminDashboardControllerAdvancedTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.monthlyRevenue").isArray())
-                .andExpect(jsonPath("$.data.monthlyRevenue", hasSize(3))); // Only 3 months returned
+                .andExpect(jsonPath("$.data.monthlyRevenue", hasSize(12)))  // ✅ MUST be 12 months
+                // Month 2 (index 1) must have revenue=0, not missing
+                .andExpect(jsonPath("$.data.monthlyRevenue[1].month").value(2))
+                .andExpect(jsonPath("$.data.monthlyRevenue[1].revenue").value(0))
+                // Month 4 (index 3) must have revenue=0
+                .andExpect(jsonPath("$.data.monthlyRevenue[3].month").value(4))
+                .andExpect(jsonPath("$.data.monthlyRevenue[3].revenue").value(0));
         
-        // BUG: Missing months should have revenue=0, but current implementation doesn't fill gaps
-        // Expected: 12 entries with months 2,4,6-12 having revenue=0
-        // Actual: Only 3 entries (months with data)
+        // GAP: If this test FAILS with hasSize(3) → service/controller doesn't fill missing months
+        // Fix: Controller or service must fill months 1-12, defaulting to 0 for missing months
         // Risk: Frontend chart shows gaps instead of zero values
     }
 
@@ -280,13 +285,18 @@ class ApiAdminDashboardControllerAdvancedTest {
         when(reportService.getRecentOrders(5)).thenReturn(unsortedOrders);
         when(reportService.getTopProducts(anyInt())).thenReturn(List.of());
 
-        // Act & Assert - First order should be the newest (id=2)
+        // Act & Assert - Newest order (id=2, Apr 12) must be first
         mockMvc.perform(get("/api/admin/dashboard"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.recentOrders[0].id").value(1)); // BUG: Not sorted!
+                // ✅ Newest order (id=2, Apr 12) must be first
+                .andExpect(jsonPath("$.data.recentOrders[0].id").value(2))
+                // ✅ Middle order (id=3, Apr 11) must be second
+                .andExpect(jsonPath("$.data.recentOrders[1].id").value(3))
+                // ✅ Oldest order (id=1, Apr 10) must be last
+                .andExpect(jsonPath("$.data.recentOrders[2].id").value(1));
         
-        // BUG: Controller doesn't sort, relies on service
-        // If service returns unsorted data, dashboard shows wrong order
+        // GAP: If test FAILS with [id=1, id=2, id=3] → sort bug confirmed
+        // Fix: Controller must sort recentOrders by createDate DESC before returning
         // Risk: User sees old orders first instead of recent ones
     }
 

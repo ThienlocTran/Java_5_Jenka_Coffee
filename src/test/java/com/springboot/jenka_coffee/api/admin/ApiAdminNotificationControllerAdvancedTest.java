@@ -151,7 +151,7 @@ class ApiAdminNotificationControllerAdvancedTest {
         mockMvc.perform(get("/api/admin/notifications/counts"))
                 .andExpect(status().isOk());
         
-        // ARCHITECTURAL GAP:
+        // ⚠️ ARCHITECTURAL GAP DOCUMENTED (NOT ENFORCED):
         // ApiAdminNotificationController injects OrderRepository and ContactRepository directly
         // Violates 3-tier architecture: Controller → Service → Repository
         // 
@@ -170,6 +170,16 @@ class ApiAdminNotificationControllerAdvancedTest {
         // Fix: Create NotificationService with methods:
         //   - getNotificationCounts() → returns { newOrders, unreadContacts }
         //   - Inject OrderService and ContactService (not repositories)
+        // 
+        // ⚠️ LIMITATION: This test PASSES when architectural gap exists
+        // To enforce architecture, use ArchUnit:
+        // 
+        // @ArchTest
+        // static final ArchRule controllers_should_not_depend_on_repositories =
+        //     noClasses().that().resideInAPackage("..api..")
+        //         .should().dependOnClassesThat()
+        //         .resideInAPackage("..repository..")
+        //         .because("Controllers must use Service layer, not Repository directly");
         // 
         // Mark as TECH DEBT for refactoring
         
@@ -230,10 +240,16 @@ class ApiAdminNotificationControllerAdvancedTest {
         // Assert - Should be fast (< 100ms for simple count queries)
         assertTrue(duration < 100, "Notification counts should be fast (<100ms), actual: " + duration + "ms");
         
-        // Note: This is a mock test, real performance depends on DB
-        // In production, add indexes on:
-        //   - orders.status
-        //   - contacts.isRead
-        // To ensure COUNT queries are fast
+        // ⚠️ LIMITATION: This test measures mock call time, not real DB query performance
+        // Mock repositories return instantly (< 1ms) → test always passes
+        // In production, DB COUNT(*) queries can take 200-500ms without proper indexes
+        // 
+        // For real performance testing:
+        // 1. Use @DataJpaTest with real DB (H2/TestContainers)
+        // 2. Insert 1M+ records to simulate production load
+        // 3. Measure query time without mocks
+        // 4. Verify indexes exist: orders.status, contacts.isRead
+        // 
+        // This test provides false sense of security - passes CI but production may be slow
     }
 }
