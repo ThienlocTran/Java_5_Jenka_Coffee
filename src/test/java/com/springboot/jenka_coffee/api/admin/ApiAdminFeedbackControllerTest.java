@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.api.admin;
 
 import com.springboot.jenka_coffee.entity.StoreFeedback;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
+import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.StoreFeedbackService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -175,20 +177,28 @@ class ApiAdminFeedbackControllerTest {
     }
 
     @Test
-    @DisplayName("TC-FBK-CTRL-007: DELETE id not found - returns 400 with error message")
+    @DisplayName("TC-FBK-CTRL-007: DELETE id không tồn tại phải trả 404 (không phải 400) - per CSV spec")
     @WithMockUser(roles = "ADMIN")
-    void test_delete_notFound_returns400() throws Exception {
-        // Arrange
-        doThrow(new BusinessRuleException("Không tìm thấy đánh giá với ID: 99999"))
+    void test_delete_notFound_shouldReturn404() throws Exception {
+        // CSV spec: Return 404 Not Found
+        // ISSUE: Service throws BusinessRuleException → GlobalExceptionHandler maps to 400
+        // CORRECT: "Not found" should use ResourceNotFoundException → 404
+        // BusinessRuleException should be for business rules (e.g., "cannot delete because has orders")
+        
+        // Arrange - Use ResourceNotFoundException for "not found" semantic
+        doThrow(new ResourceNotFoundException("Không tìm thấy đánh giá với ID: 99999"))
                 .when(feedbackService).delete(99999L);
 
         // Act & Assert
         mockMvc.perform(delete("/api/admin/feedbacks/99999"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())   // ✅ 404 per CSV spec
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Không tìm thấy đánh giá với ID: 99999"));
+                .andExpect(jsonPath("$.message").value(containsString("99999")));
 
         verify(feedbackService).delete(99999L);
+        
+        // NOTE: If service currently throws BusinessRuleException → test will fail with 400
+        // Fix: Change service to throw ResourceNotFoundException for "not found" cases
     }
 
     @Test

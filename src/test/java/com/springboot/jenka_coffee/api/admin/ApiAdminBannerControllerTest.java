@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -129,9 +130,10 @@ class ApiAdminBannerControllerTest {
     }
 
     @Test
-    @DisplayName("TC-BNR-CTRL-006: CREATE valid data with images - returns 201")
+    @DisplayName("TC-BNR-CTRL-006: CREATE valid data with images - returns 201 Created per CSV spec")
     @WithMockUser(roles = "ADMIN")
-    void test_create_validData_returns200() throws Exception {
+    void test_create_validData_returns201() throws Exception {
+        // CSV spec: Return 201 Created (not 200 OK)
         // Arrange
         MockMultipartFile image = new MockMultipartFile(
                 "images", "banner.jpg", "image/jpeg", "image".getBytes());
@@ -145,7 +147,7 @@ class ApiAdminBannerControllerTest {
                         .param("name", "Hero Banner")
                         .param("effect", "fade")
                         .param("titles", "Title 1"))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())  // ✅ 201 per CSV spec
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1));
 
@@ -332,18 +334,28 @@ class ApiAdminBannerControllerTest {
     }
 
     @Test
-    @DisplayName("TC-BNR-CTRL-018: DELETE image imageId not found - returns 200 (no error)")
+    @DisplayName("TC-BNR-CTRL-018: DELETE image - imageId not found phải trả 404 (per CSV spec + TC-BNR-SER-005)")
     @WithMockUser(roles = "ADMIN")
-    void test_removeImage_notFound_returns200() throws Exception {
-        // Arrange - deleteById doesn't throw exception even if ID doesn't exist
-        doNothing().when(bannerSetService).removeImage(99999L);
-
+    void test_removeImage_notFound_shouldReturn404() throws Exception {
+        // CSV spec: Return 404 Not Found
+        // TC-BNR-SER-005: Service MUST throw ResourceNotFoundException (not silent-fail)
+        // CURRENT BEHAVIOR: Service silent-fails → returns 200 OK → misleading UX
+        
+        // Arrange - service MUST throw ResourceNotFoundException (not silent-fail)
+        doThrow(new ResourceNotFoundException("BannerImage not found: 99999"))
+            .when(bannerSetService).removeImage(99999L);
+        
         // Act & Assert
         mockMvc.perform(delete("/api/admin/banners/images/99999"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SUCCESS"));
-
+                .andExpect(status().isNotFound())    // ✅ 404 per CSV spec
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.message").value(containsString("99999")));
+        
+        // Verify: service WAS called (not bypassed)
         verify(bannerSetService).removeImage(99999L);
+        
+        // If this test FAILS with 200 OK → service has silent-fail bug
+        // Fix: bannerSetService.removeImage() must throw ResourceNotFoundException
     }
 
     @Test

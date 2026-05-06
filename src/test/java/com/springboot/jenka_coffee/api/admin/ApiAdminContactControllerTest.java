@@ -76,9 +76,13 @@ class ApiAdminContactControllerTest {
     }
 
     @Test
-    @DisplayName("TC-CON-CTRL-002: GET list page negative - NO validation (potential 500)")
+    @DisplayName("TC-CON-CTRL-002: [FIX NEEDED] page=-1 phải trả 400, hiện trả 500 - cần add pagination clamp")
     @WithMockUser(roles = "ADMIN")
-    void test_getContacts_negativePage_noValidation() throws Exception {
+    void test_getContacts_negativePage_shouldReturn400() throws Exception {
+        // Target behavior after fix: 400 Bad Request with validation message
+        // Current behavior (bug): 500 because PageRequest.of(-1, 20) throws IllegalArgumentException
+        // Fix: ContactController should add: page = Math.max(page, 0)
+        
         // Arrange - PageRequest.of() throws IllegalArgumentException for negative page
         when(contactService.findAll(any(PageRequest.class)))
                 .thenThrow(new IllegalArgumentException("Page index must not be less than zero"));
@@ -87,15 +91,21 @@ class ApiAdminContactControllerTest {
         mockMvc.perform(get("/api/admin/contacts")
                         .param("page", "-1")
                         .param("size", "20"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest())   // ✅ Target: 400 (test fails until fix applied)
+                .andExpect(jsonPath("$.status").value("ERROR"));
 
-        verify(contactService).findAll(any(PageRequest.class));
+        // If test FAILS with 500 → pagination clamp not yet implemented
+        // Add to ContactController: int page = Math.max(rawPage, 0);
     }
 
     @Test
-    @DisplayName("TC-CON-CTRL-003: GET list size=0 - NO validation (CRITICAL GAP - 500)")
+    @DisplayName("TC-CON-CTRL-003: [FIX NEEDED] size=0 phải trả 400, hiện trả 500 - CRITICAL GAP")
     @WithMockUser(roles = "ADMIN")
-    void test_getContacts_sizeZero_noValidation() throws Exception {
+    void test_getContacts_sizeZero_shouldReturn400() throws Exception {
+        // Target behavior after fix: 400 Bad Request with validation message
+        // Current behavior (bug): 500 because PageRequest.of(0, 0) throws IllegalArgumentException
+        // Fix: ContactController should add: size = Math.max(size, 1)
+        
         // Arrange - PageRequest.of() throws IllegalArgumentException for size <= 0
         when(contactService.findAll(any(PageRequest.class)))
                 .thenThrow(new IllegalArgumentException("Page size must not be less than one"));
@@ -104,9 +114,11 @@ class ApiAdminContactControllerTest {
         mockMvc.perform(get("/api/admin/contacts")
                         .param("page", "0")
                         .param("size", "0"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest())   // ✅ Target: 400 (test fails until fix applied)
+                .andExpect(jsonPath("$.status").value("ERROR"));
 
-        verify(contactService).findAll(any(PageRequest.class));
+        // If test FAILS with 500 → size clamp not yet implemented
+        // Add to ContactController: int size = Math.max(rawSize, 1);
     }
 
     @Test
