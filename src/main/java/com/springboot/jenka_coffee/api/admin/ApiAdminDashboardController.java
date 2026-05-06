@@ -39,15 +39,27 @@ public class ApiAdminDashboardController {
 
         int currentYear = LocalDateTime.now().getYear();
         List<RevenueReportDTO> monthlyRevenue = reportService.getMonthlyRevenue(currentYear);
-        List<Map<String, Object>> chartData = monthlyRevenue.stream().map(r -> {
-            Map<String, Object> m = new HashMap<>();
-            m.put("month", r.getMonth() != null ? r.getMonth() : 0);
-            m.put("revenue", r.getTotalRevenue() != null ? r.getTotalRevenue() : BigDecimal.ZERO);
-            return m;
-        }).collect(Collectors.toList());
+        
+        // Fill missing months with 0 revenue
+        Map<Integer, BigDecimal> revenueByMonth = monthlyRevenue.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        r -> r.getMonth() != null ? r.getMonth() : 0,
+                        r -> r.getTotalRevenue() != null ? r.getTotalRevenue() : BigDecimal.ZERO
+                ));
+        
+        List<Map<String, Object>> chartData = new java.util.ArrayList<>();
+        for (int m = 1; m <= 12; m++) {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("month", m);
+            entry.put("revenue", revenueByMonth.getOrDefault(m, BigDecimal.ZERO));
+            chartData.add(entry);
+        }
 
         List<Order> recentOrders = reportService.getRecentOrders(5);
-        List<Map<String, Object>> orderDTOs = recentOrders.stream().map(o -> {
+        List<Map<String, Object>> orderDTOs = recentOrders.stream()
+                .sorted(java.util.Comparator.comparing(Order::getCreateDate, 
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .map(o -> {
             Map<String, Object> dto = new HashMap<>();
             dto.put("id", o.getId());
             dto.put("createDate", o.getCreateDate() != null ? o.getCreateDate().toString() : null);
@@ -90,8 +102,10 @@ public class ApiAdminDashboardController {
         switch (period) {
             case "week" -> {
                 int week = value != null ? value : LocalDateTime.now().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
-                from = LocalDateTime.now().with(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR, week)
-                        .with(DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
+                from = java.time.LocalDate.of(y, 1, 1)
+                        .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, (long) week)
+                        .with(DayOfWeek.MONDAY)
+                        .atStartOfDay();
                 to   = from.plusDays(7).minusSeconds(1);
             }
             case "quarter" -> {

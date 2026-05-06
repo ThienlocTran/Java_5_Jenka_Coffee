@@ -63,7 +63,7 @@ public class ApiAdminNewsControllerTest {
                 .param("title", "<script>alert(1)</script>Article") // XSS Payload
                 .param("content", "Valid content"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("Article")); // HTML stripped in response
+                .andExpect(jsonPath("$.data.title").value("Article")); // HTML stripped in response
 
         // DB check to ensure sanitization is persisted
         News saved = newsRepository.findAll().stream().filter(n -> n.getContent().equals("Valid content")).findFirst().orElseThrow();
@@ -79,7 +79,7 @@ public class ApiAdminNewsControllerTest {
                 .param("content", "Content")
                 .param("available", "true")) // Malicious attempt to publish immediately
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.available").value(false)); // Security enforced
+                .andExpect(jsonPath("$.data.available").value(false)); // Security enforced
 
         // DB Check
         News saved = newsRepository.findAll().stream().filter(n -> n.getTitle().equals("Mass Assignment Test")).findFirst().orElseThrow();
@@ -154,7 +154,7 @@ public class ApiAdminNewsControllerTest {
     void test_newsList_valid_returnsOk() throws Exception {
         mockMvc.perform(get("/api/admin/news?page=0&size=10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items").isArray());
+                .andExpect(jsonPath("$.data.items").isArray());
     }
 
     @Test
@@ -163,7 +163,7 @@ public class ApiAdminNewsControllerTest {
     void test_newsDetail_valid_returnsOk() throws Exception {
         mockMvc.perform(get("/api/admin/news/" + testNews.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Test Title"));
+                .andExpect(jsonPath("$.data.title").value("Test Title"));
     }
 
     @Test

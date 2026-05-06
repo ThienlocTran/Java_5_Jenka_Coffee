@@ -45,6 +45,10 @@ public class ApiAdminNewsController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<News>> getNewsDetail(@PathVariable Integer id) {
         News news = newsService.findById(id);
+        if (news == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Không tìm thấy tin tức: " + id));
+        }
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tin tức thành công", news));
     }
 
@@ -65,7 +69,8 @@ public class ApiAdminNewsController {
         // id = null → INSERT, không thể override thành UPDATE
 
         newsService.saveNews(news, file);
-        return ResponseEntity.ok(ApiResponse.success("Tạo tin tức thành công", news));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo tin tức thành công", news));
     }
 
     @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
