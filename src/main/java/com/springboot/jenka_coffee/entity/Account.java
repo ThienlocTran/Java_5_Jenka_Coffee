@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
+import org.springframework.data.domain.Persistable;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -18,11 +19,19 @@ import java.util.Objects;
 @AllArgsConstructor
 @Entity
 @Table(name = "Accounts")
-public class Account implements Serializable {
+public class Account implements Serializable, Persistable<String> {
 
     @Id
     @Column(name = "Username", length = 50)
     private String username;
+    
+    /**
+     * JPA FIX: String @Id causes merge() instead of persist()
+     * Implement Persistable to explicitly control isNew() behavior
+     * This flag is set by service layer when creating new accounts
+     */
+    @Transient
+    private boolean isNew = false;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn khỏi JSON response
     @Column(name = "password_hash", nullable = false)
@@ -135,5 +144,26 @@ public class Account implements Serializable {
         return this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode()
                 : getClass().hashCode();
+    }
+    
+    // --- PERSISTABLE INTERFACE IMPLEMENTATION ---
+    
+    @Override
+    public String getId() {
+        return username;
+    }
+    
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+    
+    /**
+     * Reset isNew flag after persist/load to prevent re-insertion
+     */
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
     }
 }

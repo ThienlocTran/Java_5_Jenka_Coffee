@@ -246,6 +246,9 @@ public class ApiAuthController {
             account.setCustomerRank("MEMBER");
             account.setPhone(null); // NULL phone, will be updated later
             
+            // JPA FIX: Mark as new entity to force persist() instead of merge()
+            account.setNew(true);
+            
             accountService.save(account);
             needsPhone = true; // New user needs to provide phone
         } else {

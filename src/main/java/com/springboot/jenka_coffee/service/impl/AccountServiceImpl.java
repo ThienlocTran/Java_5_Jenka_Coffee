@@ -12,6 +12,8 @@ import com.springboot.jenka_coffee.service.OTPService;
 import com.springboot.jenka_coffee.service.UploadService;
 import com.springboot.jenka_coffee.util.ImageUtils;
 import com.springboot.jenka_coffee.util.PasswordSecurity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,9 @@ public class AccountServiceImpl implements AccountService {
     private final PasswordSecurity passwordSecurity;
     private final EmailService emailService;
     private final OTPService otpService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AccountServiceImpl(AccountRepository dao, UploadService uploadService,
             PasswordSecurity passwordSecurity, EmailService emailService,
@@ -143,6 +148,12 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account createAccount(Account account, MultipartFile photoFile) {
+        // JPA FIX: Mark entity as new FIRST, before any validation or processing
+        // This ensures JPA will call persist() instead of merge()
+        account.setNew(true);
+        
+        log.debug("Creating account '{}' with isNew={}", account.getUsername(), account.isNew());
+        
         // Validation - check username exists
         if (existsByUsername(account.getUsername())) {
             throw new ValidationException("username", "Tên đăng nhập đã tồn tại!");
@@ -183,7 +194,18 @@ public class AccountServiceImpl implements AccountService {
             }
         }
 
-        return dao.save(account);
+        // JPA FIX: Use entityManager.persist() directly to force INSERT
+        // This bypasses Spring Data's save() which may call merge() for String @Id
+        log.debug("About to persist account '{}', password_hash length: {}", 
+                  account.getUsername(), 
+                  account.getPasswordHash() != null ? account.getPasswordHash().length() : 0);
+        
+        entityManager.persist(account);
+        entityManager.flush();  // Ensure INSERT is executed immediately
+        
+        log.debug("Successfully persisted account '{}'", account.getUsername());
+        
+        return account;
     }
 
     @Override

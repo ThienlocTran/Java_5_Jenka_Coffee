@@ -54,6 +54,7 @@ public class AccountRequest {
 
     /**
      * Convert DTO to Entity
+     * Note: Caller must set isNew(true) if creating new account
      */
     public Account toEntity() {
         normalize();
@@ -70,6 +71,7 @@ public class AccountRequest {
         account.setPhoto(photo);
         account.setPoints(0);
         account.setCustomerRank("MEMBER");
+        // Note: isNew flag will be set by service layer (createAccount)
 
         return account;
     }
