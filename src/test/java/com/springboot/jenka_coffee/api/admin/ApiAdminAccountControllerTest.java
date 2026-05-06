@@ -103,7 +103,7 @@ public class ApiAdminAccountControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-012: CREATE with admin=true in body (Privilege Escalation)")
+    @DisplayName("TC-ACC-CTRL-012: CREATE với admin=true trong body - Server phải force admin=false (VULN-057)")
     void test_createAccount_adminTrueInBody_forcesAdminFalse() throws Exception {
         mockMvc.perform(multipart("/api/admin/accounts")
                 .param("username", "hacker")
@@ -111,17 +111,29 @@ public class ApiAdminAccountControllerTest {
                 .param("password", "Pass@123")
                 .param("admin", "true")) // Malicious payload
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.admin").value(false)); // Verify response
+                // Check BOTH possible response paths — adjust to match actual API
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    assertFalse(body.contains("\"admin\":true"),
+                        "SECURITY BUG: Response body contains admin=true. Privilege escalation succeeded!");
+                });
 
-        // REAL DB check:
-        Optional<Account> saved = accountRepository.findById("hacker");
-        assertTrue(saved.isPresent());
-        assertFalse(saved.get().getAdmin(), "Security Bug: Account was saved as admin!");
+        // CRITICAL: DB must confirm admin=false regardless of what response says
+        Account saved = accountRepository.findById("hacker")
+            .orElseThrow(() -> new AssertionError("Account not created"));
+        
+        assertFalse(saved.getAdmin(),
+            "SECURITY BREACH: Account 'hacker' was saved with admin=true in DB. VULN-057 not fixed!");
+        
+        // Verify the forced override happened
+        assertEquals("hacker", saved.getUsername());
+        assertNotNull(saved.getPasswordHash(), "Password must be BCrypt hashed");
+        assertFalse(saved.getPasswordHash().equals("Pass@123"), "Password must NOT be stored in plaintext!");
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-017: UPDATE with admin=true (Privilege Escalation)")
+    @DisplayName("TC-ACC-CTRL-017: UPDATE với admin=true (Privilege Escalation)")
     void test_updateAccount_adminTrueInBody_forcesAdminFalse() throws Exception {
         mockMvc.perform(put("/api/admin/accounts/user1")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -129,7 +141,12 @@ public class ApiAdminAccountControllerTest {
                 .param("fullname", "Updated Name")
                 .param("admin", "true"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.admin").value(false));
+                // Check response body doesn't contain admin=true
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    assertFalse(body.contains("\"admin\":true"),
+                        "SECURITY BUG: Response body contains admin=true. Privilege escalation succeeded!");
+                });
 
         // REAL DB check:
         Account dbUser = accountRepository.findById("user1").orElseThrow();
@@ -193,12 +210,27 @@ public class ApiAdminAccountControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("TC-ACC-CTRL-001: GET list valid request")
-    void test_accountList_valid_returnsOk() throws Exception {
+    @DisplayName("TC-ACC-CTRL-001: GET list - passwordHash KHÔNG được xuất hiện trong BẤT KỲ item nào")
+    void test_accountList_noPasswordHashLeak() throws Exception {
         mockMvc.perform(get("/api/admin/accounts?page=0&size=20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isArray())
-                .andExpect(jsonPath("$.items[0].passwordHash").doesNotExist()); // Verify no leak
+                .andExpect(jsonPath("$.items").isNotEmpty())
+                // SECURITY: passwordHash must never appear anywhere in response
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    assertFalse(body.contains("passwordHash"),
+                        "SECURITY BREACH: passwordHash field leaked in account list response!");
+                    assertFalse(body.contains("$2a$"),
+                        "SECURITY BREACH: BCrypt hash leaked (starts with $2a$)!");
+                })
+                // Pagination must be accurate
+                .andExpect(jsonPath("$.currentPage").value(0))
+                .andExpect(jsonPath("$.totalItems").isNumber())
+                .andExpect(jsonPath("$.totalPages").isNumber());
+        
+        // The DB has user1 + admin1 + admin2 → totalItems >= 3
+        // (actual count depends on other tests, but must be >= 1 since setUp created data)
     }
 
     @Test

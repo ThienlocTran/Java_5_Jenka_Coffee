@@ -301,8 +301,9 @@ class AccountServiceImplTest {
     // Expected result: Return invalid credentials AuthResult (timing attack prevention)
     void testAuthenticateUserNotFound() {
         // Arrange
+        String dummyHash = "$2a$12$dummyHashForTimingAttackPrevention";
         when(accountRepository.findByUsernameOrEmailOrPhone("ghost_user")).thenReturn(Optional.empty());
-        when(passwordSecurity.verifyPassword(anyString(), anyString())).thenReturn(false);
+        when(passwordSecurity.verifyPassword("password123", dummyHash)).thenReturn(false);
 
         // Act
         AuthResult result = accountService.authenticateWithResult("ghost_user", "password123");
@@ -310,8 +311,9 @@ class AccountServiceImplTest {
         // Assert
         assertFalse(result.isSuccess());
         verify(accountRepository).findByUsernameOrEmailOrPhone("ghost_user");
-        // Verify dummy BCrypt check was performed (timing attack prevention)
-        verify(passwordSecurity).verifyPassword(eq("password123"), anyString());
+        // CRITICAL: Verify dummy BCrypt check was performed with SPECIFIC dummy hash (timing attack prevention)
+        // Using anyString() is insufficient - implementation must use a constant dummy hash
+        verify(passwordSecurity).verifyPassword(eq("password123"), eq(dummyHash));
     }
 
     @Test

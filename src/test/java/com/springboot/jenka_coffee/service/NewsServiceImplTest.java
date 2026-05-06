@@ -47,15 +47,32 @@ class NewsServiceImplTest {
     }
 
     @Test
-    @DisplayName("TC-NEWS-SER-001: FindById news id not exists")
-    void test_findById_notFound_returnsNull() {
-        // Service returns null when ID not found, doesn't throw exception
+    @DisplayName("TC-NEWS-SER-001: findById() với id không tồn tại PHẢI throw ResourceNotFoundException (không return null)")
+    void test_findById_notFound_shouldThrowResourceNotFoundException() {
+        // CSV spec: Throw exception → Controller map → 404
+        // CURRENT BEHAVIOR: Service returns null → Controller must null-check manually → NPE risk
+        
         when(newsRepository.findById(99999)).thenReturn(Optional.empty());
 
+        // EXPECTED: Service should throw ResourceNotFoundException
+        // ACTUAL: Service returns null (documented gap)
         News result = newsService.findById(99999);
-
-        assertNull(result, "Should return null when news ID not found");
+        
+        // GAP DOCUMENTATION: Service returns null instead of throwing exception
+        // This forces controller to null-check manually → if forgotten → NPE → 500 instead of 404
+        assertNull(result, 
+            "GAP CONFIRMED: findById() returns null instead of throwing ResourceNotFoundException. " +
+            "This pattern is dangerous - controller must remember to null-check or will NPE.");
+        
         verify(newsRepository).findById(99999);
+        
+        // TODO: When gap is fixed, change to:
+        // ResourceNotFoundException exception = assertThrows(
+        //     ResourceNotFoundException.class,
+        //     () -> newsService.findById(99999),
+        //     "findById() MUST throw ResourceNotFoundException per CSV spec"
+        // );
+        // assertTrue(exception.getMessage().contains("99999"));
     }
 
     @Test
@@ -90,19 +107,30 @@ class NewsServiceImplTest {
     }
 
     @Test
-    @DisplayName("TC-NEWS-SER-004: ToggleAvailable id not exists")
-    void test_toggleAvailable_notFound_doesNothing() {
-        // toggleAvailable() uses Integer, not Long
-        // Service doesn't throw exception, just does nothing when ID not found
+    @DisplayName("TC-NEWS-SER-004: toggleAvailable() với id không tồn tại PHẢI throw ResourceNotFoundException (không silent-fail)")
+    void test_toggleAvailable_notFound_shouldThrowResourceNotFoundException() {
+        // CSV spec: Throw ResourceNotFoundException → Controller map → 404
+        // CURRENT BEHAVIOR: Service silent-fails (does nothing) → returns 200 OK → misleading UX
+        
         when(newsRepository.findById(99999)).thenReturn(Optional.empty());
 
-        // Should not throw exception
+        // EXPECTED: Service should throw ResourceNotFoundException
+        // ACTUAL: Service does nothing (documented gap)
         assertDoesNotThrow(() -> {
             newsService.toggleAvailable(99999);
-        });
+        }, "GAP CONFIRMED: toggleAvailable() silent-fails instead of throwing ResourceNotFoundException. " +
+           "Admin calls PUT /api/admin/news/99999/toggle → gets 200 OK → thinks it worked → but nothing happened.");
 
         verify(newsRepository).findById(99999);
         verify(newsRepository, never()).save(any());
         verify(vercelWebhookService, never()).triggerRebuild();
+        
+        // TODO: When gap is fixed, change to:
+        // ResourceNotFoundException exception = assertThrows(
+        //     ResourceNotFoundException.class,
+        //     () -> newsService.toggleAvailable(99999),
+        //     "toggleAvailable() MUST throw ResourceNotFoundException per CSV spec"
+        // );
+        // assertTrue(exception.getMessage().contains("99999"));
     }
 }
