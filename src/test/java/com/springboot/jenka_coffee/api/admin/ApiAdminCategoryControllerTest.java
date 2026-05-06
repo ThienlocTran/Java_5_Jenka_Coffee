@@ -242,7 +242,7 @@ class ApiAdminCategoryControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())  // ✅ Target: reject invalid ID
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value(containsString("ID không hợp lệ")));
+                .andExpect(jsonPath("$.message").value(containsString("chữ in hoa")));
         
         // NOTE: If this test fails with 200 OK → validation gap exists
     }

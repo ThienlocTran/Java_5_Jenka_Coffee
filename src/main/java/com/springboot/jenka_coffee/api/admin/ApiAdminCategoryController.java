@@ -63,6 +63,12 @@ public class ApiAdminCategoryController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<Category>> createCategory(@Valid @RequestBody CategoryRequest request) {
+        // FIX: Manual validation for id since @NotBlank was removed from DTO
+        if (request.getId() == null || request.getId().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("ID danh mục không được để trống"));
+        }
+        
         if (categoryService.existsById(request.getId().trim())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("ID danh mục đã tồn tại"));
         }
@@ -80,15 +86,13 @@ public class ApiAdminCategoryController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable String id) {
-        try {
-            categoryService.deleteOrThrow(id);
-            return ResponseEntity.ok(ApiResponse.success("Xóa danh mục thành công", null));
-        } catch (BusinessRuleException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Có lỗi xảy ra khi xóa danh mục"));
-        }
+        // FIX: Removed catch-all Exception handler that was returning 500 for ResourceNotFoundException
+        // Let GlobalExceptionHandler handle all exceptions consistently:
+        // - ResourceNotFoundException → 404
+        // - BusinessRuleException → 400
+        // - Other exceptions → 500
+        categoryService.deleteOrThrow(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa danh mục thành công", null));
     }
 
     @GetMapping("/check-id/{id}")

@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CategoryRequest {
 
-    @NotBlank(message = "{CategoryRequest.id.NotBlank}")
+    // FIX: Removed @NotBlank to allow UPDATE without id in body
+    // id is required for CREATE but not for UPDATE (id comes from @PathVariable)
+    // Manual validation added in CREATE endpoint
     @Size(max = 10, message = "{CategoryRequest.id.Size}")
     @Pattern(regexp = "^[A-Z0-9_]+$", message = "{CategoryRequest.id.Pattern}")
     private String id;
