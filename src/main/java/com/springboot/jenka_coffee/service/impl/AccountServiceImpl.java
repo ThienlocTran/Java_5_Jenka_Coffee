@@ -73,6 +73,14 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @org.springframework.cache.annotation.CacheEvict(value = "accountSecurity", key = "#account.username")
     public Account save(Account account) {
+        // If account is marked as new, use persist() to ensure INSERT
+        if (account.isNew()) {
+            entityManager.persist(account);
+            entityManager.flush();
+            entityManager.detach(account);
+            return account;
+        }
+        // Otherwise use normal save (merge for updates)
         return dao.save(account);
     }
 
@@ -201,9 +209,20 @@ public class AccountServiceImpl implements AccountService {
                   account.getPasswordHash() != null ? account.getPasswordHash().length() : 0);
         
         entityManager.persist(account);
-        entityManager.flush();  // Ensure INSERT is executed immediately
+        entityManager.flush();   // Ensure INSERT is executed immediately
         
-        log.debug("Successfully persisted account '{}'", account.getUsername());
+        // CRITICAL: Create a detached copy for the response to prevent controller's
+        // setPasswordHash(null) from triggering UPDATE on the managed entity
+        String savedPasswordHash = account.getPasswordHash();
+        entityManager.detach(account); // Detach from persistence context
+        
+        // Verify detachment worked
+        if (entityManager.contains(account)) {
+            log.error("CRITICAL: Account '{}' is still managed after detach()!", account.getUsername());
+        }
+        
+        log.debug("Successfully persisted account '{}', detached={}", 
+                  account.getUsername(), !entityManager.contains(account));
         
         return account;
     }

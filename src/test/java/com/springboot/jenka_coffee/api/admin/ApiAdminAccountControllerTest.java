@@ -46,21 +46,18 @@ class ApiAdminAccountControllerTest {
         // DON'T use deleteAll() - causes foreign key constraint violations with orders table
         // @Transactional will rollback changes after each test automatically
         
-        // Clean up only test accounts if they exist (idempotent)
-        accountRepository.deleteById("user1");
-        accountRepository.deleteById("admin1");
-        accountRepository.deleteById("admin2");
-        accountRepository.deleteById("hacker");
-        accountRepository.deleteById("newuser");
-        accountRepository.deleteById("newuser2");
-        accountRepository.deleteById("brandnew");
+        // AGGRESSIVE CLEANUP: Delete test accounts using native query to bypass Hibernate cache
+        entityManager.createNativeQuery("DELETE FROM Accounts WHERE Username IN ('user1', 'admin1', 'admin2', 'hacker', 'newuser', 'newuser2', 'brandnew')")
+                .executeUpdate();
         
         // CRITICAL: Flush deletes AND clear session to prevent merge() on REMOVED entities
         entityManager.flush();
-        entityManager.clear();  // Clear Hibernate session cache
+        entityManager.clear();  // Clear Hibernate session cache completely
         
-        // EXTRA: Verify "newuser" is really deleted
-        assertFalse(accountRepository.existsById("newuser"), "newuser should be deleted before test");
+        // EXTRA: Verify "newuser" is really deleted from DB
+        Long count = (Long) entityManager.createNativeQuery("SELECT COUNT(*) FROM Accounts WHERE Username = 'newuser'")
+                .getSingleResult();
+        assertEquals(0L, count, "newuser should be deleted before test");
 
         Account testUser = new Account();
         testUser.setUsername("user1");
@@ -71,6 +68,7 @@ class ApiAdminAccountControllerTest {
         testUser.setPasswordHash(passwordSecurity.hashPassword("Password@123"));
         testUser.setActivated(true);
         testUser.setAdmin(false);
+        testUser.setNew(true);  // Mark as new for Persistable
         accountRepository.save(testUser);
 
         Account admin1 = new Account();
@@ -81,6 +79,7 @@ class ApiAdminAccountControllerTest {
         admin1.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
         admin1.setActivated(true);
         admin1.setAdmin(true);
+        admin1.setNew(true);  // Mark as new for Persistable
         accountRepository.save(admin1);
 
         Account admin2 = new Account();
@@ -91,10 +90,12 @@ class ApiAdminAccountControllerTest {
         admin2.setPasswordHash(passwordSecurity.hashPassword("Admin@123"));
         admin2.setActivated(true);
         admin2.setAdmin(true);
+        admin2.setNew(true);  // Mark as new for Persistable
         accountRepository.save(admin2);
         
         // Flush inserts to ensure they're committed before tests run
         entityManager.flush();
+        entityManager.clear();  // Clear again after setup
     }
 
     // --- 1. VULNERABILITY & BOUNDARY TESTS (REAL FLOW) ---
@@ -146,6 +147,10 @@ class ApiAdminAccountControllerTest {
                         "SECURITY BUG: Response body contains admin=true. Privilege escalation succeeded!");
                 });
 
+        // CRITICAL: Clear session before DB check to prevent auto-flush of detached entity
+        entityManager.flush();
+        entityManager.clear();
+        
         // CRITICAL: DB must confirm admin=false regardless of what response says
         Account saved = accountRepository.findById("hacker")
             .orElseThrow(() -> new AssertionError("Account not created"));
@@ -156,6 +161,7 @@ class ApiAdminAccountControllerTest {
         // Verify the forced override happened
         assertEquals("hacker", saved.getUsername());
         assertNotNull(saved.getPasswordHash(), "Password must be BCrypt hashed");
+        assertTrue(saved.getPasswordHash().startsWith("$2a$"), "Password must be BCrypt format");
         assertFalse(saved.getPasswordHash().equals("Pass@123"), "Password must NOT be stored in plaintext!");
     }
 
@@ -305,7 +311,20 @@ class ApiAdminAccountControllerTest {
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.username").value("newuser"));
 
-        assertTrue(accountRepository.existsById("newuser"));
+        // CRITICAL: Clear session before DB check to prevent auto-flush of detached entity
+        entityManager.flush();
+        entityManager.clear();
+        
+        // Verify account was created with correct data
+        Account saved = accountRepository.findById("newuser")
+                .orElseThrow(() -> new AssertionError("Account not created"));
+        
+        assertEquals("newuser", saved.getUsername());
+        assertEquals("New User", saved.getFullname());
+        assertEquals("new@test.com", saved.getEmail());
+        assertNotNull(saved.getPasswordHash(), "Password must be BCrypt hashed");
+        assertTrue(saved.getPasswordHash().startsWith("$2a$"), "Password must be BCrypt format");
+        assertFalse(saved.getPasswordHash().equals("Pass@123"), "Password must NOT be stored in plaintext!");
     }
 
     @Test

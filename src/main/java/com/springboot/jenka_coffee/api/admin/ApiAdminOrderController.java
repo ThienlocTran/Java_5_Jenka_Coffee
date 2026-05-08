@@ -116,7 +116,7 @@ public class ApiAdminOrderController {
         return cancelOrder(id);
     }
 
-    // ========== DTO MAPPING (TODO: Move to separate mapper class) ==========//   BUG-56 FIX: Use ISO-8601 format with timezone for date serialization
+    // ========== DTO MAPPING (TODO: Move to separate mapper class) ==========
     private Map<String, Object> toDto(Order o) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", o.getId());
@@ -125,14 +125,12 @@ public class ApiAdminOrderController {
         dto.put("status", o.getStatus());
         dto.put("totalAmount", o.getTotalAmount());
         
-        // BUG-56 FIX: Convert LocalDateTime to ISO-8601 with timezone
-        // Use system default timezone (server timezone)
+        // Format createDate as ISO-8601 string for frontend
         if (o.getCreateDate() != null) {
-            java.time.ZonedDateTime zdt = o.getCreateDate()
-                .atZone(java.time.ZoneId.systemDefault());
-            dto.put("createDate", zdt.toString()); // ISO-8601 with timezone: 2026-04-12T15:25:00+08:00
-            // Alternative: Unix epoch milliseconds (unambiguous)
-            // dto.put("createDate", zdt.toInstant().toEpochMilli());
+            // Use DateTimeFormatter to ensure consistent format
+            java.time.format.DateTimeFormatter formatter = 
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+            dto.put("createDate", o.getCreateDate().format(formatter));
         } else {
             dto.put("createDate", null);
         }
