@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -36,7 +37,12 @@ public class ApiOrderController {
 
     @GetMapping("/checkout-info")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCheckoutInfo(
-            @AuthenticationPrincipal String username) {
+            @AuthenticationPrincipal UserDetails principal) {
+        String username = principal != null ? principal.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Chưa đăng nhập"));
+        }
         if (cartService.getItems().isEmpty()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Giỏ hàng trống"));
         }
@@ -54,7 +60,12 @@ public class ApiOrderController {
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<Map<String, Object>>> processCheckout(
             @Valid @RequestBody CheckoutRequest request,
-            @AuthenticationPrincipal String username) {
+            @AuthenticationPrincipal UserDetails principal) {
+        String username = principal != null ? principal.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Chưa đăng nhập"));
+        }
         Account user = accountService.findById(username);
         Order order = orderService.checkout(request, user);
         orderService.postCheckout(order, user);
@@ -67,7 +78,12 @@ public class ApiOrderController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderHistory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
-            @AuthenticationPrincipal String username) {
+            @AuthenticationPrincipal UserDetails principal) {
+        String username = principal != null ? principal.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Chưa đăng nhập"));
+        }
         // BUG-43 FIX: Add page limit validation to prevent deep pagination DoS
         // Attacker can request page=99999999 causing database to scan billions of rows
         // Same protection as ApiProductController (max page 1000)
@@ -94,7 +110,12 @@ public class ApiOrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(
             @PathVariable Long orderId,
-            @AuthenticationPrincipal String username) {
+            @AuthenticationPrincipal UserDetails principal) {
+        String username = principal != null ? principal.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Chưa đăng nhập"));
+        }
         Order order = orderService.findById(orderId);
         
         if (order == null) {

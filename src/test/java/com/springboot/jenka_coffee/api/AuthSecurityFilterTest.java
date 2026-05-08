@@ -115,12 +115,13 @@ class AuthSecurityFilterTest {
     // ─── D. NO TOKEN AT ALL ──────────────────────────────────────────────────
 
     @Test
-    @DisplayName("TC-AUTH-001 (filter): No token → 403 Forbidden")
-    void noToken_shouldReturn403() throws Exception {
+    @DisplayName("TC-AUTH-001 (filter): No token → 401 Unauthorized")
+    void noToken_shouldReturn401() throws Exception {
         mockMvc.perform(get("/api/auth/me")) // không có cookie, không có header
-                .andExpect(status().isForbidden()); // 403 - Spring Security default
+                .andExpect(status().isUnauthorized()); // 401 - behavior sau khi đã fix SecurityConfig
 
-        // NOTE: 403 là correct behavior khi không có authentication cho protected endpoint
+        // NOTE: 401 là CORRECT behavior sau khi AuthenticationEntryPoint được configure
+        // 403 là OLD behavior (trước khi fix SecurityConfig)
     }
 
     // ─── E. REFRESH TOKEN USED AS ACCESS TOKEN ───────────────────────────────

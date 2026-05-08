@@ -125,7 +125,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // User — phải đăng nhập
                 .requestMatchers(
-                    "/api/auth/me",               // FIX: moved from permitAll to authenticated
+                    "/api/auth/me").authenticated()  // FIX: Allow both USER and ADMIN roles
+                .requestMatchers(
                     "/api/auth/update-phone",     // Requires authentication
                     "/api/orders/**",
                     "/api/profile/**").hasRole("USER")

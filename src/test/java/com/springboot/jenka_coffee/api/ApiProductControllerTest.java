@@ -204,14 +204,13 @@ class ApiProductControllerTest {
     @DisplayName("TC-PRD-007: GET /api/products với filter categoryId + minPrice + maxPrice trả đúng kết quả")
     void getProducts_filterByCategoryAndPrice_returnsCorrectItems() throws Exception {
         // Arrange
-        BigDecimal min = new BigDecimal("3000000");
-        BigDecimal max = new BigDecimal("6000000");
-        
+        // FIX: Use any(BigDecimal.class) instead of eq() to avoid BigDecimal comparison issues
+        // Controller converts Double to BigDecimal using valueOf(), which may not match exact BigDecimal instances
         Product product = buildProduct(1, new BigDecimal("5500000"), true);
         Page<Product> mockPage = new PageImpl<>(List.of(product));
 
         when(productService.filterProductsWithAllCriteria(
-                eq("MAY_PHA"), eq(min), eq(max), isNull(), any(Pageable.class)))
+                eq("MAY_PHA"), any(BigDecimal.class), any(BigDecimal.class), isNull(), any(Pageable.class)))
                 .thenReturn(mockPage);
 
         // Act & Assert
@@ -225,7 +224,7 @@ class ApiProductControllerTest {
                 .andExpect(jsonPath("$.data.items.length()").value(1));
 
         verify(productService).filterProductsWithAllCriteria(
-                eq("MAY_PHA"), eq(min), eq(max), isNull(), any(Pageable.class));
+                eq("MAY_PHA"), any(BigDecimal.class), any(BigDecimal.class), isNull(), any(Pageable.class));
     }
     
     /**

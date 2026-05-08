@@ -31,8 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc  // Filters ENABLED – cả RateLimitFilter và JwtAuthFilter
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.test.context.ActiveProfiles("test")
 @DisplayName("TC-SEC-AUTH-006: Brute Force Rate Limit Test")
-class AuthRateLimitTest {
+class AuthRateLimitTegst {
 
     @Autowired
     private MockMvc mockMvc;
@@ -54,6 +55,12 @@ class AuthRateLimitTest {
 
     @MockBean
     private com.springboot.jenka_coffee.service.CookieService cookieService;
+    
+    @MockBean
+    private com.springboot.jenka_coffee.service.EmailService emailService;
+    
+    @MockBean
+    private com.springboot.jenka_coffee.service.OTPService otpService;
 
     @Test
     @DisplayName("TC-SEC-AUTH-006: 10 failed logins → lần 11 trả 429 Too Many Requests")

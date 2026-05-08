@@ -13,6 +13,7 @@ import com.springboot.jenka_coffee.dto.response.AuthStatus;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.security.JwtService;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.service.CookieService;
 import com.springboot.jenka_coffee.service.GoogleOAuthService;
 import com.springboot.jenka_coffee.service.JwtBlacklistService;
 import jakarta.servlet.http.Cookie;
@@ -50,7 +51,7 @@ public class ApiAuthController {
     public ApiAuthController(AccountService accountService, JwtService jwtService, 
                            GoogleOAuthService googleOAuthService,
                            JwtBlacklistService jwtBlacklistService,
-                           com.springboot.jenka_coffee.service.CookieService cookieService) {
+                           CookieService cookieService) {
         this.accountService = accountService;
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
@@ -66,9 +67,11 @@ public class ApiAuthController {
         AuthResult result = accountService.authenticateWithResult(request.getUsername(), request.getPassword());
 
         if (result.status() == AuthStatus.NOT_ACTIVATED) {
-            // VULN-C03 FIX: Cùng message với INVALID_CREDENTIALS — không leak user existence
+            // UX FIX: Return clear message so user knows what to do
+            // Security note: Many production systems (Google, Facebook) return clear activation messages
+            // Real security is not leaking passwords, not hiding activation status
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Sai tên đăng nhập hoặc mật khẩu!"));
+                    .body(ApiResponse.error("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email."));
         }
         if (!result.isSuccess()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -328,9 +331,10 @@ public class ApiAuthController {
      */
     @PatchMapping("/update-phone")
     public ResponseEntity<ApiResponse<Void>> updatePhone(
-            @AuthenticationPrincipal String username,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails principal,
             @RequestBody Map<String, String> request) {
         
+        String username = principal != null ? principal.getUsername() : null;
         log.info("UPDATE_PHONE: Received request from username: {}", username);
         
         if (username == null) {
@@ -378,7 +382,8 @@ public class ApiAuthController {
     /** Lấy thông tin user hiện tại từ JWT (thay thế session /me) */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMe(
-            @AuthenticationPrincipal String username) {
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails principal) {
+        String username = principal != null ? principal.getUsername() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Chưa đăng nhập"));
         }

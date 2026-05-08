@@ -5,11 +5,13 @@ import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.ProductService;
+import com.springboot.jenka_coffee.util.SqlUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,7 +50,7 @@ public class ApiProductController {
         
         // VULN-SQL-INJECTION FIX: Escape SQL wildcards trong keyword
         if (keyword != null && !keyword.isEmpty()) {
-            keyword = com.springboot.jenka_coffee.util.SqlUtils.sanitizeSearchInput(keyword, 100);
+            keyword = SqlUtils.sanitizeSearchInput(keyword, 100);
         }
 
         // VULN-DEEP-PAGINATION-DOS FIX: Giới hạn page number để tránh OFFSET DoS
@@ -65,16 +67,24 @@ public class ApiProductController {
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
 
-        org.springframework.data.domain.Sort sortOrder = switch (sort) {
-            case "price_asc"  -> org.springframework.data.domain.Sort.by("price").ascending();
-            case "price_desc" -> org.springframework.data.domain.Sort.by("price").descending();
-            case "name_asc"   -> org.springframework.data.domain.Sort.by("name").ascending();
-            default           -> org.springframework.data.domain.Sort.by("id").descending(); // newest
+        Sort sortOrder = switch (sort) {
+            case "price_asc"  -> Sort.by("price").ascending();
+            case "price_desc" -> Sort.by("price").descending();
+            case "name_asc"   -> Sort.by("name").ascending();
+            default           -> Sort.by("id").descending(); // newest
         };
 
         Pageable pageable = PageRequest.of(page, size, sortOrder);
         Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, minPrice, maxPrice,
                 keyword, pageable);
+
+        // BUG FIX: Add null check for productPage to prevent NPE
+        if (productPage == null) {
+            log.error("Service returned null productPage for filters: categoryId={}, minPrice={}, maxPrice={}, keyword={}", 
+                    categoryId, minPrice, maxPrice, keyword);
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Lỗi khi lấy danh sách sản phẩm"));
+        }
 
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("items", productPage.getContent());
