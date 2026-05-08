@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -331,7 +332,7 @@ public class ApiAuthController {
      */
     @PatchMapping("/update-phone")
     public ResponseEntity<ApiResponse<Void>> updatePhone(
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails principal,
+            @AuthenticationPrincipal UserDetails principal,
             @RequestBody Map<String, String> request) {
         
         String username = principal != null ? principal.getUsername() : null;
@@ -382,7 +383,7 @@ public class ApiAuthController {
     /** Lấy thông tin user hiện tại từ JWT (thay thế session /me) */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMe(
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails principal) {
+            @AuthenticationPrincipal UserDetails principal) {
         String username = principal != null ? principal.getUsername() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Chưa đăng nhập"));

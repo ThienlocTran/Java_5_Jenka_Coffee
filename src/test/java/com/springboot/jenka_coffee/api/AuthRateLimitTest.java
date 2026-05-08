@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @org.springframework.test.context.ActiveProfiles("test")
 @DisplayName("TC-SEC-AUTH-006: Brute Force Rate Limit Test")
-class AuthRateLimitTegst {
+class AuthRateLimitTest {
 
     @Autowired
     private MockMvc mockMvc;
