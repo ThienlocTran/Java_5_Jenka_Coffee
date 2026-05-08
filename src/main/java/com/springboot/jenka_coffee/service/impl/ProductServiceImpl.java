@@ -144,9 +144,11 @@ public class ProductServiceImpl implements ProductService {
     // - 5 images × 2 seconds each = 10 seconds with DB connection held
     // - 2-3 admins uploading simultaneously = connection pool exhausted
     // SOLUTION: Upload ALL images outside transaction, then save to DB in one transaction
+    // TC-PRD-CTRL-043B FIX: Propagate exceptions instead of swallowing them
     public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
         // STEP 1: Upload all images OUTSIDE transaction (no DB connection held)
         List<String> uploadedUrls = new ArrayList<>();
+        List<String> failedFiles = new ArrayList<>();
         
         for (MultipartFile file : imageFiles) {
             if (file != null && !file.isEmpty()) {
@@ -155,12 +157,22 @@ public class ProductServiceImpl implements ProductService {
                     if (imageUrl != null) {
                         uploadedUrls.add(imageUrl);
                         log.info("Successfully uploaded product image: {}", imageUrl);
+                    } else {
+                        failedFiles.add(file.getOriginalFilename());
+                        log.error("Upload service returned null for file: {}", file.getOriginalFilename());
                     }
                 } catch (Exception e) {
-                    log.error("Error uploading product image: {}", e.getMessage(), e);
-                    // Continue with other images even if one fails
+                    failedFiles.add(file.getOriginalFilename());
+                    log.error("Error uploading product image '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
+                    // TC-PRD-CTRL-043B FIX: Propagate exception instead of silent fail
+                    throw new RuntimeException("Storage service unavailable: " + e.getMessage(), e);
                 }
             }
+        }
+        
+        // Check if any uploads failed
+        if (!failedFiles.isEmpty()) {
+            throw new RuntimeException("Failed to upload images: " + String.join(", ", failedFiles));
         }
         
         // STEP 2: Save all image URLs to database in single transaction (fast)
@@ -269,13 +281,17 @@ public class ProductServiceImpl implements ProductService {
                         Thread.currentThread().interrupt();
                     }
                 } else {
+                    // TC-PRD-CTRL-039 FIX: Throw BusinessRuleException instead of RuntimeException
+                    // Controller catches BusinessRuleException → 400 Bad Request
+                    // RuntimeException falls through to catch(Exception) → 500 Internal Server Error
                     log.error("Failed to create product after {} attempts due to slug collision", maxAttempts);
-                    throw new RuntimeException("Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.", e);
+                    throw new BusinessRuleException("Sản phẩm với tên này đã tồn tại. Vui lòng chọn tên khác.");
                 }
             }
         }
         
-        throw new RuntimeException("Không thể tạo sản phẩm");
+        // TC-PRD-CTRL-039 FIX: This should never be reached, but if it does, throw BusinessRuleException
+        throw new BusinessRuleException("Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.");
     }
 
     @Override

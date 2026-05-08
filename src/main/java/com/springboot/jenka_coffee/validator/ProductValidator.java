@@ -89,6 +89,15 @@ public class ProductValidator {
             throw new BusinessRuleException("Chỉ được upload tối đa 10 ảnh");
         }
         
+        // TC-PRD-CTRL-044 FIX: Check for duplicate filenames in same request
+        java.util.Set<String> filenames = new java.util.HashSet<>();
+        for (MultipartFile file : files) {
+            String filename = file.getOriginalFilename();
+            if (filename != null && !filenames.add(filename)) {
+                throw new BusinessRuleException("File trùng lặp: " + filename + ". Vui lòng chọn các file khác nhau.");
+            }
+        }
+        
         for (MultipartFile file : files) {
             validateImageFile(file);
         }

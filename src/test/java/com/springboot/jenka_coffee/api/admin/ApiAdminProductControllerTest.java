@@ -272,9 +272,10 @@ class ApiAdminProductControllerTest {
     @DisplayName("TC-PRD-CTRL-009: Product - CREATE missing name field - Return 400 Bad Request")
     void TC_PRD_CTRL_009() throws Exception {
         // Arrange
-        doNothing().when(productValidator).validateImageFile(isNull());
+        // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+        doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
         doThrow(new BusinessRuleException("Tên sản phẩm không được để trống"))
-                .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), isNull());
+                .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), nullable(MultipartFile.class));
 
         // Act & Assert
         mockMvc.perform(multipart("/api/admin/products")
@@ -291,9 +292,10 @@ class ApiAdminProductControllerTest {
     @DisplayName("TC-PRD-CTRL-010: Product - CREATE name = empty string - Return 400 Bad Request")
     void TC_PRD_CTRL_010() throws Exception {
         // Arrange
-        doNothing().when(productValidator).validateImageFile(isNull());
+        // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+        doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
         doThrow(new BusinessRuleException("Tên sản phẩm không được để trống"))
-                .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), isNull());
+                .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), nullable(MultipartFile.class));
 
         // Act & Assert
         mockMvc.perform(multipart("/api/admin/products")
@@ -311,9 +313,10 @@ class ApiAdminProductControllerTest {
     @DisplayName("TC-PRD-CTRL-012: Product - CREATE price < 0 (negative price) - Return 400 Bad Request")
     void TC_PRD_CTRL_012() throws Exception {
     // Arrange
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new BusinessRuleException("Giá sản phẩm không thể âm"))
-            .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), isNull());
+            .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), nullable(MultipartFile.class));
 
     // Act & Assert
     mockMvc.perform(multipart("/api/admin/products")
@@ -332,9 +335,10 @@ class ApiAdminProductControllerTest {
 @DisplayName("TC-PRD-CTRL-014: Product - CREATE categoryId not exists - Return 400 Bad Request")
 void TC_PRD_CTRL_014() throws Exception {
     // Arrange
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new BusinessRuleException("Không tìm thấy danh mục với ID: INVALID"))
-            .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("INVALID"), isNull());
+            .when(productService).createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("INVALID"), nullable(MultipartFile.class));
 
     // Act & Assert
     mockMvc.perform(multipart("/api/admin/products")
@@ -405,8 +409,9 @@ void TC_PRD_CTRL_017() throws Exception {
     // Arrange
     Product savedProduct = createMockProduct(1, "Test Product", new BigDecimal("35000"));
 
-    doNothing().when(productValidator).validateImageFile(isNull());
-    when(productService.createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), isNull()))
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
+    when(productService.createProductFromRequest(any(com.springboot.jenka_coffee.dto.request.ProductRequest.class), eq("CF"), nullable(MultipartFile.class)))
             .thenReturn(savedProduct);
 
     // Act & Assert
@@ -428,9 +433,10 @@ void TC_PRD_CTRL_018() throws Exception {
     // Arrange
     Product updatedProduct = createMockProduct(1, "Updated Name", new BigDecimal("45000"));
 
-    doNothing().when(productValidator).validateImageFile(isNull());
-    when(productService.updateProductFromRequest(eq(1), eq("Updated Name"), isNull(),
-            eq(new BigDecimal("45000")), eq("CF"), eq(true), isNull()))
+    // FIX: Change isNull() to nullable(MultipartFile.class) and nullable(String.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
+    when(productService.updateProductFromRequest(eq(1), eq("Updated Name"), nullable(String.class),
+            eq(new BigDecimal("45000")), eq("CF"), eq(true), nullable(MultipartFile.class)))
             .thenReturn(updatedProduct);
 
     // Act & Assert
@@ -456,9 +462,10 @@ void TC_PRD_CTRL_018() throws Exception {
 @DisplayName("TC-PRD-CTRL-019: Product - UPDATE id not found - Return 404 Not Found")
 void TC_PRD_CTRL_019() throws Exception {
     // Arrange
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable() for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new ResourceNotFoundException("Product not found with id: 99999"))
-            .when(productService).updateProductFromRequest(eq(99999), anyString(), isNull(), any(BigDecimal.class), anyString(), any(Boolean.class), isNull());
+            .when(productService).updateProductFromRequest(eq(99999), anyString(), nullable(String.class), any(BigDecimal.class), anyString(), any(Boolean.class), nullable(MultipartFile.class));
 
     // Act & Assert
     mockMvc.perform(multipart("/api/admin/products/99999")
@@ -481,9 +488,10 @@ void TC_PRD_CTRL_019() throws Exception {
 @DisplayName("TC-PRD-CTRL-020: Product - UPDATE name = empty string - Return 400 Bad Request")
 void TC_PRD_CTRL_020() throws Exception {
     // Arrange
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable() for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new BusinessRuleException("Tên sản phẩm không được để trống"))
-            .when(productService).updateProductFromRequest(eq(1), eq(""), isNull(), any(BigDecimal.class), anyString(), any(Boolean.class), isNull());
+            .when(productService).updateProductFromRequest(eq(1), eq(""), nullable(String.class), any(BigDecimal.class), anyString(), any(Boolean.class), nullable(MultipartFile.class));
 
     // Act & Assert
     mockMvc.perform(multipart("/api/admin/products/1")
@@ -506,10 +514,11 @@ void TC_PRD_CTRL_020() throws Exception {
 @DisplayName("TC-PRD-CTRL-021: Product - UPDATE price < 0 - Return 400 Bad Request")
 void TC_PRD_CTRL_021() throws Exception {
     // Arrange
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable() for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new BusinessRuleException("Giá sản phẩm không thể âm"))
-            .when(productService).updateProductFromRequest(eq(1), anyString(), isNull(),
-                    eq(new BigDecimal("-500")), anyString(), any(Boolean.class), isNull());
+            .when(productService).updateProductFromRequest(eq(1), anyString(), nullable(String.class),
+                    eq(new BigDecimal("-500")), anyString(), any(Boolean.class), nullable(MultipartFile.class));
 
     // Act & Assert
     mockMvc.perform(multipart("/api/admin/products/1")
@@ -864,10 +873,11 @@ void TC_PRD_CTRL_011() throws Exception {
     String longName = "A".repeat(300);
 
     Product savedProduct = createMockProduct(1, longName, new java.math.BigDecimal("35000"));
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     when(productService.createProductFromRequest(
             any(com.springboot.jenka_coffee.dto.request.ProductRequest.class),
-            eq("CF"), isNull()))
+            eq("CF"), nullable(MultipartFile.class)))
             .thenReturn(savedProduct);
 
     mockMvc.perform(multipart("/api/admin/products")
@@ -889,10 +899,11 @@ void TC_PRD_CTRL_013() throws Exception {
     // price == 0 passes the check (compareTo(ZERO) == 0, NOT < 0)
     // Expected: 200 OK (zero price is allowed by current business rule)
     Product savedProduct = createMockProduct(1, "Free Item", java.math.BigDecimal.ZERO);
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     when(productService.createProductFromRequest(
             any(com.springboot.jenka_coffee.dto.request.ProductRequest.class),
-            eq("CF"), isNull()))
+            eq("CF"), nullable(MultipartFile.class)))
             .thenReturn(savedProduct);
 
     mockMvc.perform(multipart("/api/admin/products")
@@ -968,13 +979,14 @@ void TC_PRD_CTRL_039() throws Exception {
     // DataIntegrityViolationException (duplicate slug) is NOT caught as BusinessRuleException
     // After 3 retries, it wraps in RuntimeException → caught by generic catch → 500
     // This test documents the GAP: should return 400, actually returns 500
-    doNothing().when(productValidator).validateImageFile(isNull());
+    // FIX: Change isNull() to nullable(MultipartFile.class) for proper Mockito matching
+    doNothing().when(productValidator).validateImageFile(nullable(MultipartFile.class));
     doThrow(new RuntimeException(
             "Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.",
             new org.springframework.dao.DataIntegrityViolationException("Duplicate entry")))
             .when(productService).createProductFromRequest(
                     any(com.springboot.jenka_coffee.dto.request.ProductRequest.class),
-                    anyString(), isNull());
+                    anyString(), nullable(MultipartFile.class));
 
     mockMvc.perform(multipart("/api/admin/products")
                     .param("name", "ExistingProduct")

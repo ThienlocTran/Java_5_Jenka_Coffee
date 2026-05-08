@@ -56,6 +56,13 @@ class ApiAdminProductAddendumTest {
 
     @MockBean
     private UploadService uploadService; // Mock external storage for failure tests
+    
+    // FIX: Inject OrderDetailRepository for proper FK cleanup
+    @Autowired
+    private com.springboot.jenka_coffee.repository.OrderDetailRepository orderDetailRepository;
+    
+    @Autowired
+    private com.springboot.jenka_coffee.repository.OrderRepository orderRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -65,6 +72,10 @@ class ApiAdminProductAddendumTest {
 
     @BeforeEach
     void setUp() {
+        // FIX TC-PRD-SER-012/013: Delete in correct FK order to avoid constraint violations
+        // Order: OrderDetail → Order → Product → Category
+        orderDetailRepository.deleteAll();
+        orderRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
 
