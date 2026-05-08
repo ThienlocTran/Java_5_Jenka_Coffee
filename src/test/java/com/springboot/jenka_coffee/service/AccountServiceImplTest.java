@@ -301,7 +301,8 @@ class AccountServiceImplTest {
     // Expected result: Return invalid credentials AuthResult (timing attack prevention)
     void testAuthenticateUserNotFound() {
         // Arrange
-        String dummyHash = "$2a$12$dummyHashForTimingAttackPrevention";
+        // MUST match exact constant in AccountServiceImpl.authenticateWithResult() line 116
+        String dummyHash = "$2a$12$dummyHashToPreventTimingAttack1234567890123456789012";
         when(accountRepository.findByUsernameOrEmailOrPhone("ghost_user")).thenReturn(Optional.empty());
         when(passwordSecurity.verifyPassword("password123", dummyHash)).thenReturn(false);
 
@@ -349,7 +350,7 @@ class AccountServiceImplTest {
         });
 
         assertEquals("Không thể xóa admin cuối cùng trong hệ thống!", exception.getMessage());
-        verify(accountRepository).findById("testuser");
+        verify(accountRepository, times(2)).findById("testuser");  // Called by findByIdOrThrow + canDeleteAccount
         verify(accountRepository).countByAdminTrue();
         verify(accountRepository, never()).deleteById(anyString());
     }
@@ -366,7 +367,7 @@ class AccountServiceImplTest {
         accountService.deleteOrThrow("testuser");
 
         // Assert
-        verify(accountRepository).findById("testuser");
+        verify(accountRepository, times(2)).findById("testuser");  // Called by findByIdOrThrow + canDeleteAccount
         verify(accountRepository).deleteById("testuser");
     }
 

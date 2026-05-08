@@ -145,7 +145,7 @@ class BannerSetServiceImplTest {
         // Arrange
         when(setRepo.findById(1L)).thenReturn(Optional.of(testBannerSet));
         when(setRepo.save(any(BannerSet.class))).thenReturn(testBannerSet);
-        doNothing().when(setRepo).deactivateAll();
+        when(setRepo.deactivateAll()).thenReturn(1);  // deactivateAll returns int, not void
 
         // Act
         BannerSet result = bannerSetService.activate(1L);

@@ -110,9 +110,9 @@ class DashboardReportIntegrationTest {
         mockMvc.perform(get("/api/admin/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.topProducts", hasSize(3)))
-                .andExpect(jsonPath("$.data.topProducts[0].quantitySold").value(100))
-                .andExpect(jsonPath("$.data.topProducts[1].quantitySold").value(100))
-                .andExpect(jsonPath("$.data.topProducts[2].quantitySold").value(100));
+                .andExpect(jsonPath("$.data.topProducts[0].totalSold").value(100))
+                .andExpect(jsonPath("$.data.topProducts[1].totalSold").value(100))
+                .andExpect(jsonPath("$.data.topProducts[2].totalSold").value(100));
         
         // Verify: Tie-breaking logic (should use secondary sort: productId or name)
         // Current: Undefined order for ties (DB-dependent)

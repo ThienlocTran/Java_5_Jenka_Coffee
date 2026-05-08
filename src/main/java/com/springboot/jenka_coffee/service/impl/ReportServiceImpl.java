@@ -96,7 +96,7 @@ public class ReportServiceImpl implements ReportService {
                 PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createDate")));
         List<Long> ids = page.getContent().stream().map(Order::getId).collect(Collectors.toList());
         if (ids.isEmpty()) return List.of();
-        List<Order> orders = orderRepository.findAllWithAccountByIds(ids);
+        List<Order> orders = new java.util.ArrayList<>(orderRepository.findAllWithAccountByIds(ids));
         orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
         return orders;
     }

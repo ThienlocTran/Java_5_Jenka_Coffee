@@ -493,6 +493,11 @@ public class ProductServiceImpl implements ProductService {
                                             String categoryId, MultipartFile imageFile) {
         log.info("Creating product from request: {}", request.getName());
         
+        // Validate name
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new BusinessRuleException("Tên sản phẩm không được để trống");
+        }
+        
         // Validate price
         if (request.getPrice() == null) {
             throw new BusinessRuleException("Giá sản phẩm không được để trống");

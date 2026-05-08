@@ -72,7 +72,7 @@ class StoreFeedbackServiceImplTest {
         // Arrange
         StoreFeedback hanoiFeedback = new StoreFeedback();
         hanoiFeedback.setId(1L);
-        hanoiFeedback.setBranch("HN");
+        hanoiFeedback.setBranch("HANOI");  // Service converts "Hanoi" → "HANOI" via toUpperCase()
         hanoiFeedback.setFullname("John");
         hanoiFeedback.setStoreRating(5);
         hanoiFeedback.setStaffRating(5);
@@ -80,7 +80,7 @@ class StoreFeedbackServiceImplTest {
         List<StoreFeedback> feedbacks = List.of(hanoiFeedback);
         Page<StoreFeedback> page = new PageImpl<>(feedbacks, PageRequest.of(0, 20), 1);
         
-        when(feedbackRepository.findByBranchOrderByCreatedAtDesc(eq("HN"), any(Pageable.class)))
+        when(feedbackRepository.findByBranchOrderByCreatedAtDesc(eq("HANOI"), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -89,8 +89,8 @@ class StoreFeedbackServiceImplTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        assertEquals("HN", result.getContent().get(0).getBranch());
-        verify(feedbackRepository).findByBranchOrderByCreatedAtDesc(eq("HN"), any(Pageable.class));
+        assertEquals("HANOI", result.getContent().get(0).getBranch());
+        verify(feedbackRepository).findByBranchOrderByCreatedAtDesc(eq("HANOI"), any(Pageable.class));
     }
 
     @Test

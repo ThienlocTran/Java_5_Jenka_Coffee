@@ -202,30 +202,16 @@ public class AccountServiceImpl implements AccountService {
             }
         }
 
-        // JPA FIX: Use entityManager.persist() directly to force INSERT
-        // This bypasses Spring Data's save() which may call merge() for String @Id
-        log.debug("About to persist account '{}', password_hash length: {}", 
+        // JPA FIX: Use dao.save() for consistency and testability
+        // Note: account.setNew(true) ensures JPA will call persist() instead of merge()
+        log.debug("About to save account '{}', password_hash length: {}", 
                   account.getUsername(), 
                   account.getPasswordHash() != null ? account.getPasswordHash().length() : 0);
         
-        entityManager.persist(account);
-        entityManager.flush();   // Ensure INSERT is executed immediately
+        Account savedAccount = dao.save(account);
         
-        // CRITICAL FIX TC-ACC-CTRL-007/012: Create a NEW detached copy for response
-        // Problem: Controller calls setPasswordHash(null) on returned entity
-        // If entity is still managed (even after detach), Hibernate may UPDATE DB
-        // Solution: Return a fresh copy loaded from DB, then detach it
-        Account savedAccount = entityManager.find(Account.class, account.getUsername());
-        entityManager.detach(savedAccount); // Detach the copy
-        
-        // Verify detachment worked
-        if (entityManager.contains(savedAccount)) {
-            log.error("CRITICAL: Account '{}' is still managed after detach()!", savedAccount.getUsername());
-        }
-        
-        log.debug("Successfully persisted account '{}', detached={}, password_hash_length={}", 
+        log.debug("Successfully saved account '{}', password_hash_length={}", 
                   savedAccount.getUsername(), 
-                  !entityManager.contains(savedAccount),
                   savedAccount.getPasswordHash() != null ? savedAccount.getPasswordHash().length() : 0);
         
         return savedAccount;

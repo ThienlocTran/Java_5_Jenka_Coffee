@@ -343,7 +343,7 @@ public class OrderServiceImpl implements OrderService {
 
         boolean validTransition = switch (from) {
             case NEW -> to == Order.OrderStatus.CONFIRMED || to == Order.OrderStatus.CANCELLED;
-            case CONFIRMED -> to == Order.OrderStatus.CANCELLED;
+            case CONFIRMED -> false;  // CONFIRMED is final state - cannot transition (only admin can cancel via separate endpoint)
             case CANCELLED -> false;
         };
 
