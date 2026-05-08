@@ -50,13 +50,27 @@ public class ProductValidator {
         if (file == null || file.isEmpty()) {
             return; // Optional file
         }
-        
+
+        // TC-SEC-002 FIX: Validate filename for path traversal attack prevention
+        // Attacker can send filename "../../etc/passwd.jpg" to traverse directories
+        String filename = file.getOriginalFilename();
+        if (filename != null) {
+            // Check for path traversal sequences
+            if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+                throw new BusinessRuleException("Tên file không hợp lệ: chứa ký tự nguy hiểm (path traversal)");
+            }
+            // Additional: only allow safe characters in filename
+            if (!filename.matches("^[a-zA-Z0-9._\\-\\s]+$")) {
+                throw new BusinessRuleException("Tên file không hợp lệ: chỉ chấp nhận chữ cái, số, dấu chấm, gạch ngang");
+            }
+        }
+
         // Check file size
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new BusinessRuleException("Kích thước file không được vượt quá 5MB");
         }
-        
-        // Check file type
+
+        // Check file type (MIME type from request header)
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             throw new BusinessRuleException("Chỉ chấp nhận file ảnh định dạng: JPG, PNG, WEBP");

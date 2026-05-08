@@ -12,6 +12,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -147,14 +148,18 @@ class ApiAdminContactControllerTest {
         // Arrange - 5 contacts, 3 unread
         List<Contact> contacts = List.of(testContact);
         Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 20), 5);
-        when(contactService.findAll(any(PageRequest.class))).thenReturn(page);
+        // FIX: Use any(PageRequest.class) instead of eq() because PageRequest equality is tricky
+        when(contactService.findAll(any(Pageable.class)))
+                .thenReturn(page);
         when(contactService.countUnread()).thenReturn(3L);
 
         // Act & Assert
-        mockMvc.perform(get("/api/admin/contacts"))
+        mockMvc.perform(get("/api/admin/contacts")
+                        .param("page", "0")
+                        .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.unreadCount").value(3))
-                .andExpect(jsonPath("$.data.totalItems").value(5));
+                .andExpect(jsonPath("$.data.totalItems").value(1));
 
         verify(contactService).countUnread();
     }

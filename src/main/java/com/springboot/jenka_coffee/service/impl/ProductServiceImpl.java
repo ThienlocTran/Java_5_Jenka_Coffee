@@ -505,7 +505,11 @@ public class ProductServiceImpl implements ProductService {
                     log.info("Successfully uploaded product image: {}", imageUrl);
                 }
             } catch (Exception e) {
-                log.error("Error uploading product image: {}", e.getMessage(), e);
+                // TC-DATA-001 FIX: Re-throw exception to trigger @Transactional rollback.
+                // Previously: exception was caught and swallowed → product saved without image → 200 returned.
+                // Now: RuntimeException propagates → @Transactional rolls back product INSERT → 500 returned.
+                log.error("Image upload failed for product '{}': {}", request.getName(), e.getMessage(), e);
+                throw new RuntimeException("Không thể tạo sản phẩm: lỗi upload ảnh - " + e.getMessage(), e);
             }
         }
         

@@ -211,20 +211,24 @@ public class AccountServiceImpl implements AccountService {
         entityManager.persist(account);
         entityManager.flush();   // Ensure INSERT is executed immediately
         
-        // CRITICAL: Create a detached copy for the response to prevent controller's
-        // setPasswordHash(null) from triggering UPDATE on the managed entity
-        String savedPasswordHash = account.getPasswordHash();
-        entityManager.detach(account); // Detach from persistence context
+        // CRITICAL FIX TC-ACC-CTRL-007/012: Create a NEW detached copy for response
+        // Problem: Controller calls setPasswordHash(null) on returned entity
+        // If entity is still managed (even after detach), Hibernate may UPDATE DB
+        // Solution: Return a fresh copy loaded from DB, then detach it
+        Account savedAccount = entityManager.find(Account.class, account.getUsername());
+        entityManager.detach(savedAccount); // Detach the copy
         
         // Verify detachment worked
-        if (entityManager.contains(account)) {
-            log.error("CRITICAL: Account '{}' is still managed after detach()!", account.getUsername());
+        if (entityManager.contains(savedAccount)) {
+            log.error("CRITICAL: Account '{}' is still managed after detach()!", savedAccount.getUsername());
         }
         
-        log.debug("Successfully persisted account '{}', detached={}", 
-                  account.getUsername(), !entityManager.contains(account));
+        log.debug("Successfully persisted account '{}', detached={}, password_hash_length={}", 
+                  savedAccount.getUsername(), 
+                  !entityManager.contains(savedAccount),
+                  savedAccount.getPasswordHash() != null ? savedAccount.getPasswordHash().length() : 0);
         
-        return account;
+        return savedAccount;
     }
 
     @Override

@@ -61,7 +61,9 @@ class ApiAdminOrderControllerTest {
         testAccount.setPasswordHash("password");
         testAccount.setFullname("Test User");
         testAccount.setEmail("testuser@example.com");
-        testAccount.setPhone("0123456789");
+        // FIX: Use unique phone number to avoid duplicate key constraint violation
+        // Other test classes use 0123456789, so use different number here
+        testAccount.setPhone("0911111111");  // Changed from 0123456789
         testAccount.setAdmin(true);
         testAccount.setActivated(true);
         accountRepository.save(testAccount);
@@ -70,7 +72,8 @@ class ApiAdminOrderControllerTest {
         testOrder = new Order();
         testOrder.setAccount(testAccount);
         testOrder.setAddress("123 Test St, Ward, District, Province");
-        testOrder.setPhone("0123456789");
+        // FIX: Use same phone as testAccount to maintain consistency
+        testOrder.setPhone("0911111111");  // Changed from 0123456789
         testOrder.setStatus(0); // NEW
         testOrder.setTotalAmount(new BigDecimal("500000"));
         testOrder.setCreateDate(LocalDateTime.now());

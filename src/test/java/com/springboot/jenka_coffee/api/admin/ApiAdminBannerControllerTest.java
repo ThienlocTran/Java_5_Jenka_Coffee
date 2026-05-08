@@ -138,7 +138,8 @@ class ApiAdminBannerControllerTest {
         MockMultipartFile image = new MockMultipartFile(
                 "images", "banner.jpg", "image/jpeg", "image".getBytes());
         
-        when(bannerSetService.create(anyString(), anyString(), anyList(), anyList(), anyList()))
+        // FIX: Use nullable(List.class) for subtitles since it's not sent in request
+        when(bannerSetService.create(anyString(), anyString(), anyList(), anyList(), nullable(List.class)))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -151,7 +152,8 @@ class ApiAdminBannerControllerTest {
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1));
 
-        verify(bannerSetService).create(anyString(), anyString(), anyList(), anyList(), anyList());
+        // FIX: Use nullable(List.class) for subtitles in verify
+        verify(bannerSetService).create(anyString(), anyString(), anyList(), anyList(), nullable(List.class));
     }
 
     @Test
@@ -207,7 +209,7 @@ class ApiAdminBannerControllerTest {
     @WithMockUser(roles = "ADMIN")
     void test_create_xssInName_sanitizedAndSaved() throws Exception {
         // Arrange
-        when(bannerSetService.create(anyString(), anyString(), anyList(), anyList(), anyList()))
+        when(bannerSetService.create(anyString(), anyString(), nullable(List.class), nullable(List.class), nullable(List.class)))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -221,7 +223,7 @@ class ApiAdminBannerControllerTest {
         // Regex <[^>]*> strips HTML tags but keeps text content inside tags
         // Input: <script>alert(1)</script>Banner
         // Output: alert(1)Banner (not just "Banner")
-        verify(bannerSetService).create(eq("alert(1)Banner"), anyString(), anyList(), anyList(), anyList());
+        verify(bannerSetService).create(eq("alert(1)Banner"), anyString(), nullable(List.class), nullable(List.class), nullable(List.class));
     }
 
     @Test
@@ -233,10 +235,11 @@ class ApiAdminBannerControllerTest {
                 .thenReturn(testBannerSet);
 
         // Act & Assert
+        // FIX: Changed from isOk() to isCreated() to match controller behavior (201)
         mockMvc.perform(multipart("/api/admin/banners")
                         .param("name", "Empty Banner")
                         .param("effect", "fade"))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())  // FIX: 201 not 200
                 .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(bannerSetService).create(anyString(), anyString(), isNull(), isNull(), isNull());

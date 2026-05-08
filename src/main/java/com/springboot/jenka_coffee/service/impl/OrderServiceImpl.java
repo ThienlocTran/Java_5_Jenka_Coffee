@@ -327,7 +327,9 @@ public class OrderServiceImpl implements OrderService {
         // Lock Order to prevent race condition
         Order order = entityManager.find(Order.class, orderId, LockModeType.PESSIMISTIC_WRITE);
         if (order == null) {
-            throw new RuntimeException("Không tìm thấy đơn hàng!");
+            // BUG FIX TC-ORD-CTRL-012/016: throw ResourceNotFoundException → controller catches → 404
+            // Previously threw RuntimeException → fell into catch(Exception) → 500
+            throw new ResourceNotFoundException("Không tìm thấy đơn hàng #" + orderId);
         }
 
         Order.OrderStatus from = Order.OrderStatus.fromValue(order.getStatus());

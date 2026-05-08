@@ -58,7 +58,9 @@ public class ApiAdminOrderController {
             Page<Order> orderPage = orderService.findAll(pageable);
 
             List<Long> ids = orderPage.getContent().stream().map(Order::getId).collect(Collectors.toList());
-            List<Order> orders = orderService.findAllWithAccountByIds(ids);
+            // TC-ORD-CTRL-005 FIX: Wrap in ArrayList before sort() to avoid UnsupportedOperationException
+            // findAllWithAccountByIds([]) returns List.of() (immutable) when ids is empty
+            List<Order> orders = new java.util.ArrayList<>(orderService.findAllWithAccountByIds(ids));
             orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
 
             Map<String, Object> data = new HashMap<>();
@@ -86,6 +88,9 @@ public class ApiAdminOrderController {
         try {
             orderService.updateStatus(id, status);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        } catch (ResourceNotFoundException e) {
+            // TC-ORD-CTRL-012 FIX: Order not found → 404
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
@@ -102,6 +107,11 @@ public class ApiAdminOrderController {
         try {
             orderService.updateStatus(id, Order.OrderStatus.CANCELLED.getValue());
             return ResponseEntity.ok(ApiResponse.success("Đã hủy đơn hàng", null));
+        } catch (ResourceNotFoundException e) {
+            // TC-ORD-CTRL-016 FIX: Per CSV spec, return 400 (not 404) for cancel endpoint
+            // Note: This differs from updateStatus endpoint which returns 404
+            // Rationale: Cancel is a business operation, not-found is treated as bad request
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
