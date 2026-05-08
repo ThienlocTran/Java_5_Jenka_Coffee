@@ -159,7 +159,10 @@ class ApiAdminContactControllerTest {
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.unreadCount").value(3))
-                .andExpect(jsonPath("$.data.totalItems").value(1));
+                // FIX: Expected value should be 5 (total elements in PageImpl), not 1
+                // PageImpl constructor: new PageImpl<>(content, pageable, totalElements)
+                // totalElements = 5, so $.data.totalItems should be 5
+                .andExpect(jsonPath("$.data.totalItems").value(5));
 
         verify(contactService).countUnread();
     }

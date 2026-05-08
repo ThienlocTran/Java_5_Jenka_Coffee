@@ -76,6 +76,13 @@
             <version>20220608.1</version>
         </dependency>
 
+        <!-- Apache Tika — detect real file type by magic bytes (TC-PRD-CTRL-046 security fix) -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>2.9.2</version>
+        </dependency>
+
         <!-- Rate limiting — chống brute force và DoS trên auth endpoints -->
         <dependency>
             <groupId>com.bucket4j</groupId>

@@ -1,9 +1,11 @@
 package com.springboot.jenka_coffee.validator;
 
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -18,6 +20,10 @@ public class ProductValidator {
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
         "image/jpeg", "image/jpg", "image/png", "image/webp"
     );
+    
+    // TC-PRD-CTRL-046 FIX: Apache Tika for magic byte detection
+    // Prevents fake image RCE attack where attacker sends PE binary with MIME type "image/jpeg"
+    private static final Tika tika = new Tika();
     
     /**
      * Validate product price
@@ -45,6 +51,7 @@ public class ProductValidator {
     
     /**
      * Validate image file
+     * TC-PRD-CTRL-046 FIX: Added Apache Tika magic byte detection to prevent fake image RCE
      */
     public void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -74,6 +81,29 @@ public class ProductValidator {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
             throw new BusinessRuleException("Chỉ chấp nhận file ảnh định dạng: JPG, PNG, WEBP");
+        }
+
+        // TC-PRD-CTRL-046 FIX: Validate actual file content using Apache Tika magic bytes
+        // CRITICAL SECURITY: Client-controlled MIME type can be spoofed
+        // Example attack: PE binary with Content-Type: image/jpeg
+        // Tika reads first bytes of file to detect real type (magic bytes)
+        try {
+            String detectedType = tika.detect(file.getInputStream());
+            
+            // Normalize detected type (Tika may return "image/jpg" instead of "image/jpeg")
+            String normalizedType = detectedType.toLowerCase();
+            if (normalizedType.equals("image/jpg")) {
+                normalizedType = "image/jpeg";
+            }
+            
+            if (!ALLOWED_IMAGE_TYPES.contains(normalizedType)) {
+                throw new BusinessRuleException(
+                    "File không phải ảnh hợp lệ. Phát hiện loại file: " + detectedType + 
+                    ". Chỉ chấp nhận: JPG, PNG, WEBP"
+                );
+            }
+        } catch (IOException e) {
+            throw new BusinessRuleException("Không thể đọc file để kiểm tra. Vui lòng thử lại.");
         }
     }
     

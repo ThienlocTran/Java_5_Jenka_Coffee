@@ -26,6 +26,20 @@ public class ApiAdminContactController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        // Pagination validation - prevent negative page, zero/negative size, and DoS attacks
+        if (page < 0) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Số trang không được âm"));
+        }
+        if (size <= 0) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Kích thước trang phải lớn hơn 0"));
+        }
+        if (size > 100) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Kích thước trang không được vượt quá 100"));
+        }
+
         Page<Contact> contactPage = contactService.findAll(PageRequest.of(page, size));
 
         Map<String, Object> data = new HashMap<>();
