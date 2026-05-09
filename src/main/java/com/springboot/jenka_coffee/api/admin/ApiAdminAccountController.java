@@ -10,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -93,8 +95,7 @@ public class ApiAdminAccountController {
     @DeleteMapping("/{username}")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
             @PathVariable String username,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal 
-            org.springframework.security.core.userdetails.UserDetails currentUser) {
+            @AuthenticationPrincipal UserDetails currentUser) {
         
         String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
         
@@ -147,8 +148,7 @@ public class ApiAdminAccountController {
     public ResponseEntity<ApiResponse<Void>> adminResetPassword(
             @PathVariable String username,
             @RequestBody Map<String, String> body,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal 
-            org.springframework.security.core.userdetails.UserDetails currentUser) {
+            @AuthenticationPrincipal UserDetails currentUser) {
         
         String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
         

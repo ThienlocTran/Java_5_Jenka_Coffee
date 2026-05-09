@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.exception;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.SneakyThrows;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +10,14 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
@@ -79,12 +87,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(friendly));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, org.springframework.validation.BindException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<ApiResponse<Void>> handleValidationErrors(Exception ex) {
-        org.springframework.validation.BindingResult bindingResult = null;
+        BindingResult bindingResult = null;
         if (ex instanceof MethodArgumentNotValidException e) {
             bindingResult = e.getBindingResult();
-        } else if (ex instanceof org.springframework.validation.BindException e) {
+        } else if (ex instanceof BindException e) {
             bindingResult = e.getBindingResult();
         }
         String message = bindingResult != null
@@ -136,9 +144,9 @@ public class GlobalExceptionHandler {
      * Handle Spring Security AccessDeniedException (403 Forbidden)
      * Thrown when authenticated user lacks required role/permission
      */
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
-            org.springframework.security.access.AccessDeniedException ex,
+            AccessDeniedException ex,
             HttpServletRequest request) {
         logger.warn("Access denied at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -149,9 +157,9 @@ public class GlobalExceptionHandler {
      * Handle Spring Security AuthenticationException (401 Unauthorized)
      * Thrown when user is not authenticated (missing/invalid token)
      */
-    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationError(
-            org.springframework.security.core.AuthenticationException ex,
+            AuthenticationException ex,
             HttpServletRequest request) {
         logger.warn("Authentication failed at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -162,9 +170,9 @@ public class GlobalExceptionHandler {
      * Handle missing required headers (400 Bad Request)
      * Thrown when required header (e.g., Authorization) is missing
      */
-    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    @ExceptionHandler(MissingRequestHeaderException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingHeader(
-            org.springframework.web.bind.MissingRequestHeaderException ex,
+            MissingRequestHeaderException ex,
             HttpServletRequest request) {
         logger.warn("Missing required header at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -180,9 +188,9 @@ public class GlobalExceptionHandler {
      * Thrown when required @RequestParam is missing from request
      * Example: POST /api/admin/products without categoryId parameter
      */
-    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingParam(
-            org.springframework.web.bind.MissingServletRequestParameterException ex,
+            MissingServletRequestParameterException ex,
             HttpServletRequest request) {
         logger.warn("Missing required parameter at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -194,9 +202,9 @@ public class GlobalExceptionHandler {
      * Thrown when request Content-Type doesn't match expected type
      * Example: PUT /api/admin/products with Content-Type: application/json instead of multipart/form-data
      */
-    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnsupportedMediaType(
-            org.springframework.web.HttpMediaTypeNotSupportedException ex,
+            HttpMediaTypeNotSupportedException ex,
             HttpServletRequest request) {
         logger.warn("Unsupported media type at {}: {}", request.getRequestURI(), ex.getMessage());
         String supportedTypes = ex.getSupportedMediaTypes().stream()
@@ -211,14 +219,19 @@ public class GlobalExceptionHandler {
     // CATCH-ALL EXCEPTION HANDLER (MUST BE LAST)
     // ================================================================
     
+    @SneakyThrows
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalError(Exception ex, HttpServletRequest request) {
         // Ignore client abort exceptions (user closed browser/tab before response completed)
-        if (ex instanceof ClientAbortException ||
-            ex instanceof AsyncRequestNotUsableException ||
+        // FIX: return null causes NPE in Spring MVC dispatcher. Re-throw so Tomcat handles it silently.
+        if (ex instanceof ClientAbortException clientAbort) {
+            logger.debug("Client aborted connection: {}", clientAbort.getMessage());
+            throw clientAbort; // Let Tomcat handle silently — no response needed
+        }
+        if (ex instanceof AsyncRequestNotUsableException ||
             (ex.getCause() != null && ex.getCause() instanceof ClosedChannelException)) {
-            // Silent ignore - this is normal when user navigates away
-            return null;
+            logger.debug("Async/channel closed (client disconnected): {}", ex.getMessage());
+            return ResponseEntity.ok().build(); // Empty 200 — connection already gone, body irrelevant
         }
         
         // Ignore favicon noise

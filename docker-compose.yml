@@ -1,18 +1,29 @@
 version: '3.8'
 
-services:
-  sql-server:
-    container_name: jenka-sql-server
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    ports:
-      - "1433:1433"
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=123456  # Mật khẩu chung cho cả team
-    volumes:
-      - ./sql-data:/var/opt/mssql # Đây là cái "thùng" chứa dữ liệu
-    restart: always
+# Docker Compose cho LOCAL DEVELOPMENT
+# Production: Dùng PostgreSQL trên Vietnix VPS (không cần Docker)
 
-# Giải thích:
-# - ./sql-data: Nó sẽ tự tạo 1 thư mục sql-data ngay tại chỗ ông chạy lệnh để lưu file DB.
-# - restart: always: Tự bật lại DB nếu lỡ máy tính bị reset.
+services:
+  postgres:
+    container_name: jenka-postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=jenka_coffee
+      - POSTGRES_USER=jenka_user
+      - POSTGRES_PASSWORD=jenka_dev_123  # Chỉ dùng local dev
+    volumes:
+      - ./pg-data:/var/lib/postgresql/data        # Lưu data khi tắt container
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Auto init schema
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jenka_user -d jenka_coffee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Để dùng với Spring Boot local:
+# spring.datasource.url=jdbc:postgresql://localhost:5432/jenka_coffee
+# spring.datasource.username=jenka_user
+# spring.datasource.password=jenka_dev_123

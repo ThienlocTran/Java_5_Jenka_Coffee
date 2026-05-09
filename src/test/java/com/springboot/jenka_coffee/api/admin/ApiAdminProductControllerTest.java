@@ -17,6 +17,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -925,10 +926,9 @@ void TC_PRD_CTRL_031() throws Exception {
     // Source: if (keyword != null && !keyword.isBlank()) → searchProductsPaginated
     // keyword="" → isBlank() == true → falls to findAllPaginated
     List<Product> products = List.of(createMockProduct(1, "Any Product", new java.math.BigDecimal("35000")));
-    org.springframework.data.domain.Page<Product> page =
-            new org.springframework.data.domain.PageImpl<>(products);
+    Page<Product> page = new PageImpl<>(products);
 
-    when(productService.findAllPaginated(any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+    when(productService.findAllPaginated(any(Pageable.class))).thenReturn(page);
 
     mockMvc.perform(get("/api/admin/products/inventory")
                     .param("keyword", "")
@@ -939,7 +939,7 @@ void TC_PRD_CTRL_031() throws Exception {
             .andExpect(jsonPath("$.data.items").isArray());
 
     // CRITICAL: verify findAll was called, NOT search — proves keyword="" triggers no-filter path
-    verify(productService).findAllPaginated(any(org.springframework.data.domain.Pageable.class));
+    verify(productService).findAllPaginated(any(Pageable.class));
     verify(productService, never()).searchProductsPaginated(anyString(), any());
 }
 
@@ -1023,9 +1023,8 @@ void TC_PRD_CTRL_041() throws Exception {
     // Sending JSON Content-Type → Spring rejects with 415
     String jsonBody = "{\"name\":\"Test\",\"price\":35000,\"categoryId\":\"CF\",\"available\":true}";
 
-    mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .put("/api/admin/products/1")
-                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+    mockMvc.perform(put("/api/admin/products/1")
+                    .contentType(MediaType.APPLICATION_JSON)
                     .content(jsonBody))
             .andExpect(status().isUnsupportedMediaType()); // 415
 

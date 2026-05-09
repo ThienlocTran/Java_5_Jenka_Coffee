@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.BannerSet;
 import com.springboot.jenka_coffee.service.BannerSetService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -49,7 +50,7 @@ public class ApiAdminBannerController {
 
         BannerSet saved = bannerSetService.create(safeName, effect, images, titles, subtitles);
         // FIX: Return 201 Created for resource creation (REST standard)
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tạo bộ banner thành công", saved));
     }
 

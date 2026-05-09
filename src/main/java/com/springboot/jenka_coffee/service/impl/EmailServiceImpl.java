@@ -147,7 +147,11 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
 
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email đơn hàng");
+            // IMPORTANT: @Async method — MUST log here, cannot re-throw to caller!
+            // RuntimeException thrown in @Async thread pool is silently discarded.
+            org.slf4j.LoggerFactory.getLogger(EmailServiceImpl.class)
+                    .error("[EMAIL FAIL] sendNewOrderNotification | to={} | orderId={} | cause={}",
+                            adminEmail, orderId, e.getMessage(), e);
         }
     }
 

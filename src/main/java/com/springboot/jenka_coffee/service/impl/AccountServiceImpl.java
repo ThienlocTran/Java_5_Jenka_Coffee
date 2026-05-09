@@ -15,6 +15,8 @@ import com.springboot.jenka_coffee.util.PasswordSecurity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -71,7 +73,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @org.springframework.cache.annotation.CacheEvict(value = "accountSecurity", key = "#account.username")
+    @CacheEvict(value = "accountSecurity", key = "#account.username")
     public Account save(Account account) {
         // If account is marked as new, use persist() to ensure INSERT
         if (account.isNew()) {
@@ -310,7 +312,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @org.springframework.cache.annotation.CacheEvict(value = "accountSecurity", key = "#username")
+    @CacheEvict(value = "accountSecurity", key = "#username")
     public Account toggleActivation(String username) {
         Account account = findByIdOrThrow(username);
         account.setActivated(!account.getActivated());
@@ -446,7 +448,7 @@ public class AccountServiceImpl implements AccountService {
     // - Cache invalidated on admin status change, password reset, account lock
     // - Acceptable staleness: max 5 minutes for privilege revocation
     @Override
-    @org.springframework.cache.annotation.Cacheable(
+    @Cacheable(
         value = "accountSecurity", 
         key = "#username",
         unless = "#result == null || !#result.exists()"
@@ -509,7 +511,10 @@ public class AccountServiceImpl implements AccountService {
                 emailService.sendPasswordResetEmail(account.getEmail(), resetToken, account.getFullname());
                 log.info("Password reset email sent to: {}", account.getEmail());
             } else {
-                throw new BusinessRuleException("Tài khoản không có email. Vui lòng liên hệ quản trị viên.");
+                // SECURITY FIX: Do NOT throw exception — that leaks account existence.
+                // If username has no email, silently return same message as if not found.
+                // Admin should contact user directly.
+                log.warn("Password reset requested for username={} but no email/phone available — silent return", account.getUsername());
             }
         }
     }

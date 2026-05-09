@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.service.VercelWebhookService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -63,8 +64,7 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
         // VULN-EXTERNAL-CALL-DOS FIX: Configure timeout for external HTTP calls
         // Without timeout, thread can block indefinitely if Vercel is slow/hanging
         // This prevents thread pool exhaustion and service degradation
-        org.springframework.http.client.SimpleClientHttpRequestFactory factory = 
-            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000); // 5 seconds to establish connection
         factory.setReadTimeout(10000);   // 10 seconds to read response
         

@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ public class OrderServiceImpl implements OrderService {
     private final EntityManager entityManager;
     private final PointHistoryRepository pointHistoryRepository;
 
-    @Value("${spring.mail.username}")
+    @Value("${app.admin.email:${spring.mail.username}}")
     private String adminEmail;
 
     public OrderServiceImpl(OrderRepository orderRepository,
@@ -254,6 +255,9 @@ public class OrderServiceImpl implements OrderService {
         try {
             String customerName = account != null ? account.getFullname() : "Khách";
 
+            log.info("Sending order notification email to adminEmail={} for orderId={}",
+                    adminEmail, savedOrder.getId());
+
             emailService.sendNewOrderNotification(
                     adminEmail,
                     savedOrder.getId(),
@@ -263,9 +267,13 @@ public class OrderServiceImpl implements OrderService {
                     savedOrder.getTotalAmount()
             );
 
+            log.info("Order notification email dispatched for orderId={}", savedOrder.getId());
+
         } catch (Exception e) {
-            log.warn("Failed to send order notification for orderId={}: {}",
-                    savedOrder.getId(), e.getMessage());
+            // Log đầy đủ stack trace để debug dễ hơn
+            log.error("[EMAIL FAIL] Cannot send order notification email" +
+                    " | orderId={} | adminEmail={} | error={}",
+                    savedOrder.getId(), adminEmail, e.getMessage(), e);
         }
     }
 
@@ -292,7 +300,7 @@ public class OrderServiceImpl implements OrderService {
         // - If frontend uses v-html, browser won't execute escaped HTML as code
         // - Simple, safe, and effective for plain text fields
         if (request.getNote() != null && !request.getNote().isBlank()) {
-            String sanitizedNote = org.springframework.web.util.HtmlUtils.htmlEscape(request.getNote().trim());
+            String sanitizedNote = HtmlUtils.htmlEscape(request.getNote().trim());
             order.setNote(sanitizedNote);
             
             // Log if potential XSS attempt detected

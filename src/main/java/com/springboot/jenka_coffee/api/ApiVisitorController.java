@@ -1,93 +1,96 @@
 package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
+import com.springboot.jenka_coffee.entity.VisitorStats;
+import com.springboot.jenka_coffee.repository.VisitorStatsRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-// BUG-50 WARNING: Analytics Data Manipulation Risk
+/**
+ * Visitor tracking with DB persistence.
+ * - Unique daily visitors tracked in visitor_stats table → survives restart.
+ * - "Online now" count still in-memory (ephemeral by design — 5-min window).
+ *   This is acceptable: online count resets to 0 on restart (normal behavior).
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/visitors")
 public class ApiVisitorController {
 
-    // VULN-VOLATILE-ANALYTICS: These counters are volatile (lost on restart)
-    // TODO: Implement database persistence for production
-    private final AtomicLong totalVisits  = new AtomicLong(0);
-    private final AtomicLong todayVisits  = new AtomicLong(0);
-    private final AtomicLong monthVisits  = new AtomicLong(0);
-    
-    // Track online users by IP + last activity timestamp
-    private final ConcurrentHashMap<String, Long> onlineUsers = new ConcurrentHashMap<>();
-    private static final long ONLINE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-    
-    // FIX: Track unique visitors per day/month to prevent duplicate counting
-    private final ConcurrentHashMap<String, LocalDate> dailyVisitors = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Integer> monthlyVisitors = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Boolean> totalVisitors = new ConcurrentHashMap<>();
+    private final VisitorStatsRepository visitorStatsRepository;
 
-    private LocalDate currentDay   = LocalDate.now();
-    private int       currentMonth = LocalDate.now().getMonthValue();
+    // Online tracking stays in-memory (ephemeral, 5-min window — intentional)
+    private final ConcurrentHashMap<String, Long> onlineUsers = new ConcurrentHashMap<>();
+    private static final long ONLINE_TIMEOUT_MS = 5 * 60 * 1000L; // 5 minutes
+
+    // Deduplicate unique visitors within the current day (in-memory — fast)
+    // This resets on restart, meaning a visitor on day N might be counted again after restart.
+    // Acceptable for MVP — the daily total in DB is the source of truth.
+    private final ConcurrentHashMap<String, LocalDate> seenTodayMap = new ConcurrentHashMap<>();
+
+    public ApiVisitorController(VisitorStatsRepository visitorStatsRepository) {
+        this.visitorStatsRepository = visitorStatsRepository;
+    }
 
     /**
      * POST /api/visitors/ping — gọi khi user load trang.
-     * Tăng counter và trả về stats hiện tại.
-     * 
-     * FIX: Prevent duplicate counting
-     * - Total: Count once per unique visitor (lifetime)
-     * - Today: Count once per unique visitor per day
-     * - Month: Count once per unique visitor per month
-     * - Online: Update activity timestamp
+     * Tăng counter trong DB và trả về stats hiện tại.
      */
     @PostMapping("/ping")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> ping(HttpServletRequest request) {
-        checkReset();
-        
+    public ResponseEntity<ApiResponse<Map<String, Object>>> ping(HttpServletRequest request) {
         String clientId = getClientIdentifier(request);
         long now = System.currentTimeMillis();
         LocalDate today = LocalDate.now();
-        int currentMonthValue = today.getMonthValue();
-        
-        // 1. Update online status (always)
+
+        // 1. Update online status
         onlineUsers.put(clientId, now);
-        
-        // 2. Count TOTAL visits (once per unique visitor, lifetime)
-        if (!totalVisitors.containsKey(clientId)) {
-            totalVisits.incrementAndGet();
-            totalVisitors.put(clientId, true);
-        }
-        
-        // 3. Count TODAY visits (once per unique visitor per day)
-        LocalDate lastDailyVisit = dailyVisitors.get(clientId);
-        if (lastDailyVisit == null || !lastDailyVisit.equals(today)) {
-            todayVisits.incrementAndGet();
-            dailyVisitors.put(clientId, today);
-        }
-        
-        // 4. Count MONTH visits (once per unique visitor per month)
-        Integer lastMonthVisit = monthlyVisitors.get(clientId);
-        if (lastMonthVisit == null || lastMonthVisit != currentMonthValue) {
-            monthVisits.incrementAndGet();
-            monthlyVisitors.put(clientId, currentMonthValue);
+
+        // 2. Determine if this is a new unique visitor today
+        LocalDate lastSeen = seenTodayMap.get(clientId);
+        boolean isNewUniqueToday = (lastSeen == null || !lastSeen.equals(today));
+        if (isNewUniqueToday) {
+            seenTodayMap.put(clientId, today);
         }
 
-        return ResponseEntity.ok(ApiResponse.success("OK", buildStats()));
+        // 3. Count active online users
+        int onlineCount = (int) onlineUsers.values().stream()
+                .filter(ts -> (now - ts) <= ONLINE_TIMEOUT_MS)
+                .count();
+
+        // 4. Persist to DB via UPSERT (atomic increment)
+        try {
+            visitorStatsRepository.upsertVisit(today, isNewUniqueToday ? 1 : 0, onlineCount);
+        } catch (Exception e) {
+            // Non-critical — don't break the user's page load because of analytics
+            log.warn("[VISITOR] Failed to persist visit stats: {}", e.getMessage());
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("OK", buildStats(today, onlineCount)));
     }
 
-    /** GET /api/visitors/stats — lấy stats không tăng counter */
+    /** GET /api/visitors/stats — lấy stats hiện tại */
     @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> stats() {
-        return ResponseEntity.ok(ApiResponse.success("OK", buildStats()));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> stats() {
+        LocalDate today = LocalDate.now();
+        long now = System.currentTimeMillis();
+        int onlineCount = (int) onlineUsers.values().stream()
+                .filter(ts -> (now - ts) <= ONLINE_TIMEOUT_MS)
+                .count();
+        return ResponseEntity.ok(ApiResponse.success("OK", buildStats(today, onlineCount)));
     }
 
-    /** Giảm online count khi user rời trang (beacon API) */
+    /** POST /api/visitors/leave — user rời trang */
     @PostMapping("/leave")
     public ResponseEntity<Void> leave(HttpServletRequest request) {
         String clientId = getClientIdentifier(request);
@@ -95,80 +98,53 @@ public class ApiVisitorController {
         return ResponseEntity.ok().build();
     }
 
-    /** Reset today counter mỗi nửa đêm */
-    @Scheduled(cron = "0 0 0 * * *")
-    public void resetDaily() {
-        todayVisits.set(0);
-        dailyVisitors.clear(); // Clear daily tracking map
-        currentDay = LocalDate.now();
-    }
-
-    /** Reset month counter đầu tháng */
-    @Scheduled(cron = "0 0 0 1 * *")
-    public void resetMonthly() {
-        monthVisits.set(0);
-        monthlyVisitors.clear(); // Clear monthly tracking map
-        currentMonth = LocalDate.now().getMonthValue();
-    }
-
-    /** Cleanup inactive users mỗi 1 phút */
+    /** Cleanup online map mỗi 1 phút */
     @Scheduled(fixedDelay = 60_000)
     public void cleanupInactiveUsers() {
         long now = System.currentTimeMillis();
-        onlineUsers.entrySet().removeIf(entry -> 
-            (now - entry.getValue()) > ONLINE_TIMEOUT_MS
-        );
+        onlineUsers.entrySet().removeIf(e -> (now - e.getValue()) > ONLINE_TIMEOUT_MS);
     }
 
-    private void checkReset() {
-        LocalDate today = LocalDate.now();
-        if (!today.equals(currentDay)) {
-            todayVisits.set(0);
-            dailyVisitors.clear(); // Clear daily tracking
-            currentDay = today;
-        }
-        if (today.getMonthValue() != currentMonth) {
-            monthVisits.set(0);
-            monthlyVisitors.clear(); // Clear monthly tracking
-            currentMonth = today.getMonthValue();
-        }
+    /** Cleanup seenTodayMap sau nửa đêm để không giữ data cũ */
+    @Scheduled(cron = "0 5 0 * * *") // 00:05 hàng ngày
+    public void resetDailyDedup() {
+        seenTodayMap.clear();
+        log.debug("[VISITOR] Daily dedup map cleared");
     }
 
-    private Map<String, Long> buildStats() {
-        // Cleanup expired users before counting
-        long now = System.currentTimeMillis();
-        long activeCount = onlineUsers.values().stream()
-            .filter(timestamp -> (now - timestamp) <= ONLINE_TIMEOUT_MS)
-            .count();
-        
+    private Map<String, Object> buildStats(LocalDate today, int onlineCount) {
+        VisitorStats todayStats = visitorStatsRepository.findByStatDate(today).orElse(null);
+
+        long todayVisits    = todayStats != null ? todayStats.getUniqueVisitors() : 0;
+        long totalVisits    = 0;
+        long monthVisits    = 0;
+
+        // Calculate month total from DB
+        LocalDate monthStart = today.withDayOfMonth(1);
+        try {
+            totalVisits = visitorStatsRepository.findAll().stream()
+                    .mapToLong(VisitorStats::getTotalVisits).sum();
+            monthVisits = visitorStatsRepository.findRecentStats(monthStart).stream()
+                    .mapToLong(VisitorStats::getTotalVisits).sum();
+        } catch (Exception e) {
+            log.warn("[VISITOR] Failed to read stats from DB: {}", e.getMessage());
+        }
+
         return Map.of(
-                "online", activeCount,
-                "today",  todayVisits.get(),
-                "month",  monthVisits.get(),
-                "total",  totalVisits.get()
+                "online", (long) onlineCount,
+                "today",  todayVisits,
+                "month",  monthVisits,
+                "total",  totalVisits
         );
     }
-    
-    /**
-     * Get unique client identifier from IP + User-Agent
-     * Prevents same user from being counted multiple times
-     * FIX: Removed session dependency since app uses STATELESS session policy
-     */
+
     private String getClientIdentifier(HttpServletRequest request) {
         String ip = getClientIp(request);
-        
         String userAgent = request.getHeader("User-Agent");
         if (userAgent == null) userAgent = "unknown";
-        
-        // Combine IP + first 50 chars of user agent for uniqueness
-        // Note: This means multiple tabs from same IP will be counted as one user
         return ip + "|" + (userAgent.length() > 50 ? userAgent.substring(0, 50) : userAgent);
     }
-    
-    /**
-     * VULN-FAKE-ANALYTICS FIX: Only trust X-Forwarded-For from trusted proxies
-     * Same logic as RateLimitFilter to prevent fake analytics
-     */
+
     private String getClientIp(HttpServletRequest request) {
         String remoteAddr = request.getRemoteAddr();
         if (isTrustedProxy(remoteAddr)) {
@@ -183,12 +159,8 @@ public class ApiVisitorController {
         }
         return remoteAddr;
     }
-    
-    private boolean isTrustedProxy(String ip) {
-        return checkIp(ip);
-    }
 
-    public static boolean checkIp(String ip) {
+    private boolean isTrustedProxy(String ip) {
         if (ip == null) return false;
         return ip.startsWith("10.")
                 || ip.startsWith("172.16.") || ip.startsWith("172.17.")

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,7 +47,7 @@ public class ApiAdminNewsController {
     public ResponseEntity<ApiResponse<News>> getNewsDetail(@PathVariable Integer id) {
         News news = newsService.findById(id);
         if (news == null) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error("Không tìm thấy tin tức: " + id));
         }
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tin tức thành công", news));
@@ -69,7 +70,7 @@ public class ApiAdminNewsController {
         // id = null → INSERT, không thể override thành UPDATE
 
         newsService.saveNews(news, file);
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tạo tin tức thành công", news));
     }
 
