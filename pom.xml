@@ -33,29 +33,6 @@
 
 
     <dependencies>
-<!-- Test -->
-
-<!--        <dependency>-->
-<!--            <groupId>org.seleniumhq.selenium</groupId>-->
-<!--            <artifactId>selenium-java</artifactId>-->
-<!--            <version>4.25.0</version>-->
-<!--        </dependency>-->
-
-            <!-- Spring Boot Test (bao gồm JUnit 5 + Mockito + AssertJ luôn) -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-test</artifactId>
-                <scope>test</scope>
-            </dependency>
-
-        <dependency>
-            <groupId>io.github.bonigarcia</groupId>
-            <artifactId>webdrivermanager</artifactId>
-            <version>5.9.2</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- apache poi đã bị xóa - không dùng trong code, chỉ tốn RAM -->
-
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

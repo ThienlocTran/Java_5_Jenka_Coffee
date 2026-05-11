@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,11 +16,12 @@ public interface VisitorStatsRepository extends JpaRepository<VisitorStats, Loca
 
     Optional<VisitorStats> findByStatDate(LocalDate date);
 
-    /** Lấy thống kê 30 ngày gần nhất */
-    @Query("SELECT v FROM VisitorStats v WHERE v.statDate >= :fromDate ORDER BY v.statDate DESC")
-    List<VisitorStats> findRecentStats(@Param("fromDate") LocalDate fromDate);
+    @Query(value = "SELECT COALESCE(SUM(total_visits), 0) FROM visitor_stats", nativeQuery = true)
+    long sumTotalVisits();
 
-    /** UPSERT: tăng total_visits và cập nhật unique_visitors theo ngày */
+    @Query(value = "SELECT COALESCE(SUM(total_visits), 0) FROM visitor_stats WHERE stat_date >= :fromDate", nativeQuery = true)
+    long sumTotalVisitsSince(@Param("fromDate") LocalDate fromDate);
+
     @Modifying
     @Transactional
     @Query(value = """
@@ -35,7 +35,7 @@ public interface VisitorStatsRepository extends JpaRepository<VisitorStats, Loca
         """, nativeQuery = true)
     void upsertVisit(
             @Param("today") LocalDate today,
-            @Param("uniqueDelta") int uniqueDelta,   // 1 nếu visitor mới, 0 nếu đã đếm
+            @Param("uniqueDelta") int uniqueDelta,
             @Param("onlinePeak") int onlinePeak
     );
 }

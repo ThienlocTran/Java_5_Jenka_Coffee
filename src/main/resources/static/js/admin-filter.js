@@ -6,19 +6,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ========== PRODUCT PAGE FILTER ==========
     if (document.querySelector('#categoryFilter') && document.querySelector('#statusFilter')) {
-        console.log('Initializing Product Filter');
         initProductFilter();
     }
 
     // ========== ACCOUNT PAGE FILTER ==========
     if (document.querySelector('#roleFilter') && document.querySelector('#accountsTable')) {
-        console.log('Initializing Account Filter');
         initAccountFilter();
     }
 
     // ========== CATEGORY PAGE FILTER ==========
     if (document.querySelector('#sortFilter') && document.querySelector('#sortButton')) {
-        console.log('Initializing Category Filter');
         initCategoryFilter();
     }
 });
@@ -184,8 +181,6 @@ function initCategoryFilter() {
     document.getElementById('searchInput').addEventListener('keyup', applySearch);
     document.getElementById('sortFilter').addEventListener('change', applySort);
     document.getElementById('sortButton').addEventListener('click', applySort);
-
-    console.log('Category filter events bound successfully');
 
     const resetBtn = document.getElementById('resetFilterBtn');
     if (resetBtn) {

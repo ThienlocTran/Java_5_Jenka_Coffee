@@ -115,17 +115,15 @@ public class ApiVisitorController {
     private Map<String, Object> buildStats(LocalDate today, int onlineCount) {
         VisitorStats todayStats = visitorStatsRepository.findByStatDate(today).orElse(null);
 
-        long todayVisits    = todayStats != null ? todayStats.getUniqueVisitors() : 0;
-        long totalVisits    = 0;
-        long monthVisits    = 0;
+        long todayVisits = todayStats != null ? todayStats.getUniqueVisitors() : 0;
+        long totalVisits = 0;
+        long monthVisits = 0;
 
         // Calculate month total from DB
         LocalDate monthStart = today.withDayOfMonth(1);
         try {
-            totalVisits = visitorStatsRepository.findAll().stream()
-                    .mapToLong(VisitorStats::getTotalVisits).sum();
-            monthVisits = visitorStatsRepository.findRecentStats(monthStart).stream()
-                    .mapToLong(VisitorStats::getTotalVisits).sum();
+            totalVisits = visitorStatsRepository.sumTotalVisits();
+            monthVisits = visitorStatsRepository.sumTotalVisitsSince(monthStart);
         } catch (Exception e) {
             log.warn("[VISITOR] Failed to read stats from DB: {}", e.getMessage());
         }

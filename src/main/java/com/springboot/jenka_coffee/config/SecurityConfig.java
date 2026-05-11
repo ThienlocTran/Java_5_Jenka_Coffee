@@ -64,6 +64,7 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED); // 401
+                    response.setHeader("WWW-Authenticate", "");
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Vui lòng đăng nhập để tiếp tục!\"}");
                 })

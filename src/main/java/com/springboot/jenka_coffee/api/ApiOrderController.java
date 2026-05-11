@@ -44,7 +44,10 @@ public class ApiOrderController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));
         }
-        if (cartService.getItems().isEmpty()) {
+        Map<String, Object> cartSummary = cartService.getCartSummary();
+        Object rawItems = cartSummary.get("items");
+        List<?> cartItems = rawItems instanceof List<?> list ? list : List.of();
+        if (cartItems.isEmpty()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Giỏ hàng trống"));
         }
         Account user = accountService.findById(username);
@@ -52,9 +55,9 @@ public class ApiOrderController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("checkoutRequest", request);
-        data.put("cartItems",  cartService.getItems());
-        data.put("cartTotal",  cartService.getTotal());
-        data.put("cartCount",  cartService.getCount());
+        data.put("cartItems", cartItems);
+        data.put("cartTotal", cartSummary.get("total"));
+        data.put("cartCount", cartSummary.get("count"));
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin thanh toán thành công", data));
     }
 

@@ -420,9 +420,9 @@ public class ProductServiceImpl implements ProductService {
                 .filter(p -> Boolean.TRUE.equals(p.getFeatured()) && p.getFeaturedPosition() != null)
                 .sorted((a, b) -> a.getFeaturedPosition().compareTo(b.getFeaturedPosition()))
                 .toList();
-        List<Integer> pinnedIds = featuredProducts.stream()
+        java.util.Set<Integer> pinnedIds = featuredProducts.stream()
                 .map(Product::getId)
-                .toList();
+                .collect(java.util.stream.Collectors.toSet());
 
         for (Product product : featuredProducts) {
             int index = Math.min(product.getFeaturedPosition(), total) - 1;
