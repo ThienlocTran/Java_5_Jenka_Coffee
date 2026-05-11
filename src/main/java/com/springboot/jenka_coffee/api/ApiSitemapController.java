@@ -53,7 +53,6 @@ public class ApiSitemapController {
         addUrl(xml, SITE_URL + "/product/list",  "0.9",  "daily",   today);
         addUrl(xml, SITE_URL + "/news",          "0.8",  "weekly",  today);
         addUrl(xml, SITE_URL + "/contact",       "0.5",  "monthly", today);
-        addUrl(xml, SITE_URL + "/booking",       "0.6",  "monthly", today);
 
         // ── Danh mục sản phẩm ───────────────────────────────────────────
         try {

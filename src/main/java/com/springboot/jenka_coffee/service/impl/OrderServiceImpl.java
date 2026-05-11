@@ -140,11 +140,6 @@ public class OrderServiceImpl implements OrderService {
                     "Vui lòng liên hệ trực tiếp để được hỗ trợ đặt hàng số lượng lớn.");
         }
 
-        // VULN-C02 FIX: Validate + consume trong cùng 1 transaction với PESSIMISTIC_WRITE
-        // VULN-VOUCHER-SIPHON FIX: Check user usage count against maxUsesPerUser limit
-        // VULN-COMPILATION-ERROR FIX: Require login for all vouchers to prevent guest abuse
-        // BUG-44 FIX: Support multiple uses per user based on maxUsesPerUser field
-
         order.setTotalAmount(totalAmount);
 
         // VULN-INFINITE-POINTS FIX: Lưu số điểm thực tế đã sử dụng
@@ -169,8 +164,6 @@ public class OrderServiceImpl implements OrderService {
         // 3. Implement payment timeout (auto-cancel unpaid orders after 15 minutes)
         // 4. Add admin dashboard to track pending payments
         createPayment(savedOrder, totalAmount, request);
-
-        // STEP 7: Voucher đã được consume trong validateAndLockVoucher() — không cần gọi lại
 
         // VULN-C01 FIX: Clear cart TRONG transaction — ngăn double checkout
         try {

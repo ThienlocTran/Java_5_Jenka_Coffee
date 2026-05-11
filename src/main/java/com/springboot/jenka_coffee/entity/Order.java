@@ -20,7 +20,7 @@ import java.util.Objects;
 @Entity
 @Table(
     name = "Orders", // Bắt buộc, vì Order trùng tên khóa SQL
-    indexes = { @Index(name = "idx_order_code", columnList = "orderCode", unique = true) }
+    indexes = { @Index(name = "idx_order_code", columnList = "ordercode", unique = true) }
 )
 public class Order implements Serializable {
 
@@ -35,7 +35,7 @@ public class Order implements Serializable {
      * Generated once at checkout; NEVER changes after creation.
      * Keeps numeric PK private (performance / JPA relations unchanged).
      */
-    @Column(name = "orderCode", unique = true, nullable = false, length = 30)
+    @Column(name = "ordercode", unique = true, nullable = false, length = 30)
     private String orderCode;
 
     @Column(name = "Address", nullable = false)
@@ -70,9 +70,6 @@ public class Order implements Serializable {
             throw new IllegalArgumentException("Unknown order status: " + value);
         }
     }
-
-    @Column(name = "VoucherCode", length = 20)
-    private String voucherCode;
 
     @Column(name = "totalAmount", precision = 18, scale = 2)
     private BigDecimal totalAmount;

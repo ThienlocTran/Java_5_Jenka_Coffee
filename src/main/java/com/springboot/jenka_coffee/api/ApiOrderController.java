@@ -119,7 +119,6 @@ public class ApiOrderController {
         dto.setCreateDate(order.getCreateDate());
         dto.setPhone(order.getPhone());
         dto.setStatus(order.getStatus());
-        dto.setVoucherCode(order.getVoucherCode());
         dto.setTotalAmount(order.getTotalAmount());
         dto.setPointsUsed(order.getPointsUsed());
         dto.setNote(order.getNote());
@@ -207,7 +206,6 @@ public class ApiOrderController {
         data.put("createDate", order.getCreateDate());
         data.put("status", order.getStatus());
         data.put("totalAmount", order.getTotalAmount());
-        data.put("voucherCode", order.getVoucherCode());
         data.put("note", order.getNote());
         data.put("pointsUsed", order.getPointsUsed());
 

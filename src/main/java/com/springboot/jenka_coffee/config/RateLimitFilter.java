@@ -30,10 +30,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Cache<String, Bucket> forgotBuckets  = buildCache(Duration.ofMinutes(5));
     private final Cache<String, Bucket> signupBuckets  = buildCache(Duration.ofMinutes(5));
     private final Cache<String, Bucket> otpBuckets     = buildCache(Duration.ofMinutes(5));
-    private final Cache<String, Bucket> bookingBuckets = buildCache(Duration.ofMinutes(15));
     private final Cache<String, Bucket> contactBuckets = buildCache(Duration.ofMinutes(35));
-    // VULN-BRUTE-002 FIX: Rate limit cho voucher check để ngăn enumeration attack
-    private final Cache<String, Bucket> voucherBuckets = buildCache(Duration.ofMinutes(5));
+    private final Cache<String, Bucket> checkoutBuckets = buildCache(Duration.ofMinutes(15));
     // VULN-FAKE-TRAFFIC FIX: Rate limit cho visitor ping để ngăn fake traffic
     private final Cache<String, Bucket> visitorBuckets = buildCache(Duration.ofMinutes(10));
     // VULN-ENUMERATION FIX: Rate limit cho admin check-username/email để ngăn enumeration
@@ -119,8 +117,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 // VULN-REQUEST-BODY-CONSUMPTION FIX: Disabled phone extraction from body
                 // Use IP-based rate limiting only (5 resends per minute per IP)
                 bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
-            } else if (path.startsWith("/api/booking/submit")) {
-                bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
             } else if (path.startsWith("/api/contact/send")) {
                 // BUG-48 FIX: Email-specific rate limiting for contact form
                 String email = req.getParameter("email");
@@ -140,21 +136,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 // VULN-ORDER-FLOODING FIX: Rate limit checkout to prevent spam orders
                 // Limit: 3 checkouts per 10 minutes per IP
                 // Prevents: fake orders, email spam, inventory manipulation
-                bucket = bookingBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
-            } else if (path.startsWith("/api/vouchers/check")) {
-                // VULN-BRUTE-002 FIX: 20 requests/phút để ngăn voucher enumeration
-                bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
+                bucket = checkoutBuckets.get(ip, k -> buildBucket(3, Duration.ofMinutes(10)));
             } else if (path.startsWith("/api/feedbacks")) {
                 // VULN #16 FIX: Rate limit feedback submission to prevent storage DoS
                 // Limit: 2 feedbacks per hour per IP
                 // Prevents: database spam, storage exhaustion, disk full
                 bucket = feedbackBuckets.get(ip, k -> buildBucket(2, Duration.ofHours(1)));
             }
-        }
-        
-        // Rate limit cho GET voucher check (nếu có)
-        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/vouchers/check")) {
-            bucket = voucherBuckets.get(ip, k -> buildBucket(20, Duration.ofMinutes(1)));
         }
         
         // VULN-FAKE-TRAFFIC FIX: Rate limit cho visitor ping - 60 requests/10 phút

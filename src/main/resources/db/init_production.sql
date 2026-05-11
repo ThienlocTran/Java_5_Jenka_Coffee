@@ -2,7 +2,7 @@
 -- JENKA COFFEE — PostgreSQL Production Schema
 -- Target: Vietnix VPS PostgreSQL
 -- Frontend: Vercel (jenkacoffee.com)
--- Version: 2.0 — Clean slate cho production
+-- Version: 3.0 - Clean production schema, no booking/voucher
 --
 -- HUONG DAN CHAY:
 --   psql -U <db_user> -d <db_name> -f init_production.sql
@@ -176,31 +176,35 @@ COMMENT ON TABLE "ProductImages" IS 'Anh gallery cua san pham (nhieu anh)';
 -- ----------------------------------------------------------
 -- 5. ORDERS (Entity: Order.java)
 -- Status: 0=NEW, 1=CONFIRMED, 2=CANCELLED
+-- Public URL: /orders/{orderCode}; never expose numeric Id to customers
+-- Physical column name is lowercase ordercode to avoid PostgreSQL quoted camelCase issues.
 -- ----------------------------------------------------------
 CREATE SEQUENCE orders_id_seq;
-CREATE TABLE "Orders" (
-    "Id"          BIGINT        NOT NULL DEFAULT nextval('orders_id_seq'),
-    "Address"     VARCHAR(500)  NOT NULL,
-    "CreateDate"  TIMESTAMP     NOT NULL DEFAULT NOW(),
-    "Phone"       VARCHAR(15),
-    "Status"      INTEGER       NOT NULL DEFAULT 0
-                                CHECK ("Status" IN (0, 1, 2)),
-    "VoucherCode" VARCHAR(20),
-    "totalAmount" NUMERIC(18,2),
-    "pointsUsed"  INTEGER       NOT NULL DEFAULT 0,
+CREATE TABLE orders (
+    id            BIGINT        NOT NULL DEFAULT nextval('orders_id_seq'),
+    ordercode     VARCHAR(30)   NOT NULL,
+    address       VARCHAR(500)  NOT NULL,
+    createdate    TIMESTAMP     NOT NULL DEFAULT NOW(),
+    phone         VARCHAR(15),
+    status        INTEGER       NOT NULL DEFAULT 0
+                                CHECK (status IN (0, 1, 2)),
+    totalamount   NUMERIC(18,2),
+    pointsused    INTEGER       NOT NULL DEFAULT 0,
     note          VARCHAR(500),
-    "Username"    VARCHAR(50),
-    CONSTRAINT "Orders_pkey"    PRIMARY KEY ("Id"),
-    CONSTRAINT fk_orders_account FOREIGN KEY ("Username")
+    username      VARCHAR(50),
+    CONSTRAINT orders_pkey       PRIMARY KEY (id),
+    CONSTRAINT uq_order_code     UNIQUE (ordercode),
+    CONSTRAINT fk_orders_account FOREIGN KEY (username)
         REFERENCES "Accounts" ("Username") ON DELETE SET NULL
 );
 
-CREATE INDEX idx_orders_username   ON "Orders" ("Username");
-CREATE INDEX idx_orders_status     ON "Orders" ("Status");
-CREATE INDEX idx_orders_createdate ON "Orders" ("CreateDate" DESC);
-CREATE INDEX idx_orders_user_date  ON "Orders" ("Username", "CreateDate" DESC);
+CREATE INDEX idx_order_code        ON orders (ordercode);
+CREATE INDEX idx_orders_username   ON orders (username);
+CREATE INDEX idx_orders_status     ON orders (status);
+CREATE INDEX idx_orders_createdate ON orders (createdate DESC);
+CREATE INDEX idx_orders_user_date  ON orders (username, createdate DESC);
 
-COMMENT ON TABLE "Orders" IS 'Don hang. Status: 0=NEW, 1=CONFIRMED, 2=CANCELLED';
+COMMENT ON TABLE orders IS 'Don hang. Status: 0=NEW, 1=CONFIRMED, 2=CANCELLED';
 
 
 -- ----------------------------------------------------------
@@ -215,7 +219,7 @@ CREATE TABLE "OrderDetails" (
     "Productid" INTEGER       NOT NULL,
     CONSTRAINT "OrderDetails_pkey"     PRIMARY KEY ("Id"),
     CONSTRAINT fk_orderdetails_order   FOREIGN KEY ("Orderid")
-        REFERENCES "Orders" ("Id") ON DELETE CASCADE,
+        REFERENCES orders (id) ON DELETE CASCADE,
     CONSTRAINT fk_orderdetails_product FOREIGN KEY ("Productid")
         REFERENCES "Products" ("Id") ON DELETE RESTRICT
 );
@@ -242,7 +246,7 @@ CREATE TABLE "Payments" (
                                     CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
     CONSTRAINT payments_pkey     PRIMARY KEY (id),
     CONSTRAINT fk_payments_order FOREIGN KEY ("OrderId")
-        REFERENCES "Orders" ("Id") ON DELETE CASCADE
+        REFERENCES orders (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_payments_orderid ON "Payments" ("OrderId");
@@ -266,7 +270,7 @@ CREATE TABLE "PointHistory" (
     CONSTRAINT fk_pointhistory_account FOREIGN KEY (username)
         REFERENCES "Accounts" ("Username") ON DELETE CASCADE,
     CONSTRAINT fk_pointhistory_order   FOREIGN KEY ("OrderId")
-        REFERENCES "Orders" ("Id") ON DELETE SET NULL
+        REFERENCES orders (id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_pointhistory_username ON "PointHistory" (username);
@@ -435,7 +439,7 @@ COMMENT ON TABLE visitor_stats IS 'Thong ke luot truy cap theo ngay. Tong hop ha
 -- ============================================================
 -- BUOC 4: SEQUENCE OWNERSHIP
 -- ============================================================
-ALTER SEQUENCE orders_id_seq          OWNED BY "Orders"."Id";
+ALTER SEQUENCE orders_id_seq          OWNED BY orders.id;
 ALTER SEQUENCE products_id_seq        OWNED BY "Products"."Id";
 ALTER SEQUENCE orderdetails_id_seq    OWNED BY "OrderDetails"."Id";
 ALTER SEQUENCE payments_id_seq        OWNED BY "Payments".id;

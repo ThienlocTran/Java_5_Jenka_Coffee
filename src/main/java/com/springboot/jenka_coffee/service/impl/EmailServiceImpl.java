@@ -6,6 +6,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -53,6 +54,11 @@ public class EmailServiceImpl implements EmailService {
         return helper;
     }
 
+    private void logMailFailure(String action, String to, Exception e) {
+        log.error("[EMAIL FAIL] {} | to={} | cause={}. Check SPRING_MAIL_USERNAME and Gmail App Password.",
+                action, to, e.getMessage(), e);
+    }
+
     @Override
     @Async
     public void sendActivationEmail(String to, String token, String fullname) {
@@ -78,8 +84,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email kích hoạt", e);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendActivationEmail", to, e);
         }
     }
 
@@ -108,8 +114,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email reset password", e);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendPasswordResetEmail", to, e);
         }
     }
 
@@ -158,9 +164,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            log.error("[EMAIL FAIL] sendNewOrderNotification | to={} | orderId={} | cause={}",
-                    adminEmail, orderId, e.getMessage(), e);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendNewOrderNotification orderId=" + orderId, adminEmail, e);
         }
     }
 
@@ -218,9 +223,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            log.error("[EMAIL FAIL] sendOrderConfirmation | to={} | orderId={} | cause={}",
-                    customerEmail, orderId, e.getMessage(), e);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendOrderConfirmation orderId=" + orderId, customerEmail, e);
         }
     }
 
@@ -247,8 +251,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email liên hệ", e);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendContactConfirmation", adminNotifyEmail, e);
         }
     }
 }

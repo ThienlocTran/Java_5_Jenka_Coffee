@@ -22,7 +22,6 @@ public class OrderHistoryDTO {
     private LocalDateTime createDate;
     private String phone;
     private Integer status;
-    private String voucherCode;
     private BigDecimal totalAmount;
     private Integer pointsUsed;
     private String note;

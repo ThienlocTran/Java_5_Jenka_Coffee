@@ -67,10 +67,6 @@ public class CheckoutRequest {
     @Size(max = 500, message = "{CheckoutRequest.note.Size}")
     private String note;
 
-    /** Mã giảm giá (tùy chọn) */
-    @Size(max = 20)
-    private String voucherCode;
-
     // VULN-CONSENT-BYPASS FIX: Validate terms agreement on server-side
     // Frontend validation can be bypassed via curl/Postman
     // Server must verify user consent for legal compliance

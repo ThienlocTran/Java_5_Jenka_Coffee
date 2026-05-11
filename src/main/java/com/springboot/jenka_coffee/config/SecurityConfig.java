@@ -115,8 +115,6 @@ public class SecurityConfig {
                     "/api/contacts",
                     "/api/contact/**",
                     "/api/feedbacks",             // Feedback popup - public access
-                    "/api/bookings",
-                    "/api/booking/**",
                     "/api/visitors/**",
                     "/api/cart/**",               // Allow anonymous cart (session-based)
                     "/api/error",

@@ -30,7 +30,6 @@ public class ApiAdminNotificationController {
      * GET /api/admin/notifications/counts
      * Trả về số lượng thông báo chưa xử lý:
      * - newOrders: đơn hàng status=0 (NEW)
-     * - pendingBookings: lịch hẹn status=PENDING
      * - unreadContacts: liên hệ chưa đọc
      */
     @GetMapping("/counts")
