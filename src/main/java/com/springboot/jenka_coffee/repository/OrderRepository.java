@@ -106,6 +106,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.createDate >= :from AND o.createDate < :to")
     BigDecimal sumTotalRevenueBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
+    @Query("SELECT o FROM Order o " +
+            "WHERE o.createDate >= :from AND o.createDate < :to " +
+            "ORDER BY o.createDate ASC")
+    List<Order> findOrdersForRevenueReport(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
     // ===== TOP PRODUCTS =====
     @Query("SELECT new com.springboot.jenka_coffee.dto.response.TopProductDTO(" +
             "d.product.id, d.product.name, d.product.category.name, SUM(d.quantity), SUM(d.price * d.quantity)) " +

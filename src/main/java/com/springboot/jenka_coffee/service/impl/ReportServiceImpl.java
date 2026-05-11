@@ -102,6 +102,12 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Order> getOrdersForRevenueReport(LocalDateTime from, LocalDateTime to) {
+        return orderRepository.findOrdersForRevenueReport(from, to);
+    }
+
+    @Override
     public BigDecimal getTotalRevenueBetween(LocalDateTime from, LocalDateTime to) {
         return orderRepository.sumTotalRevenueBetween(from, to);
     }

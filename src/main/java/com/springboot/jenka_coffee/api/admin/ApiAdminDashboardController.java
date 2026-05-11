@@ -18,8 +18,11 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.IsoFields;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -124,7 +127,7 @@ public class ApiAdminDashboardController {
             @RequestParam(required = false) Integer value) {
 
         int y = year != null ? year : LocalDateTime.now().getYear();
-        LocalDateTime from, to;
+        LocalDateTime from, toExclusive;
 
         switch (period) {
             case "week" -> {
@@ -133,35 +136,157 @@ public class ApiAdminDashboardController {
                         .with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, (long) week)
                         .with(DayOfWeek.MONDAY)
                         .atStartOfDay();
-                to   = from.plusDays(7).minusSeconds(1);
+                toExclusive = from.plusDays(7);
             }
             case "quarter" -> {
                 int q = value != null ? value : (LocalDateTime.now().getMonthValue() - 1) / 3 + 1;
                 int startMonth = (q - 1) * 3 + 1;
                 from = LocalDateTime.of(y, startMonth, 1, 0, 0);
-                to   = from.plusMonths(3).minusSeconds(1);
+                toExclusive = from.plusMonths(3);
             }
             case "year" -> {
                 from = LocalDateTime.of(y, 1, 1, 0, 0);
-                to   = LocalDateTime.of(y, 12, 31, 23, 59, 59);
+                toExclusive = from.plusYears(1);
             }
             default -> { // month
                 int m = value != null ? value : LocalDateTime.now().getMonthValue();
                 from = LocalDateTime.of(y, m, 1, 0, 0);
-                to   = from.plusMonths(1).minusSeconds(1);
+                toExclusive = from.plusMonths(1);
             }
         }
 
-        List<RevenueReportDTO> revenueData = reportService.getRevenueByDateRange(from, to);
+        List<Order> orders = reportService.getOrdersForRevenueReport(from, toExclusive);
+        List<Map<String, Object>> revenueData = buildRevenueTimeline(period, from, toExclusive, orders);
         List<TopProductDTO> topProducts = reportService.getTopProducts(10);
+        BigDecimal totalRevenue = revenueData.stream()
+                .map(row -> (BigDecimal) row.get("totalRevenue"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long totalOrders = revenueData.stream()
+                .mapToLong(row -> ((Number) row.get("orderCount")).longValue())
+                .sum();
+        BigDecimal avgOrderValue = totalOrders > 0
+                ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 0, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        Map<String, Object> bestPeriod = revenueData.stream()
+                .max((a, b) -> ((BigDecimal) a.get("totalRevenue")).compareTo((BigDecimal) b.get("totalRevenue")))
+                .orElse(Map.of());
 
         Map<String, Object> result = new HashMap<>();
         result.put("data", revenueData);
         result.put("topProducts", topProducts);
         result.put("from", from.toString());
-        result.put("to", to.toString());
+        result.put("to", toExclusive.minusSeconds(1).toString());
+        result.put("summary", Map.of(
+                "totalRevenue", totalRevenue,
+                "totalOrders", totalOrders,
+                "averageOrderValue", avgOrderValue,
+                "bestPeriod", bestPeriod,
+                "growthPercent", calculateTimelineGrowth(revenueData)
+        ));
 
         return ResponseEntity.ok(ApiResponse.success("OK", result));
+    }
+
+    private List<Map<String, Object>> buildRevenueTimeline(
+            String period,
+            LocalDateTime from,
+            LocalDateTime toExclusive,
+            List<Order> orders) {
+
+        Map<String, Map<String, Object>> buckets = new LinkedHashMap<>();
+
+        if ("quarter".equals(period) || "year".equals(period)) {
+            LocalDate cursor = from.toLocalDate().withDayOfMonth(1);
+            while (cursor.isBefore(toExclusive.toLocalDate())) {
+                String key = cursor.getYear() + "-" + String.format("%02d", cursor.getMonthValue());
+                buckets.put(key, createRevenueBucket(
+                        key,
+                        "T" + cursor.getMonthValue() + "/" + cursor.getYear(),
+                        cursor.getYear(),
+                        cursor.getMonthValue(),
+                        null));
+                cursor = cursor.plusMonths(1);
+            }
+        } else {
+            DateTimeFormatter labelFormatter = DateTimeFormatter.ofPattern("dd/MM");
+            LocalDate cursor = from.toLocalDate();
+            while (cursor.isBefore(toExclusive.toLocalDate())) {
+                String key = cursor.toString();
+                buckets.put(key, createRevenueBucket(
+                        key,
+                        labelFormatter.format(cursor),
+                        cursor.getYear(),
+                        cursor.getMonthValue(),
+                        cursor.getDayOfMonth()));
+                cursor = cursor.plusDays(1);
+            }
+        }
+
+        for (Order order : orders) {
+            if (order.getCreateDate() == null) {
+                continue;
+            }
+            LocalDate orderDate = order.getCreateDate().toLocalDate();
+            String key = ("quarter".equals(period) || "year".equals(period))
+                    ? orderDate.getYear() + "-" + String.format("%02d", orderDate.getMonthValue())
+                    : orderDate.toString();
+            Map<String, Object> bucket = buckets.get(key);
+            if (bucket == null) {
+                continue;
+            }
+
+            BigDecimal currentRevenue = (BigDecimal) bucket.get("totalRevenue");
+            BigDecimal orderAmount = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+            long orderCount = ((Number) bucket.get("orderCount")).longValue() + 1;
+            BigDecimal newRevenue = currentRevenue.add(orderAmount);
+
+            bucket.put("totalRevenue", newRevenue);
+            bucket.put("orderCount", orderCount);
+            bucket.put("averageOrderValue", orderCount > 0
+                    ? newRevenue.divide(BigDecimal.valueOf(orderCount), 0, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO);
+        }
+
+        return new ArrayList<>(buckets.values());
+    }
+
+    private Map<String, Object> createRevenueBucket(String periodKey, String label, int year, int month, Integer day) {
+        Map<String, Object> bucket = new LinkedHashMap<>();
+        bucket.put("period", periodKey);
+        bucket.put("label", label);
+        bucket.put("year", year);
+        bucket.put("month", month);
+        bucket.put("day", day);
+        bucket.put("totalRevenue", BigDecimal.ZERO);
+        bucket.put("orderCount", 0L);
+        bucket.put("averageOrderValue", BigDecimal.ZERO);
+        return bucket;
+    }
+
+    private BigDecimal calculateTimelineGrowth(List<Map<String, Object>> rows) {
+        Map<String, Object> latest = null;
+        Map<String, Object> previous = null;
+
+        for (int i = rows.size() - 1; i >= 0; i--) {
+            BigDecimal revenue = (BigDecimal) rows.get(i).get("totalRevenue");
+            if (revenue.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            if (latest == null) {
+                latest = rows.get(i);
+            } else {
+                previous = rows.get(i);
+                break;
+            }
+        }
+
+        if (latest == null || previous == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return calculateGrowthPercent(
+                (BigDecimal) latest.get("totalRevenue"),
+                (BigDecimal) previous.get("totalRevenue"));
     }
 }
 

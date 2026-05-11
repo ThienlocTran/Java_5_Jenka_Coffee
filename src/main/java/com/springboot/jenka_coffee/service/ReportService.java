@@ -29,6 +29,8 @@ public interface ReportService {
 
     List<Order> getRecentOrders(int limit);
 
+    List<Order> getOrdersForRevenueReport(LocalDateTime from, LocalDateTime to);
+
     BigDecimal getTotalRevenueBetween(LocalDateTime from, LocalDateTime to);
 
     long countOrdersBetween(LocalDateTime from, LocalDateTime to);
