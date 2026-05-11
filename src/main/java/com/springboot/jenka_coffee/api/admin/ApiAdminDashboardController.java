@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.IsoFields;
 import java.util.HashMap;
@@ -77,17 +79,42 @@ public class ApiAdminDashboardController {
         }).collect(Collectors.toList());
 
         List<TopProductDTO> topProducts = reportService.getTopProducts(5);
+        LocalDate today = LocalDate.now();
+        LocalDateTime todayStart = today.atStartOfDay();
+        LocalDateTime tomorrowStart = today.plusDays(1).atStartOfDay();
+        LocalDateTime currentMonthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime nextMonthStart = currentMonthStart.plusMonths(1);
+        LocalDateTime previousMonthStart = currentMonthStart.minusMonths(1);
+        BigDecimal currentMonthRevenue = reportService.getTotalRevenueBetween(currentMonthStart, nextMonthStart);
+        BigDecimal previousMonthRevenue = reportService.getTotalRevenueBetween(previousMonthStart, currentMonthStart);
 
         Map<String, Object> data = new HashMap<>();
         data.put("totalRevenue",   stats.getTotalRevenue() != null ? stats.getTotalRevenue() : BigDecimal.ZERO);
+        data.put("revenueGrowth",  calculateGrowthPercent(currentMonthRevenue, previousMonthRevenue));
         data.put("totalOrders",    counts.totalOrders());
+        data.put("newOrdersToday", reportService.countOrdersBetween(todayStart, tomorrowStart));
         data.put("totalProducts",  counts.totalProducts());
+        data.put("newProducts",    reportService.countProductsBetween(currentMonthStart, nextMonthStart));
         data.put("totalCustomers", counts.totalCustomers());
+        data.put("newCustomers",   reportService.countCustomersBetween(currentMonthStart, nextMonthStart));
         data.put("recentOrders",   orderDTOs);
         data.put("monthlyRevenue", chartData);
         data.put("topProducts",    topProducts);
 
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin dashboard thành công", data));
+    }
+
+    private BigDecimal calculateGrowthPercent(BigDecimal current, BigDecimal previous) {
+        BigDecimal safeCurrent = current != null ? current : BigDecimal.ZERO;
+        BigDecimal safePrevious = previous != null ? previous : BigDecimal.ZERO;
+
+        if (safePrevious.compareTo(BigDecimal.ZERO) == 0) {
+            return safeCurrent.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.valueOf(100) : BigDecimal.ZERO;
+        }
+
+        return safeCurrent.subtract(safePrevious)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(safePrevious, 1, RoundingMode.HALF_UP);
     }
 
     @GetMapping("/revenue")

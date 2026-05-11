@@ -96,6 +96,7 @@ CREATE TABLE "Accounts" (
     "ResetTokenExpiry"      TIMESTAMP,
     "ActivationMethod"      VARCHAR(10),
     "lastPasswordResetDate" TIMESTAMP,
+    createdate              TIMESTAMP       NOT NULL DEFAULT NOW(),
     CONSTRAINT "Accounts_pkey" PRIMARY KEY ("Username")
 );
 
@@ -103,6 +104,7 @@ CREATE INDEX idx_accounts_email      ON "Accounts" ("Email");
 CREATE INDEX idx_accounts_phone      ON "Accounts" (phone);
 CREATE INDEX idx_accounts_activated  ON "Accounts" ("Activated");
 CREATE INDEX idx_accounts_admin      ON "Accounts" ("Admin");
+CREATE INDEX idx_accounts_createdate ON "Accounts" (createdate DESC);
 CREATE INDEX idx_accounts_resettoken ON "Accounts" ("ResetToken") WHERE "ResetToken" IS NOT NULL;
 CREATE INDEX idx_accounts_acttoken   ON "Accounts" ("ActivationToken") WHERE "ActivationToken" IS NOT NULL;
 

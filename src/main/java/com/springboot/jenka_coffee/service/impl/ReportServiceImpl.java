@@ -100,4 +100,24 @@ public class ReportServiceImpl implements ReportService {
         orders.sort((a, b) -> b.getCreateDate().compareTo(a.getCreateDate()));
         return orders;
     }
+
+    @Override
+    public BigDecimal getTotalRevenueBetween(LocalDateTime from, LocalDateTime to) {
+        return orderRepository.sumTotalRevenueBetween(from, to);
+    }
+
+    @Override
+    public long countOrdersBetween(LocalDateTime from, LocalDateTime to) {
+        return orderRepository.countByCreateDateGreaterThanEqualAndCreateDateLessThan(from, to);
+    }
+
+    @Override
+    public long countProductsBetween(LocalDateTime from, LocalDateTime to) {
+        return productRepository.countByCreateDateGreaterThanEqualAndCreateDateLessThan(from, to);
+    }
+
+    @Override
+    public long countCustomersBetween(LocalDateTime from, LocalDateTime to) {
+        return accountRepository.countByCreateDateGreaterThanEqualAndCreateDateLessThan(from, to);
+    }
 }
