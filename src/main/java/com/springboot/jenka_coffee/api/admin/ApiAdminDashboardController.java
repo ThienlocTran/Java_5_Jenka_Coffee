@@ -170,6 +170,9 @@ public class ApiAdminDashboardController {
         Map<String, Object> bestPeriod = revenueData.stream()
                 .max((a, b) -> ((BigDecimal) a.get("totalRevenue")).compareTo((BigDecimal) b.get("totalRevenue")))
                 .orElse(Map.of());
+        LocalDateTime previousFrom = getPreviousPeriodStart(period, from);
+        BigDecimal previousPeriodRevenue = reportService.getTotalRevenueBetween(previousFrom, from);
+        BigDecimal growthPercent = calculateGrowthPercent(totalRevenue, previousPeriodRevenue);
 
         Map<String, Object> result = new HashMap<>();
         result.put("data", revenueData);
@@ -181,10 +184,20 @@ public class ApiAdminDashboardController {
                 "totalOrders", totalOrders,
                 "averageOrderValue", avgOrderValue,
                 "bestPeriod", bestPeriod,
-                "growthPercent", calculateTimelineGrowth(revenueData)
+                "previousPeriodRevenue", previousPeriodRevenue,
+                "growthPercent", growthPercent
         ));
 
         return ResponseEntity.ok(ApiResponse.success("OK", result));
+    }
+
+    private LocalDateTime getPreviousPeriodStart(String period, LocalDateTime currentStart) {
+        return switch (period) {
+            case "week" -> currentStart.minusWeeks(1);
+            case "quarter" -> currentStart.minusMonths(3);
+            case "year" -> currentStart.minusYears(1);
+            default -> currentStart.minusMonths(1);
+        };
     }
 
     private List<Map<String, Object>> buildRevenueTimeline(
