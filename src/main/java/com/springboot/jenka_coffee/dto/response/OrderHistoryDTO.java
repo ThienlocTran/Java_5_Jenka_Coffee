@@ -16,7 +16,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderHistoryDTO {
-    private Long id;
+    /** Public-facing order code (e.g. "ORD-20260511-AB12CD"). Never expose numeric PK to frontend. */
+    private String orderCode;
     private String address;
     private LocalDateTime createDate;
     private String phone;

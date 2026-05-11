@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -51,6 +52,7 @@ public class OrderServiceTest {
         testAccount = new Account();
         testAccount.setUsername("testuser");
         testAccount.setFullname("Test User");
+        testAccount.setEmail("testuser@example.com");
         testAccount.setPoints(100);
 
         testProduct = new Product();
@@ -144,5 +146,38 @@ public class OrderServiceTest {
         assertEquals(2, order.getStatus());
         assertEquals(150, testAccount.getPoints());
         verify(pointHistoryRepository).save(any(PointHistory.class));
+    }
+
+    @Test
+    @DisplayName("Test postCheckout - sends admin and customer emails")
+    void postCheckout_sendsAdminAndCustomerEmails() {
+        ReflectionTestUtils.setField(orderService, "adminEmail", "admin@example.com");
+
+        Order order = new Order();
+        order.setId(100L);
+        order.setOrderCode("ORD-20260511-ABC123");
+        order.setPhone("0912345678");
+        order.setAddress("123 Street, Ward, District, City");
+        order.setTotalAmount(new BigDecimal("100000"));
+
+        orderService.postCheckout(order, testAccount);
+
+        verify(emailService).sendNewOrderNotification(
+                eq("admin@example.com"),
+                eq(100L),
+                eq("Test User"),
+                eq("0912345678"),
+                eq("123 Street, Ward, District, City"),
+                eq(new BigDecimal("100000"))
+        );
+        verify(emailService).sendOrderConfirmation(
+                eq("testuser@example.com"),
+                eq("Test User"),
+                eq(100L),
+                eq("ORD-20260511-ABC123"),
+                eq("0912345678"),
+                eq("123 Street, Ward, District, City"),
+                eq(new BigDecimal("100000"))
+        );
     }
 }

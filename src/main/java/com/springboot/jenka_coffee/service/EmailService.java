@@ -31,6 +31,11 @@ public interface EmailService {
     void sendNewOrderNotification(String adminEmail, Long orderId, String customerName,
                                    String phone, String address, BigDecimal total);
 
+    /**
+     * Send a customer-facing order confirmation email after checkout succeeds.
+     */
+    void sendOrderConfirmation(String customerEmail, String customerName, Long orderId,
+                               String orderCode, String phone, String address, BigDecimal total);
 
     void sendContactConfirmation(String toEmail, String customerName, String subject);
 }

@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -65,6 +67,19 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy đơn hàng #" + id));
+    }
+
+    @Override
+    public Order findByOrderCode(String orderCode) {
+        return orderRepository.findByOrderCode(orderCode).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Order findByOrderCodeWithDetails(String orderCode) {
+        return orderRepository.findByOrderCodeWithDetails(orderCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn hàng: " + orderCode));
     }
 
     @Override
@@ -260,6 +275,7 @@ public class OrderServiceImpl implements OrderService {
     public void postCheckout(Order savedOrder, Account account) {
         try {
             String customerName = account != null ? account.getFullname() : "Khách";
+            String customerEmail = resolveCustomerEmail(account);
 
             log.info("Sending order notification email to adminEmail={} for orderId={}",
                     adminEmail, savedOrder.getId());
@@ -275,17 +291,73 @@ public class OrderServiceImpl implements OrderService {
 
             log.info("Order notification email dispatched for orderId={}", savedOrder.getId());
 
+            if (customerEmail != null) {
+                log.info("Sending order confirmation email to customerEmail={} for orderId={}",
+                        customerEmail, savedOrder.getId());
+
+                emailService.sendOrderConfirmation(
+                        customerEmail,
+                        customerName,
+                        savedOrder.getId(),
+                        savedOrder.getOrderCode(),
+                        savedOrder.getPhone(),
+                        savedOrder.getAddress(),
+                        savedOrder.getTotalAmount()
+                );
+
+                log.info("Customer order confirmation email dispatched for orderId={}", savedOrder.getId());
+            } else {
+                log.warn("Skip customer order confirmation email because account has no email | orderId={}",
+                        savedOrder.getId());
+            }
+
         } catch (Exception e) {
             // Log đầy đủ stack trace để debug dễ hơn
-            log.error("[EMAIL FAIL] Cannot send order notification email" +
+            log.error("[EMAIL FAIL] Cannot send post-checkout email" +
                     " | orderId={} | adminEmail={} | error={}",
                     savedOrder.getId(), adminEmail, e.getMessage(), e);
         }
     }
 
+    private String resolveCustomerEmail(Account account) {
+        if (account == null) return null;
+
+        String email = account.getEmail();
+        if (email != null && !email.isBlank()) {
+            return email.trim();
+        }
+
+        String username = account.getUsername();
+        if (username != null && username.contains("@")) {
+            return username.trim();
+        }
+
+        return null;
+    }
+
+    // ── Order code generation ─────────────────────────────────────────────────
+
+    private static final String ORDER_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous 0/O/1/I
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * Generates a unique public order code: ORD-YYYYMMDD-XXXXXX
+     * Uses SecureRandom to make enumeration attacks infeasible.
+     */
+    private String generateOrderCode() {
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        StringBuilder suffix = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) {
+            suffix.append(ORDER_CODE_CHARS.charAt(SECURE_RANDOM.nextInt(ORDER_CODE_CHARS.length())));
+        }
+        return "ORD-" + datePart + "-" + suffix;
+    }
+
     private Order buildOrder(CheckoutRequest request, Account account) {
         Order order = new Order();
         order.setAccount(account);
+        // Generate public-facing order code (never expose numeric PK to customers)
+        order.setOrderCode(generateOrderCode());
 
         String fullAddress = String.format("%s, %s, %s, %s",
                 request.getAddress(),

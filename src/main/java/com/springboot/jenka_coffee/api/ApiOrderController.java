@@ -71,8 +71,8 @@ public class ApiOrderController {
         Order order = orderService.checkout(request, user);
         orderService.postCheckout(order, user);
         return ResponseEntity.ok(ApiResponse.success(
-                "Đặt hàng thành công! Mã đơn hàng: #" + order.getId(),
-                Map.of("orderId", order.getId())));
+                "Đặt hàng thành công! Mã đơn hàng: " + order.getOrderCode(),
+                Map.of("orderCode", order.getOrderCode())));
     }
 
     @GetMapping
@@ -114,7 +114,7 @@ public class ApiOrderController {
      */
     private com.springboot.jenka_coffee.dto.response.OrderHistoryDTO convertToOrderHistoryDTO(Order order) {
         com.springboot.jenka_coffee.dto.response.OrderHistoryDTO dto = new com.springboot.jenka_coffee.dto.response.OrderHistoryDTO();
-        dto.setId(order.getId());
+        dto.setOrderCode(order.getOrderCode()); // Use public code, NOT numeric id
         dto.setAddress(order.getAddress());
         dto.setCreateDate(order.getCreateDate());
         dto.setPhone(order.getPhone());
@@ -155,47 +155,52 @@ public class ApiOrderController {
     }
     
     /**
-     * VULN-ORDER-DETAIL-BLACKHOLE FIX: Add endpoint to get order details
-     * Allows users to view what products they ordered
+     * VULN-ORDER-DETAIL-BLACKHOLE FIX: Get order details by public orderCode.
+     * Uses orderCode (not numeric id) — prevents IDOR enumeration via sequential IDs.
      */
-    @GetMapping("/{orderId}")
+    @GetMapping("/{orderCode}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(
-            @PathVariable Long orderId,
+            @PathVariable String orderCode,
             Authentication authentication) {
         String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));
         }
-        Order order = orderService.findById(orderId);
-        
+
+        // Validate orderCode format to prevent fuzzing (must match ORD-YYYYMMDD-XXXXXX)
+        if (orderCode == null || !orderCode.matches("ORD-\\d{8}-[A-Z0-9]{6}")) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Mã đơn hàng không hợp lệ"));
+        }
+
+        Order order = orderService.findByOrderCode(orderCode);
+
         if (order == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Không tìm thấy đơn hàng"));
+                    .body(ApiResponse.error("Đơn hàng không tồn tại"));
         }
-        
-        // VULN-IDOR FIX: Proper authorization check for both logged-in and guest orders
-        // Guest orders (account == null) cannot be accessed via this API
-        // Guest users must create account or contact support to view order
+
+        // VULN-IDOR FIX: Guest orders cannot be accessed via this API
         if (order.getAccount() == null) {
-            // Guest order - deny access via API
-            // TODO: Implement access token mechanism for guest orders
-            // For now, guest must contact support with order ID
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error(
                         "Đơn hàng này được đặt bởi khách vãng lai. " +
                         "Vui lòng đăng ký tài khoản hoặc liên hệ hotline để tra cứu đơn hàng."));
         }
-        
-        // Logged-in user - check ownership
+
+        // Logged-in user — ownership check
         if (!order.getAccount().getUsername().equals(username)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Bạn không có quyền xem đơn hàng này"));
         }
-        
-        // Build response with order details
+
+        // Load details eagerly
+        order = orderService.findByOrderCodeWithDetails(orderCode);
+
+        // Build response with public code only
         Map<String, Object> data = new HashMap<>();
-        data.put("id", order.getId());
+        data.put("orderCode", order.getOrderCode()); // public code
         data.put("address", order.getAddress());
         data.put("phone", order.getPhone());
         data.put("createDate", order.getCreateDate());
@@ -204,7 +209,7 @@ public class ApiOrderController {
         data.put("voucherCode", order.getVoucherCode());
         data.put("note", order.getNote());
         data.put("pointsUsed", order.getPointsUsed());
-        
+
         // Add order details (products)
         var orderDetails = order.getOrderDetails().stream()
                 .map(detail -> {
@@ -217,7 +222,7 @@ public class ApiOrderController {
                     return item;
                 }).toList();
         data.put("orderDetails", orderDetails);
-        
+
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết đơn hàng thành công", data));
     }
 }

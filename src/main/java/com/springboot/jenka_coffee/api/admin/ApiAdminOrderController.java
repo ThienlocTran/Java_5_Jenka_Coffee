@@ -130,6 +130,7 @@ public class ApiAdminOrderController {
     private Map<String, Object> toDto(Order o) {
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", o.getId());
+        dto.put("orderCode", o.getOrderCode()); // public code for display
         dto.put("address", o.getAddress());
         dto.put("phone", o.getPhone());
         dto.put("status", o.getStatus());

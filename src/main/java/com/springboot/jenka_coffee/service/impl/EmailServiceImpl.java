@@ -3,6 +3,8 @@ package com.springboot.jenka_coffee.service.impl;
 import com.springboot.jenka_coffee.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -14,6 +16,8 @@ import java.math.BigDecimal;
 
 @Service
 public class EmailServiceImpl implements EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     private final JavaMailSender mailSender;
 
@@ -29,8 +33,6 @@ public class EmailServiceImpl implements EmailService {
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
-
-    // ================= HELPER METHODS =================
 
     private String escape(String value, String defaultVal) {
         return HtmlUtils.htmlEscape(value != null ? value : defaultVal);
@@ -51,8 +53,6 @@ public class EmailServiceImpl implements EmailService {
         return helper;
     }
 
-    // ================= EMAIL METHODS =================
-
     @Override
     @Async
     public void sendActivationEmail(String to, String token, String fullname) {
@@ -68,19 +68,18 @@ public class EmailServiceImpl implements EmailService {
             String link = baseUrl + "/auth/activate/" + token;
 
             String html = """
-                    <div style="font-family: Arial; max-width:600px;margin:auto;">
+                    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:auto;">
                         <h2>Xin chào %s!</h2>
-                        <p>Vui lòng kích hoạt tài khoản:</p>
-                        <a href="%s">Kích hoạt</a>
+                        <p>Vui lòng kích hoạt tài khoản Jenka Coffee của bạn:</p>
+                        <a href="%s">Kích hoạt tài khoản</a>
                         <p>%s</p>
                     </div>
                     """.formatted(safeName, link, link);
 
             helper.setText(html, true);
             mailSender.send(message);
-
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email kích hoạt");
+            throw new RuntimeException("Không thể gửi email kích hoạt", e);
         }
     }
 
@@ -99,19 +98,18 @@ public class EmailServiceImpl implements EmailService {
             String link = baseUrl + "/auth/reset-password/" + token;
 
             String html = """
-                    <div style="font-family: Arial; max-width:600px;margin:auto;">
+                    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:auto;">
                         <h2>Xin chào %s!</h2>
-                        <p>Đặt lại mật khẩu:</p>
-                        <a href="%s">Reset Password</a>
+                        <p>Đặt lại mật khẩu Jenka Coffee:</p>
+                        <a href="%s">Đặt lại mật khẩu</a>
                         <p>%s</p>
                     </div>
                     """.formatted(safeName, link, link);
 
             helper.setText(html, true);
             mailSender.send(message);
-
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email reset password");
+            throw new RuntimeException("Không thể gửi email reset password", e);
         }
     }
 
@@ -134,24 +132,95 @@ public class EmailServiceImpl implements EmailService {
             String formatted = formatCurrency(total);
 
             String html = """
-                    <h2>Đơn hàng #%d</h2>
-                    <p>Khách: %s</p>
-                    <p>SĐT: %s</p>
-                    <p>Địa chỉ: %s</p>
-                    <p>Tổng tiền: %s</p>
-                    <a href="%s/admin/order/detail/%d">Xem chi tiết</a>
-                    """.formatted(orderId, safeName, safePhone, safeAddress,
-                    formatted, baseUrl, orderId);
+                    <div style="margin:0;padding:0;background:#f6f1ea;font-family:Arial,Helvetica,sans-serif;color:#24170f;">
+                      <div style="max-width:640px;margin:0 auto;padding:28px 16px;">
+                        <div style="background:#ffffff;border:1px solid #eadfd2;border-radius:16px;overflow:hidden;">
+                          <div style="background:#3f2618;color:#fff;padding:22px 28px;">
+                            <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#e8cfae;">Jenka Coffee</div>
+                            <h1 style="margin:8px 0 0;font-size:24px;line-height:1.3;">Có đơn hàng mới #%d</h1>
+                          </div>
+                          <div style="padding:26px 28px;">
+                            <p style="margin:0 0 18px;font-size:16px;">Một khách hàng vừa đặt mua trên website. Vui lòng kiểm tra và liên hệ xác nhận sớm.</p>
+                            <table style="width:100%%;border-collapse:collapse;font-size:15px;">
+                              <tr><td style="padding:10px 0;color:#7b6758;">Khách hàng</td><td style="padding:10px 0;text-align:right;font-weight:700;">%s</td></tr>
+                              <tr><td style="padding:10px 0;color:#7b6758;">Số điện thoại</td><td style="padding:10px 0;text-align:right;font-weight:700;">%s</td></tr>
+                              <tr><td style="padding:10px 0;color:#7b6758;">Địa chỉ</td><td style="padding:10px 0;text-align:right;font-weight:700;">%s</td></tr>
+                              <tr><td style="padding:14px 0;border-top:1px solid #eadfd2;color:#7b6758;">Tổng tiền</td><td style="padding:14px 0;border-top:1px solid #eadfd2;text-align:right;font-size:20px;font-weight:800;color:#b85c20;">%s</td></tr>
+                            </table>
+                            <div style="margin-top:24px;">
+                              <a href="%s/admin/order/detail/%d" style="display:inline-block;background:#b85c20;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;">Xem chi tiết đơn</a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    """.formatted(orderId, safeName, safePhone, safeAddress, formatted, baseUrl, orderId);
 
             helper.setText(html, true);
             mailSender.send(message);
-
         } catch (MessagingException e) {
-            // IMPORTANT: @Async method — MUST log here, cannot re-throw to caller!
-            // RuntimeException thrown in @Async thread pool is silently discarded.
-            org.slf4j.LoggerFactory.getLogger(EmailServiceImpl.class)
-                    .error("[EMAIL FAIL] sendNewOrderNotification | to={} | orderId={} | cause={}",
-                            adminEmail, orderId, e.getMessage(), e);
+            log.error("[EMAIL FAIL] sendNewOrderNotification | to={} | orderId={} | cause={}",
+                    adminEmail, orderId, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Async
+    public void sendOrderConfirmation(String customerEmail, String customerName, Long orderId,
+                                      String orderCode, String phone, String address, BigDecimal total) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = createHelper(
+                    message,
+                    customerEmail,
+                    "Cảm ơn bạn đã mua hàng tại Jenka Coffee"
+            );
+
+            String safeName = escape(customerName, "bạn");
+            String safeOrderCode = escape(orderCode, "#" + orderId);
+            String safePhone = escape(phone, "");
+            String safeAddress = escape(address, "");
+            String formatted = formatCurrency(total);
+            String orderUrl = baseUrl + "/orders/" + safeOrderCode;
+
+            String html = """
+                    <div style="margin:0;padding:0;background:#f6f1ea;font-family:Arial,Helvetica,sans-serif;color:#24170f;">
+                      <div style="max-width:640px;margin:0 auto;padding:28px 16px;">
+                        <div style="text-align:center;margin-bottom:18px;">
+                          <div style="font-size:22px;font-weight:800;color:#3f2618;">Jenka Coffee</div>
+                          <div style="font-size:13px;color:#8a7665;margin-top:4px;">Máy pha, hạt cà phê và dịch vụ tận tâm</div>
+                        </div>
+                        <div style="background:#ffffff;border:1px solid #eadfd2;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(63,38,24,.08);">
+                          <div style="background:#3f2618;color:#fff;padding:30px 28px;text-align:center;">
+                            <div style="display:inline-block;background:#e8cfae;color:#3f2618;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;">Đặt hàng thành công</div>
+                            <h1 style="margin:16px 0 8px;font-size:28px;line-height:1.25;">Cảm ơn %s đã mua hàng</h1>
+                            <p style="margin:0;color:#f4e7d6;font-size:15px;">Jenka Coffee đã nhận đơn của bạn và sẽ liên hệ xác nhận trong thời gian sớm nhất.</p>
+                          </div>
+                          <div style="padding:26px 28px;">
+                            <div style="background:#fff8f0;border:1px solid #f0dfca;border-radius:12px;padding:16px;margin-bottom:20px;">
+                              <div style="font-size:13px;color:#8a7665;">Mã đơn hàng</div>
+                              <div style="font-size:24px;font-weight:800;color:#b85c20;margin-top:4px;">%s</div>
+                            </div>
+                            <table style="width:100%%;border-collapse:collapse;font-size:15px;">
+                              <tr><td style="padding:10px 0;color:#7b6758;">Số điện thoại</td><td style="padding:10px 0;text-align:right;font-weight:700;">%s</td></tr>
+                              <tr><td style="padding:10px 0;color:#7b6758;">Địa chỉ giao hàng</td><td style="padding:10px 0;text-align:right;font-weight:700;">%s</td></tr>
+                              <tr><td style="padding:14px 0;border-top:1px solid #eadfd2;color:#7b6758;">Tổng thanh toán</td><td style="padding:14px 0;border-top:1px solid #eadfd2;text-align:right;font-size:22px;font-weight:800;color:#b85c20;">%s</td></tr>
+                            </table>
+                            <div style="margin-top:24px;text-align:center;">
+                              <a href="%s" style="display:inline-block;background:#b85c20;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;">Xem đơn hàng</a>
+                            </div>
+                            <p style="margin:22px 0 0;color:#7b6758;font-size:14px;line-height:1.6;">Nếu thông tin chưa đúng, bạn chỉ cần phản hồi email này hoặc liên hệ Jenka Coffee để được hỗ trợ.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    """.formatted(safeName, safeOrderCode, safePhone, safeAddress, formatted, orderUrl);
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            log.error("[EMAIL FAIL] sendOrderConfirmation | to={} | orderId={} | cause={}",
+                    customerEmail, orderId, e.getMessage(), e);
         }
     }
 
@@ -178,9 +247,8 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-
         } catch (MessagingException e) {
-            throw new RuntimeException("Không thể gửi email liên hệ");
+            throw new RuntimeException("Không thể gửi email liên hệ", e);
         }
     }
 }
