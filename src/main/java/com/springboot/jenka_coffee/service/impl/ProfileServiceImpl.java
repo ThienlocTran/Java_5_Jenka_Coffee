@@ -275,6 +275,11 @@ public class ProfileServiceImpl implements ProfileService {
         
         if (!isOAuthAccount) {
             // Regular account - verify current password
+            // Check if currentPassword is provided
+            if (currentPassword == null || currentPassword.trim().isEmpty()) {
+                throw new ValidationException("Vui lòng nhập mật khẩu hiện tại");
+            }
+            
             if (!passwordSecurity.verifyPassword(currentPassword, account.getPasswordHash())) {
                 throw new ValidationException("Mật khẩu hiện tại không đúng");
             }

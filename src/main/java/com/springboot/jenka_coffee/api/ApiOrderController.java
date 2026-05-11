@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.api;
 
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.dto.request.CheckoutRequest;
+import com.springboot.jenka_coffee.dto.response.OrderHistoryDTO;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.entity.Order;
 import com.springboot.jenka_coffee.service.AccountService;
@@ -14,11 +15,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -37,8 +38,8 @@ public class ApiOrderController {
 
     @GetMapping("/checkout-info")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCheckoutInfo(
-            @AuthenticationPrincipal UserDetails principal) {
-        String username = principal != null ? principal.getUsername() : null;
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));
@@ -60,8 +61,8 @@ public class ApiOrderController {
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<Map<String, Object>>> processCheckout(
             @Valid @RequestBody CheckoutRequest request,
-            @AuthenticationPrincipal UserDetails principal) {
-        String username = principal != null ? principal.getUsername() : null;
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));
@@ -78,8 +79,8 @@ public class ApiOrderController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderHistory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
-            @AuthenticationPrincipal UserDetails principal) {
-        String username = principal != null ? principal.getUsername() : null;
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));
@@ -93,14 +94,64 @@ public class ApiOrderController {
         }
         
         Pageable pageable = PageRequest.of(page, Math.min(size, 20), Sort.by("id").descending());
-        Page<Order> orderPage = orderService.findByUsername(username, pageable);
+        Page<Order> orderPage = orderService.findByUsernameWithDetails(username, pageable);
+
+        // Convert to DTO to include orderDetails with product info
+        List<OrderHistoryDTO> orderDTOs = orderPage.getContent().stream()
+                .map(this::convertToOrderHistoryDTO)
+                .toList();
 
         Map<String, Object> data = new HashMap<>();
-        data.put("items",       orderPage.getContent());
+        data.put("items",       orderDTOs);
         data.put("currentPage", orderPage.getNumber());
         data.put("totalPages",  orderPage.getTotalPages());
         data.put("totalItems",  orderPage.getTotalElements());
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử đơn hàng thành công", data));
+    }
+    
+    /**
+     * Convert Order entity to OrderHistoryDTO with orderDetails and product info
+     */
+    private com.springboot.jenka_coffee.dto.response.OrderHistoryDTO convertToOrderHistoryDTO(Order order) {
+        com.springboot.jenka_coffee.dto.response.OrderHistoryDTO dto = new com.springboot.jenka_coffee.dto.response.OrderHistoryDTO();
+        dto.setId(order.getId());
+        dto.setAddress(order.getAddress());
+        dto.setCreateDate(order.getCreateDate());
+        dto.setPhone(order.getPhone());
+        dto.setStatus(order.getStatus());
+        dto.setVoucherCode(order.getVoucherCode());
+        dto.setTotalAmount(order.getTotalAmount());
+        dto.setPointsUsed(order.getPointsUsed());
+        dto.setNote(order.getNote());
+        
+        // Convert orderDetails
+        if (order.getOrderDetails() != null) {
+            List<com.springboot.jenka_coffee.dto.response.OrderHistoryDTO.OrderDetailDTO> detailDTOs = 
+                order.getOrderDetails().stream()
+                    .map(detail -> {
+                        com.springboot.jenka_coffee.dto.response.OrderHistoryDTO.OrderDetailDTO detailDTO = 
+                            new com.springboot.jenka_coffee.dto.response.OrderHistoryDTO.OrderDetailDTO();
+                        detailDTO.setId(detail.getId());
+                        detailDTO.setPrice(detail.getPrice());
+                        detailDTO.setQuantity(detail.getQuantity());
+                        
+                        // Convert product
+                        if (detail.getProduct() != null) {
+                            com.springboot.jenka_coffee.dto.response.OrderHistoryDTO.ProductDTO productDTO = 
+                                new com.springboot.jenka_coffee.dto.response.OrderHistoryDTO.ProductDTO();
+                            productDTO.setId(detail.getProduct().getId());
+                            productDTO.setName(detail.getProduct().getName());
+                            productDTO.setImage(detail.getProduct().getImage());
+                            detailDTO.setProduct(productDTO);
+                        }
+                        
+                        return detailDTO;
+                    })
+                    .toList();
+            dto.setOrderDetails(detailDTOs);
+        }
+        
+        return dto;
     }
     
     /**
@@ -110,8 +161,8 @@ public class ApiOrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOrderDetail(
             @PathVariable Long orderId,
-            @AuthenticationPrincipal UserDetails principal) {
-        String username = principal != null ? principal.getUsername() : null;
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Chưa đăng nhập"));

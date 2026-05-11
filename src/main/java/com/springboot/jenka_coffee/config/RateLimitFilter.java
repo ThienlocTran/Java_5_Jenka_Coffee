@@ -17,8 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Duration;
 
-import static com.springboot.jenka_coffee.api.ApiVisitorController.checkIp;
-
 /**
  * Rate limiter per IP — dùng Caffeine Cache với TTL tự động.
  * VULN-H02 FIX: Thay ConcurrentHashMap + periodic clear bằng sliding window.
@@ -214,8 +212,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return remoteAddr;
     }
 
+    /**
+     * Check if IP belongs to trusted private network (internal proxy/load-balancer).
+     * Only trust X-Forwarded-For headers from these sources.
+     *
+     * RFC 1918 private ranges:
+     *   10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+     * Localhost: 127.0.0.1, ::1
+     */
     private boolean isTrustedProxy(String ip) {
-        return checkIp(ip);
+        if (ip == null) return false;
+        return ip.startsWith("10.")
+                || ip.startsWith("172.16.") || ip.startsWith("172.17.")
+                || ip.startsWith("172.18.") || ip.startsWith("172.19.")
+                || ip.startsWith("172.20.") || ip.startsWith("172.21.")
+                || ip.startsWith("172.22.") || ip.startsWith("172.23.")
+                || ip.startsWith("172.24.") || ip.startsWith("172.25.")
+                || ip.startsWith("172.26.") || ip.startsWith("172.27.")
+                || ip.startsWith("172.28.") || ip.startsWith("172.29.")
+                || ip.startsWith("172.30.") || ip.startsWith("172.31.")
+                || ip.startsWith("192.168.")
+                || "127.0.0.1".equals(ip)
+                || "::1".equals(ip);
     }
     
     /*

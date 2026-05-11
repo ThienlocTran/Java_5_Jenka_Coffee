@@ -10,8 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -95,9 +94,9 @@ public class ApiAdminAccountController {
     @DeleteMapping("/{username}")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
             @PathVariable String username,
-            @AuthenticationPrincipal UserDetails currentUser) {
-        
-        String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
+            Authentication authentication) {
+
+        String currentAdmin = authentication != null ? authentication.getName() : null;
         
         // BUG-54 FIX: Prevent admin self-deletion (suicide protection)
         if (username.equals(currentAdmin)) {
@@ -148,9 +147,9 @@ public class ApiAdminAccountController {
     public ResponseEntity<ApiResponse<Void>> adminResetPassword(
             @PathVariable String username,
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDetails currentUser) {
-        
-        String currentAdmin = currentUser != null ? currentUser.getUsername() : null;
+            Authentication authentication) {
+
+        String currentAdmin = authentication != null ? authentication.getName() : null;
         
         String newPassword = body.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {

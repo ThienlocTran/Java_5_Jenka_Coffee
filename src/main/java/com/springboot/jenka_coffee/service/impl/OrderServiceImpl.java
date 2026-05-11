@@ -72,6 +72,12 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findByAccount_Username(username, pageable);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Order> findByUsernameWithDetails(String username, Pageable pageable) {
+        return orderRepository.findByUsernameWithDetails(username, pageable);
+    }
+
     /**
      * CHECKOUT TRANSACTION — ACID guaranteed
      * Luồng:

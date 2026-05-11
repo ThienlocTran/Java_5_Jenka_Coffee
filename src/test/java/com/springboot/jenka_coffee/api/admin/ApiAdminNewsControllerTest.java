@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.jenka_coffee.entity.News;
 import com.springboot.jenka_coffee.repository.NewsRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,7 +95,7 @@ public class ApiAdminNewsControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("TC-NEWS-CTRL-021: CREATE concurrent requests same title (Race condition) - DISABLED DUE TO SECURITY CONTEXT ISSUE")
-    @org.junit.jupiter.api.Disabled("FLAKY: @WithMockUser SecurityContext not inherited by ExecutorService child threads. " +
+    @Disabled("FLAKY: @WithMockUser SecurityContext not inherited by ExecutorService child threads. " +
             "Child threads get 401/403 because SecurityContextHolder.MODE_THREADLOCAL doesn't propagate. " +
             "Fix requires: SecurityContextHolder.setStrategyName(MODE_INHERITABLETHREADLOCAL) or use real JWT tokens. " +
             "Test disabled to prevent false failures.")

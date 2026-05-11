@@ -94,9 +94,12 @@ public class ApiAuthController {
         }
 
         Map<String, Object> data = buildUserData(account);
-        // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
-        // HttpOnly cookie đã đủ an toàn, không cần sessionStorage
-        // data.put("accessToken", accessToken); // REMOVED - tránh XSS
+        // DEV FALLBACK: Trả accessToken trong body để frontend lưu vào sessionStorage
+        // Cần thiết cho dev cross-origin (localhost:5173 → localhost:8080) vì HttpOnly cookie
+        // không gửi được qua cross-origin requests (SameSite=Lax).
+        // Trên production (same-origin qua reverse proxy), cookie tự động gửi → không cần body token.
+        // sessionStorage an toàn hơn localStorage (xóa khi đóng tab) và tốt hơn không có gì.
+        data.put("accessToken", accessToken);
 
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
     }
@@ -164,8 +167,8 @@ public class ApiAuthController {
         addTokenCookie(response, "access_token", newAccessToken, 86400);
 
         Map<String, Object> data = buildUserData(account);
-        // VULN-XSS-001 FIX: KHÔNG trả token trong JSON body
-        // data.put("accessToken", newAccessToken); // REMOVED
+        // DEV FALLBACK: Trả accessToken trong body (xem lý giải tại /login endpoint)
+        data.put("accessToken", newAccessToken);
         return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
     }
 
@@ -236,7 +239,16 @@ public class ApiAuthController {
         
         if (account == null) {
             // Create new account from Google - generate unique username from email
-            String username = email.split("@")[0] + "_" + currentTimeMillis();
+            // Clean email prefix: remove dots and special characters, keep only alphanumeric
+            String emailPrefix = email.split("@")[0]
+                    .replaceAll("[^a-zA-Z0-9]", "")  // Remove dots, dashes, etc.
+                    .toLowerCase();
+            
+            // Use only last 6 digits of timestamp for shorter username
+            String timestamp = String.valueOf(currentTimeMillis());
+            String shortTimestamp = timestamp.substring(timestamp.length() - 6);
+            
+            String username = emailPrefix + "_" + shortTimestamp;
             
             account = new Account();
             account.setUsername(username);
@@ -318,10 +330,8 @@ public class ApiAuthController {
         addTokenCookie(response, "refresh_token", refreshToken, 604800);
         
         Map<String, Object> data = buildUserData(account);
-        // VULN-M01 FIX: Do NOT return accessToken in JSON response body
-        // Token should only be in HttpOnly cookie to prevent XSS theft
-        // Frontend will use cookie automatically, no need for sessionStorage
-        // data.put("accessToken", accessToken); // REMOVED
+        // DEV FALLBACK: Trả accessToken trong body (xem lý giải tại /login endpoint)
+        data.put("accessToken", accessToken);
         data.put("needsPhone", needsPhone);
         
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", data));
@@ -332,10 +342,10 @@ public class ApiAuthController {
      */
     @PatchMapping("/update-phone")
     public ResponseEntity<ApiResponse<Void>> updatePhone(
-            @AuthenticationPrincipal UserDetails principal,
+            org.springframework.security.core.Authentication authentication,
             @RequestBody Map<String, String> request) {
         
-        String username = principal != null ? principal.getUsername() : null;
+        String username = authentication != null ? authentication.getName() : null;
         log.info("UPDATE_PHONE: Received request from username: {}", username);
         
         if (username == null) {
@@ -383,8 +393,8 @@ public class ApiAuthController {
     /** Lấy thông tin user hiện tại từ JWT (thay thế session /me) */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMe(
-            @AuthenticationPrincipal UserDetails principal) {
-        String username = principal != null ? principal.getUsername() : null;
+            org.springframework.security.core.Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Chưa đăng nhập"));
         }

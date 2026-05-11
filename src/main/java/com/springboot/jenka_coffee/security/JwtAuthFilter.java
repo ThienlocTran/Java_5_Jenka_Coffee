@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.List;
 
 // BUG-63: JWT VALIDATION FLAW / USER LOCKOUT DELAY (Hệ Miễn Dịch Chậm Chạp)
+@Slf4j
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -43,38 +45,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 chain.doFilter(req, res);
                 return;
             }
-            
+
             String username = jwtService.extractUsername(token);
-            
-            // ARCHITECTURE FIX: Use service layer instead of repository
-            // VULN-PRIVILEGE-REVOCATION FIX: Load account từ DB để verify admin status
-            // Không tin JWT claim vì có thể đã bị revoke
-            AccountService.AccountSecurityInfo securityInfo = accountService.getAccountSecurityInfo(username);
-            
+
+            AccountService.AccountSecurityInfo securityInfo;
+            try {
+                securityInfo = accountService.getAccountSecurityInfo(username);
+            } catch (Exception e) {
+                log.error("[Security] Failed to load account info for '{}': {}", username, e.getMessage());
+                chain.doFilter(req, res);
+                return;
+            }
+
             if (!securityInfo.exists() || !securityInfo.activated()) {
                 chain.doFilter(req, res);
                 return;
             }
-            
+
             // VULN-SESSION-REVOCATION FIX: Check if token was issued before password reset
             if (securityInfo.lastPasswordResetTimestamp() != null) {
                 long tokenIssuedAt = jwtService.extractIssuedAt(token);
                 long passwordResetTime = securityInfo.lastPasswordResetTimestamp();
-                
+
                 if (tokenIssuedAt < passwordResetTime) {
-                    // Token issued before password reset - reject
+                    log.warn("[Security] Stale token rejected for user '{}' (issued before password reset)", username);
                     chain.doFilter(req, res);
                     return;
                 }
             }
-            
-            // Lấy admin status từ DB (fresh data), không từ JWT token
-            boolean isAdminInDb = securityInfo.admin();
+
+            boolean isAdminInDb    = securityInfo.admin();
             boolean isAdminInToken = jwtService.isAdmin(token);
-            
+
             // VULN-PRIVILEGE-REVOCATION FIX: Nếu token claim admin=true nhưng DB là false → reject
             if (isAdminInToken && !isAdminInDb) {
-                // Token đã stale, admin privilege đã bị revoke
+                log.warn("[Security] Admin privilege revoked — token rejected for user '{}'", username);
                 chain.doFilter(req, res);
                 return;
             }

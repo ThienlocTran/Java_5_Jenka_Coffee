@@ -71,6 +71,12 @@ public class ApiProfileController {
             @AuthenticationPrincipal String username) {
         if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Vui lòng đăng nhập"));
+        
+        // Validate confirmPassword matches newPassword
+        if (request.getNewPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Mật khẩu xác nhận không khớp"));
+        }
+        
         try {
             profileService.changePassword(username, request.getCurrentPassword(), request.getNewPassword());
             return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công!", null));

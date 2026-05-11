@@ -125,11 +125,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // User — phải đăng nhập
                 .requestMatchers(
-                    "/api/auth/me").authenticated()  // FIX: Allow both USER and ADMIN roles
+                    "/api/auth/me",
+                    "/api/auth/update-phone").authenticated()  // Allow any authenticated user (including new Google users without role yet)
                 .requestMatchers(
-                    "/api/auth/update-phone",     // Requires authentication
                     "/api/orders/**",
-                    "/api/profile/**").hasRole("USER")
+                    "/api/profile/**").hasAnyRole("USER", "ADMIN")
                 // Mọi endpoint không match → deny (secure by default)
                 .anyRequest().denyAll()
             )

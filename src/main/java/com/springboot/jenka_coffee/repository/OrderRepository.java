@@ -16,6 +16,23 @@ import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    // ===== PUBLIC ORDER CODE LOOKUPS =====
+
+    /**
+     * Find order by its public-facing order code (e.g. "ORD-20260511-AB12CD").
+     * Used by customer-facing API instead of exposing numeric PK.
+     */
+    java.util.Optional<Order> findByOrderCode(String orderCode);
+
+    /**
+     * Find order by public code with all details eagerly loaded (avoids N+1).
+     */
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderDetails d " +
+           "LEFT JOIN FETCH d.product " +
+           "WHERE o.orderCode = :orderCode")
+    java.util.Optional<Order> findByOrderCodeWithDetails(@Param("orderCode") String orderCode);
+
     // ===== ANALYTICS QUERIES =====
 
     /**
@@ -51,6 +68,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 
     Page<Order> findByAccount_Username(String username, Pageable pageable);
+
+    /**
+     * Fetch orders with orderDetails and products for order history page
+     * Uses JOIN FETCH to eagerly load relationships and avoid N+1 queries
+     */
+    @Query(value = "SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.orderDetails d " +
+            "LEFT JOIN FETCH d.product " +
+            "WHERE o.account.username = :username",
+            countQuery = "SELECT COUNT(o) FROM Order o WHERE o.account.username = :username")
+    Page<Order> findByUsernameWithDetails(@Param("username") String username, Pageable pageable);
 
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.account WHERE o.id IN :ids")
     List<Order> findAllWithAccountByIds(@Param("ids") List<Long> ids);

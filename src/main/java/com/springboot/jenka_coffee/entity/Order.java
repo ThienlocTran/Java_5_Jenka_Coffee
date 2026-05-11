@@ -2,6 +2,7 @@ package com.springboot.jenka_coffee.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.persistence.Index;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -17,13 +18,25 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Orders") // Bắt buộc, vì Order trùng tên khóa SQL
+@Table(
+    name = "Orders", // Bắt buộc, vì Order trùng tên khóa SQL
+    indexes = { @Index(name = "idx_order_code", columnList = "orderCode", unique = true) }
+)
 public class Order implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "Id")
     private Long id;
+
+    /**
+     * Public-facing order code — safe to expose in URLs and to customers.
+     * Format: ORD-YYYYMMDD-XXXXXX  (e.g. ORD-20260511-AB12CD)
+     * Generated once at checkout; NEVER changes after creation.
+     * Keeps numeric PK private (performance / JPA relations unchanged).
+     */
+    @Column(name = "orderCode", unique = true, nullable = false, length = 30)
+    private String orderCode;
 
     @Column(name = "Address", nullable = false)
     private String address;

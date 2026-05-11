@@ -15,6 +15,7 @@ public interface OrderService {
     Order findByIdWithDetails(Long id);
 
     Page<Order> findByUsername(String username, Pageable pageable);
+    Page<Order> findByUsernameWithDetails(String username, Pageable pageable);
     Order checkout(CheckoutRequest request, Account account);
     void postCheckout(Order savedOrder, Account account);
     CheckoutRequest prepareCheckoutRequest(Account user);
