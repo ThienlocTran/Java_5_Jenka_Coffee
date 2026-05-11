@@ -299,7 +299,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @CacheEvict(value = "categoryCounts", allEntries = true)
     public Product update(Product product) {
-        log.info("Updating product with ID: {}", product.getId());
+         //log.info("Updating product with ID: {}", product.getId());
 
         // Kiểm tra product có tồn tại không
         if (!productRepository.existsById(product.getId())) {
@@ -313,7 +313,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product updatedProduct = productRepository.save(product);
-        log.info("Successfully updated product with ID: {}", updatedProduct.getId());
+      //  log.info("Successfully updated product with ID: {}", updatedProduct.getId());
         
         // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
         try {

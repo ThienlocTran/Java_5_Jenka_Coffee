@@ -87,7 +87,7 @@ public class VercelWebhookServiceImpl implements VercelWebhookService {
     public void triggerRebuild() {
         // Guard: Check if webhook URL is configured
         if (deployHookUrl == null || deployHookUrl.isBlank()) {
-            log.warn("[VERCEL] Deploy hook URL not configured. Skipping rebuild trigger.");
+           // log.warn("[VERCEL] Deploy hook URL not configured. Skipping rebuild trigger.");
             return;
         }
 
