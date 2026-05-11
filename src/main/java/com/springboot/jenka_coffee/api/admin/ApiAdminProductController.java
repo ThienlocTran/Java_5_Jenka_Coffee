@@ -221,6 +221,31 @@ public class ApiAdminProductController {
     }
 
     /**
+     * PUT /api/admin/products/{id}/featured-position
+     * Body: { "position": 1 } to pin on homepage, or null/0 to remove.
+     */
+    @PutMapping("/{id}/featured-position")
+    public ResponseEntity<ApiResponse<Product>> updateFeaturedPosition(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Integer> body) {
+        try {
+            Integer position = body != null ? body.get("position") : null;
+            Product product = productService.updateFeaturedPosition(id, position);
+            String message = Boolean.TRUE.equals(product.getFeatured())
+                    ? "Đã cập nhật vị trí nổi bật"
+                    : "Đã bỏ sản phẩm khỏi danh sách nổi bật";
+            return ResponseEntity.ok(ApiResponse.success(message, product));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error updating product featured position: {}", id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Lỗi khi cập nhật vị trí nổi bật"));
+        }
+    }
+
+    /**
      * GET /api/admin/products/inventory
      */
     @GetMapping("/inventory")
@@ -254,6 +279,7 @@ public class ApiAdminProductController {
                     item.put("price", p.getPrice());
                     item.put("available", p.getAvailable());
                     item.put("featured", p.getFeatured());
+                    item.put("featuredPosition", p.getFeaturedPosition());
                     return item;
                 }).toList();
 

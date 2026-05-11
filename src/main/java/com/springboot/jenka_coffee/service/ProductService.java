@@ -50,6 +50,8 @@ public interface ProductService {
     void deleteProductWithValidation(Integer id);
     
     Product toggleFeatured(Integer id);
+
+    Product updateFeaturedPosition(Integer id, Integer position);
     
     void saveProductImages(Integer productId, List<MultipartFile> images);
     

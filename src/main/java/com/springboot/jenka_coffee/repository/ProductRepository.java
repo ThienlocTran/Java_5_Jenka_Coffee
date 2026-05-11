@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,10 +23,19 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsBySlug(String slug);
 
     // ── findAll with JOIN FETCH to avoid LazyInitializationException ──
-    // Featured products first, then by creation date (newest first)
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category ORDER BY p.featured DESC, p.createDate DESC",
+    // Featured products first by explicit homepage position, then by creation date.
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category " +
+            "ORDER BY CASE WHEN p.featured = true THEN 0 ELSE 1 END, " +
+            "CASE WHEN p.featured = true THEN COALESCE(p.featuredPosition, 999999) ELSE 999999 END ASC, " +
+            "p.createDate DESC",
            countQuery = "SELECT COUNT(p) FROM Product p")
     Page<Product> findAllWithCategory(Pageable pageable);
+
+    @Query("SELECT p FROM Product p WHERE p.featured = true ORDER BY COALESCE(p.featuredPosition, 999999), p.createDate DESC")
+    List<Product> findFeaturedProductsForOrdering();
+
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.available = true ORDER BY p.createDate DESC")
+    List<Product> findAvailableForHomepageOrdering();
     
     @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.id = :id")
     Optional<Product> findByIdWithCategory(@Param("id") Integer id);
@@ -92,4 +102,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // ── Count orders using this product ──────────────────────────────
     @Query("SELECT COUNT(od) FROM OrderDetail od WHERE od.product.id = :productId")
     long countOrdersByProductId(@Param("productId") Integer productId);
+
+    long countByCreateDateGreaterThanEqualAndCreateDateLessThan(LocalDateTime from, LocalDateTime to);
 }

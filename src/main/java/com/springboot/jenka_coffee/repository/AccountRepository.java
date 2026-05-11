@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +54,8 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          * Generated query: SELECT COUNT(*) FROM accounts WHERE admin = true
          */
         long countByAdminTrue();
+
+        long countByCreateDateGreaterThanEqualAndCreateDateLessThan(LocalDateTime from, LocalDateTime to);
 
         // ===== CUSTOM @Query METHODS =====
 

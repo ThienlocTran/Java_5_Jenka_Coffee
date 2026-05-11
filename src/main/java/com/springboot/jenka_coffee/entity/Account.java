@@ -104,6 +104,9 @@ public class Account implements Serializable, Persistable<String> {
     @Column(name = "lastPasswordResetDate")
     private LocalDateTime lastPasswordResetDate;
 
+    @Column(name = "createdate", updatable = false)
+    private LocalDateTime createDate = LocalDateTime.now();
+
     // Quan hệ 1-N với Order
     @JsonIgnore // Chặn Account↔Order cycle
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)

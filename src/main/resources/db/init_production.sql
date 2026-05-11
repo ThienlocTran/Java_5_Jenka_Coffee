@@ -136,6 +136,7 @@ CREATE TABLE "Products" (
     "createDate"     TIMESTAMP     NOT NULL DEFAULT NOW(),
     "Available"      BOOLEAN       NOT NULL DEFAULT TRUE,
     "isFeatured"     BOOLEAN       NOT NULL DEFAULT FALSE,
+    featured_position INTEGER,
     "requireContact" BOOLEAN       NOT NULL DEFAULT FALSE,
     "Categoryid"     VARCHAR(50)   NOT NULL,
     CONSTRAINT "Products_pkey"      PRIMARY KEY ("Id"),
@@ -146,6 +147,7 @@ CREATE TABLE "Products" (
 CREATE INDEX idx_products_category  ON "Products" ("Categoryid");
 CREATE INDEX idx_products_available ON "Products" ("Available");
 CREATE INDEX idx_products_featured  ON "Products" ("isFeatured");
+CREATE INDEX idx_products_featured_position ON "Products" (featured_position);
 CREATE INDEX idx_products_slug      ON "Products" (slug);
 
 COMMENT ON TABLE "Products" IS 'San pham ca phe va may moc';
@@ -259,25 +261,25 @@ COMMENT ON TABLE "Payments" IS 'Lich su thanh toan - audit trail cho moi don han
 -- 8. POINT HISTORY (Entity: PointHistory.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE pointhistory_id_seq;
-CREATE TABLE "PointHistory" (
+CREATE TABLE pointhistory (
     id           BIGINT       NOT NULL DEFAULT nextval('pointhistory_id_seq'),
     username     VARCHAR(50)  NOT NULL,
     amount       INTEGER      NOT NULL,
-    "OrderId"    BIGINT,
+    orderid      BIGINT,
     reason       VARCHAR(255) NOT NULL,
-    "createDate" TIMESTAMP    NOT NULL DEFAULT NOW(),
+    createdate   TIMESTAMP    NOT NULL DEFAULT NOW(),
     CONSTRAINT pointhistory_pkey       PRIMARY KEY (id),
     CONSTRAINT fk_pointhistory_account FOREIGN KEY (username)
         REFERENCES "Accounts" ("Username") ON DELETE CASCADE,
-    CONSTRAINT fk_pointhistory_order   FOREIGN KEY ("OrderId")
+    CONSTRAINT fk_pointhistory_order   FOREIGN KEY (orderid)
         REFERENCES orders (id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_pointhistory_username ON "PointHistory" (username);
-CREATE INDEX idx_pointhistory_order    ON "PointHistory" ("OrderId");
-CREATE INDEX idx_pointhistory_date     ON "PointHistory" ("createDate" DESC);
+CREATE INDEX idx_pointhistory_username ON pointhistory (username);
+CREATE INDEX idx_pointhistory_order    ON pointhistory (orderid);
+CREATE INDEX idx_pointhistory_date     ON pointhistory (createdate DESC);
 
-COMMENT ON TABLE "PointHistory" IS 'Lich su diem tich luy. amount > 0: tich, < 0: tieu';
+COMMENT ON TABLE pointhistory IS 'Lich su diem tich luy. amount > 0: tich, < 0: tieu';
 
 
 -- ----------------------------------------------------------
@@ -443,7 +445,7 @@ ALTER SEQUENCE orders_id_seq          OWNED BY orders.id;
 ALTER SEQUENCE products_id_seq        OWNED BY "Products"."Id";
 ALTER SEQUENCE orderdetails_id_seq    OWNED BY "OrderDetails"."Id";
 ALTER SEQUENCE payments_id_seq        OWNED BY "Payments".id;
-ALTER SEQUENCE pointhistory_id_seq    OWNED BY "PointHistory".id;
+ALTER SEQUENCE pointhistory_id_seq    OWNED BY pointhistory.id;
 ALTER SEQUENCE productimages_id_seq   OWNED BY "ProductImages"."Id";
 ALTER SEQUENCE news_id_seq            OWNED BY "News"."Id";
 ALTER SEQUENCE contacts_id_seq        OWNED BY "Contacts".id;

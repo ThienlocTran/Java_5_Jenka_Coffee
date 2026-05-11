@@ -165,6 +165,8 @@ public class OrderServiceImpl implements OrderService {
         // 4. Add admin dashboard to track pending payments
         createPayment(savedOrder, totalAmount, request);
 
+        awardLoyaltyPoints(lockedAccount, savedOrder, totalAmount);
+
         // VULN-C01 FIX: Clear cart TRONG transaction — ngăn double checkout
         try {
             cartService.clear();
@@ -259,6 +261,35 @@ public class OrderServiceImpl implements OrderService {
         payment.setPaymentDate(LocalDateTime.now());
 
         entityManager.persist(payment);
+    }
+
+    private void awardLoyaltyPoints(Account account, Order order, BigDecimal totalAmount) {
+        if (account == null || totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        int earnedPoints = calculateRewardPoints(totalAmount);
+        if (earnedPoints <= 0) {
+            return;
+        }
+
+        int currentPoints = Optional.ofNullable(account.getPoints()).orElse(0);
+        account.setPoints(currentPoints + earnedPoints);
+        entityManager.merge(account);
+
+        recordPointHistory(
+                account.getUsername(),
+                earnedPoints,
+                order.getId(),
+                "Tích điểm từ đơn hàng #" + order.getId()
+        );
+
+        log.info("Awarded {} points to user {} for order #{}",
+                earnedPoints, account.getUsername(), order.getId());
+    }
+
+    private int calculateRewardPoints(BigDecimal totalAmount) {
+        return totalAmount.divideToIntegralValue(BigDecimal.valueOf(1000)).intValue();
     }
 
     /**
@@ -434,6 +465,8 @@ public class OrderServiceImpl implements OrderService {
         // Refund points when order is cancelled
         if (to == Order.OrderStatus.CANCELLED && order.getAccount() != null) {
 
+            revokeEarnedPointsForCancelledOrder(order);
+
             Integer pointsToRefund = order.getPointsUsed();
 
             if (pointsToRefund != null && pointsToRefund > 0) {
@@ -459,6 +492,31 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         log.info("Order #{} status changed: {} → {}", orderId, from.name(), to.name());
         orderRepository.save(order);
+    }
+
+    private void revokeEarnedPointsForCancelledOrder(Order order) {
+        int earnedPoints = calculateRewardPoints(order.getTotalAmount());
+        if (earnedPoints <= 0) {
+            return;
+        }
+
+        Account account = entityManager.find(Account.class,
+                order.getAccount().getUsername(),
+                LockModeType.PESSIMISTIC_WRITE);
+
+        if (account == null) {
+            return;
+        }
+
+        int currentPoints = Optional.ofNullable(account.getPoints()).orElse(0);
+        account.setPoints(Math.max(0, currentPoints - earnedPoints));
+        entityManager.merge(account);
+
+        recordPointHistory(account.getUsername(), -earnedPoints, order.getId(),
+                "Trừ điểm tích lũy do hủy đơn hàng #" + order.getId());
+
+        log.info("Revoked {} earned points from user {} for cancelled order #{}",
+                earnedPoints, account.getUsername(), order.getId());
     }
 
     /**

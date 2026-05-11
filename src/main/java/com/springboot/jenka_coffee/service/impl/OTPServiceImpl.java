@@ -138,14 +138,6 @@ public class OTPServiceImpl implements OTPService {
             }
         }
         
-        if (removedOtps > 0 || removedAttempts > 0 || removedLocks > 0) {
-            System.out.println(String.format(
-                "OTP cleanup: removed %d expired OTPs, %d attempts, %d locks. " +
-                "Current sizes: otpStore=%d, attemptStore=%d, phoneLocks=%d",
-                removedOtps, removedAttempts, removedLocks,
-                otpStore.size(), attemptStore.size(), phoneLocks.size()
-            ));
-        }
     }
 
     private record OTPData(String otp, LocalDateTime expiry) {

@@ -16,6 +16,7 @@ import com.springboot.jenka_coffee.util.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -385,7 +387,71 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
+        if (isDefaultHomepageQuery(categoryId, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+            return findHomepagePinnedProducts(pageable);
+        }
         return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
+    }
+
+    private boolean isDefaultHomepageQuery(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
+        return (categoryId == null || categoryId.isBlank())
+                && minPrice == null
+                && maxPrice == null
+                && (keyword == null || keyword.isBlank());
+    }
+
+    private boolean isDefaultProductSort(Pageable pageable) {
+        if (pageable == null || pageable.getSort().isUnsorted()) {
+            return true;
+        }
+        return pageable.getSort().stream()
+                .anyMatch(order -> "id".equals(order.getProperty()) && order.isDescending());
+    }
+
+    private Page<Product> findHomepagePinnedProducts(Pageable pageable) {
+        List<Product> allProducts = productRepository.findAvailableForHomepageOrdering();
+        int total = allProducts.size();
+        if (total == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        List<Product> arranged = new ArrayList<>(Collections.nCopies(total, null));
+        List<Product> featuredProducts = allProducts.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getFeatured()) && p.getFeaturedPosition() != null)
+                .sorted((a, b) -> a.getFeaturedPosition().compareTo(b.getFeaturedPosition()))
+                .toList();
+        List<Integer> pinnedIds = featuredProducts.stream()
+                .map(Product::getId)
+                .toList();
+
+        for (Product product : featuredProducts) {
+            int index = Math.min(product.getFeaturedPosition(), total) - 1;
+            while (index < total && arranged.get(index) != null) {
+                index++;
+            }
+            if (index < total) {
+                arranged.set(index, product);
+            }
+        }
+
+        var regularIterator = allProducts.stream()
+                .filter(p -> !pinnedIds.contains(p.getId()))
+                .iterator();
+
+        for (int i = 0; i < arranged.size(); i++) {
+            if (arranged.get(i) == null && regularIterator.hasNext()) {
+                arranged.set(i, regularIterator.next());
+            }
+        }
+
+        List<Product> ordered = arranged.stream()
+                .filter(Objects::nonNull)
+                .toList();
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), ordered.size());
+        List<Product> pageContent = start >= ordered.size() ? List.of() : ordered.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, ordered.size());
     }
 
     @Override
@@ -621,7 +687,46 @@ public class ProductServiceImpl implements ProductService {
     public Product toggleFeatured(Integer id) {
         log.info("Toggling featured status for product ID: {}", id);
         Product product = findById(id);
-        product.setFeatured(!Boolean.TRUE.equals(product.getFeatured()));
+        boolean nextFeatured = !Boolean.TRUE.equals(product.getFeatured());
+        product.setFeatured(nextFeatured);
+        product.setFeaturedPosition(nextFeatured ? nextFeaturedPosition() : null);
         return update(product);
+    }
+
+    @Override
+    @Transactional
+    public Product updateFeaturedPosition(Integer id, Integer position) {
+        Product product = findById(id);
+
+        if (position == null || position < 1) {
+            product.setFeatured(false);
+            product.setFeaturedPosition(null);
+            return update(product);
+        }
+
+        List<Product> featuredProducts = productRepository.findFeaturedProductsForOrdering().stream()
+                .filter(p -> !p.getId().equals(id))
+                .toList();
+
+        for (Product featuredProduct : featuredProducts) {
+            Integer currentPosition = featuredProduct.getFeaturedPosition();
+            if (currentPosition != null && currentPosition >= position) {
+                featuredProduct.setFeaturedPosition(currentPosition + 1);
+            }
+        }
+        productRepository.saveAll(featuredProducts);
+
+        product.setFeatured(true);
+        product.setFeaturedPosition(position);
+        return update(product);
+    }
+
+    private Integer nextFeaturedPosition() {
+        return productRepository.findFeaturedProductsForOrdering().stream()
+                .map(Product::getFeaturedPosition)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .map(position -> position + 1)
+                .orElse(1);
     }
 }

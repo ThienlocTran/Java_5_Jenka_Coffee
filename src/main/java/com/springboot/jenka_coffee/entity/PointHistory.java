@@ -15,7 +15,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "PointHistory")
+@Table(name = "pointhistory")
 public class PointHistory implements Serializable {
 
     @Id
@@ -29,13 +29,13 @@ public class PointHistory implements Serializable {
     @Column(name = "amount", nullable = false)
     private Integer amount; // Positive = gain points, Negative = spend points
 
-    @Column(name = "OrderId")
+    @Column(name = "orderid")
     private Long orderId;
 
     @Column(name = "reason", nullable = false)
     private String reason;
 
-    @Column(name = "createDate")
+    @Column(name = "createdate")
     private LocalDateTime createDate = LocalDateTime.now();
 
     // --- RELATIONSHIPS ---
@@ -50,7 +50,7 @@ public class PointHistory implements Serializable {
     // N-1 with Order (nullable - for non-order points like events)
     @JsonIgnore // Chặn Order↔PointHistory cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "OrderId", insertable = false, updatable = false)
+    @JoinColumn(name = "orderid", insertable = false, updatable = false)
     @ToString.Exclude
     private Order order;
 

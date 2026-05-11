@@ -54,6 +54,9 @@ public class Product implements Serializable {
     @Column(name = "isFeatured")
     private Boolean featured = false;
 
+    @Column(name = "featured_position")
+    private Integer featuredPosition;
+
     @Column(name = "requireContact")
     private Boolean requireContact = false; // Sản phẩm yêu cầu liên hệ (không thể mua online)
 
