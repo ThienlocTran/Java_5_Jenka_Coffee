@@ -168,8 +168,9 @@ public class ApiOrderController {
                     .body(ApiResponse.error("Chưa đăng nhập"));
         }
 
-        // Validate orderCode format to prevent fuzzing (must match ORD-YYYYMMDD-XXXXXX)
-        if (orderCode == null || !orderCode.matches("ORD-\\d{8}-[A-Z0-9]{6}")) {
+        // Validate orderCode format to prevent fuzzing.
+        // Supports current ORD-YYYYMMDD-XXXXXX and compact ORD-XXXXXX format.
+        if (orderCode == null || !orderCode.matches("ORD-(\\d{8}-)?[A-Z0-9]{6}")) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Mã đơn hàng không hợp lệ"));
         }

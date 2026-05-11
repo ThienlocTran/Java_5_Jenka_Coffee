@@ -22,12 +22,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Find order by its public-facing order code (e.g. "ORD-20260511-AB12CD").
      * Used by customer-facing API instead of exposing numeric PK.
      */
-    java.util.Optional<Order> findByOrderCode(String orderCode);
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.account " +
+           "WHERE o.orderCode = :orderCode")
+    java.util.Optional<Order> findByOrderCode(@Param("orderCode") String orderCode);
 
     /**
      * Find order by public code with all details eagerly loaded (avoids N+1).
      */
     @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.account " +
            "LEFT JOIN FETCH o.orderDetails d " +
            "LEFT JOIN FETCH d.product " +
            "WHERE o.orderCode = :orderCode")

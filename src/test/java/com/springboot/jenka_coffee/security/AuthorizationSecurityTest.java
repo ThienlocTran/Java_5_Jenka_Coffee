@@ -28,12 +28,12 @@ class AuthorizationSecurityTest {
     @DisplayName("TC-SEC-IDOR-001: User A reads User B's orders - returns 403 or 404 (both secure)")
     @WithMockUser(username = "userA", roles = "USER")
     void test_idor_userAReadsUserBOrders_returns403() throws Exception {
-        // Arrange - Order ID 999 belongs to userB (or doesn't exist in test DB)
-        Long orderIdOfUserB = 999L;
+        // Arrange - Public order code belongs to userB (or doesn't exist in test DB)
+        String orderCodeOfUserB = "ORD-20260511-ZZZ999";
 
         // Act & Assert - Accept both 403 (explicit forbidden) and 404 (information hiding)
         // Both are secure responses - neither leaks order data
-        mockMvc.perform(get("/api/orders/" + orderIdOfUserB))
+        mockMvc.perform(get("/api/orders/" + orderCodeOfUserB))
                 .andExpect(result -> {
                     int status = result.getResponse().getStatus();
                     if (status != 403 && status != 404) {
@@ -50,11 +50,11 @@ class AuthorizationSecurityTest {
     @DisplayName("TC-SEC-IDOR-002: User A cancels User B's order - returns 403 or 404 (both secure)")
     @WithMockUser(username = "userA", roles = "USER")
     void test_idor_userACancelsUserBOrder_returns403() throws Exception {
-        // Arrange - Order ID 999 belongs to userB (or doesn't exist in test DB)
-        Long orderIdOfUserB = 999L;
+        // Arrange - Public order code belongs to userB (or doesn't exist in test DB)
+        String orderCodeOfUserB = "ORD-20260511-ZZZ999";
 
         // Act & Assert - Accept both 403 and 404
-        mockMvc.perform(post("/api/orders/" + orderIdOfUserB + "/cancel"))
+        mockMvc.perform(post("/api/orders/" + orderCodeOfUserB + "/cancel"))
                 .andExpect(result -> {
                     int status = result.getResponse().getStatus();
                     if (status != 403 && status != 404) {

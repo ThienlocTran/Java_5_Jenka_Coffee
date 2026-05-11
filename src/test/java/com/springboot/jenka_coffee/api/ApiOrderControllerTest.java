@@ -96,12 +96,12 @@ class ApiOrderControllerTest {
 
     /**
      * TC-ORD-001 — Checkout thành công (Happy Path)
-     * Expected: HTTP 200, status="SUCCESS", orderId > 0
+     * Expected: HTTP 200, status="SUCCESS", orderCode present
      */
     @Test
     @WithMockUser(username = "nva@gmail.com")
     @DisplayName("TC-ORD-001: Checkout thành công với đủ thông tin hợp lệ")
-    void checkout_happyPath_returns200WithOrderId() throws Exception {
+    void checkout_happyPath_returns200WithOrderCode() throws Exception {
         // Arrange
         CartItem item1 = new CartItem(1, "Máy pha DeLonghi", "/images/product1.jpg", 
                 new BigDecimal("5500000"), 1);
@@ -114,6 +114,7 @@ class ApiOrderControllerTest {
 
         Order savedOrder = new Order();
         savedOrder.setId(101L);
+        savedOrder.setOrderCode("ORD-20260511-ABC123");
         savedOrder.setTotalAmount(new BigDecimal("6140000"));
 
         when(orderService.checkout(any(CheckoutRequest.class), any(Account.class)))
@@ -128,8 +129,9 @@ class ApiOrderControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
-                .andExpect(jsonPath("$.message").value("Đặt hàng thành công! Mã đơn hàng: #101"))
-                .andExpect(jsonPath("$.data.orderId").value(101L));
+                .andExpect(jsonPath("$.message").value("Đặt hàng thành công! Mã đơn hàng: ORD-20260511-ABC123"))
+                .andExpect(jsonPath("$.data.orderCode").value("ORD-20260511-ABC123"))
+                .andExpect(jsonPath("$.data.orderId").doesNotExist());
 
         verify(orderService).checkout(any(CheckoutRequest.class), eq(account));
         verify(orderService).postCheckout(eq(savedOrder), eq(account));
@@ -202,7 +204,7 @@ class ApiOrderControllerTest {
     }
 
     /**
-     * TC-ORD-008 — GET /api/orders/{orderId} — IDOR protection
+     * TC-ORD-008 — GET /api/orders/{orderCode} — IDOR protection
      * Expected: HTTP 403, message="Bạn không có quyền xem đơn hàng này"
      */
     @Test
@@ -212,21 +214,22 @@ class ApiOrderControllerTest {
         // Arrange
         Order order = new Order();
         order.setId(55L);
+        order.setOrderCode("ORD-20260511-ABC123");
         Account owner = buildAccount("user_a");
         order.setAccount(owner);
         order.setOrderDetails(new ArrayList<>());
 
-        when(orderService.findById(55L)).thenReturn(order);
+        when(orderService.findByOrderCode("ORD-20260511-ABC123")).thenReturn(order);
 
         // Act & Assert
-        mockMvc.perform(get("/api/orders/55"))
+        mockMvc.perform(get("/api/orders/ORD-20260511-ABC123"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Bạn không có quyền xem đơn hàng này"));
     }
 
     /**
-     * TC-ORD-009 — GET /api/orders/{orderId} — guest order bị block
+     * TC-ORD-009 — GET /api/orders/{orderCode} — guest order bị block
      * Expected: HTTP 403, message chứa "khách vãng lai"
      */
     @Test
@@ -236,20 +239,21 @@ class ApiOrderControllerTest {
         // Arrange
         Order order = new Order();
         order.setId(66L);
+        order.setOrderCode("ORD-20260511-GUEST1");
         order.setAccount(null); // Guest order
         order.setOrderDetails(new ArrayList<>());
 
-        when(orderService.findById(66L)).thenReturn(order);
+        when(orderService.findByOrderCode("ORD-20260511-GUEST1")).thenReturn(order);
 
         // Act & Assert
-        mockMvc.perform(get("/api/orders/66"))
+        mockMvc.perform(get("/api/orders/ORD-20260511-GUEST1"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("khách vãng lai")));
     }
 
     /**
-     * TC-ORD-010 — GET /api/orders/{orderId} — không tìm thấy
+     * TC-ORD-010 — GET /api/orders/{orderCode} — không tìm thấy
      * Expected: HTTP 404, message="Không tìm thấy đơn hàng"
      */
     @Test
@@ -257,10 +261,10 @@ class ApiOrderControllerTest {
     @DisplayName("TC-ORD-010: GET order không tồn tại phải trả 404")
     void getOrderDetail_notFound_returns404() throws Exception {
         // Arrange
-        when(orderService.findById(9999L)).thenReturn(null);
+        when(orderService.findByOrderCode("ORD-20260511-ZZZ999")).thenReturn(null);
 
         // Act & Assert
-        mockMvc.perform(get("/api/orders/9999"))
+        mockMvc.perform(get("/api/orders/ORD-20260511-ZZZ999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value("ERROR"))
                 .andExpect(jsonPath("$.message").value("Không tìm thấy đơn hàng"));
