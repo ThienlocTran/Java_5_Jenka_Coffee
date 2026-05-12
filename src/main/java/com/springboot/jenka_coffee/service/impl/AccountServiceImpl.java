@@ -73,6 +73,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     @CacheEvict(value = "accountSecurity", key = "#account.username")
     public Account save(Account account) {
         // If account is marked as new, use persist() to ensure INSERT

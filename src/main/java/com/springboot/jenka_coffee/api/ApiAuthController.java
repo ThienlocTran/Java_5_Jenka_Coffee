@@ -229,9 +229,15 @@ public class ApiAuthController {
         String email = payload.getEmail();
         String name = (String) payload.get("name");
         String picture = (String) payload.get("picture");
+        Boolean emailVerified = payload.getEmailVerified();
+
+        if (!Boolean.TRUE.equals(emailVerified)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Email Google chua duoc xac thuc"));
+        }
         
-        // VULN-PRE-ACCOUNT-HIJACKING FIX: Chỉ cho phép Google login nếu account đã tồn tại VÀ có password = GOOGLE_OAUTH
-        // Không cho phép login vào account đã đăng ký bằng password thông thường
+        // Google login may link to an activated password account when the verified
+        // Google email matches. Unactivated accounts stay blocked below.
         Account account = accountService.findByEmail(email);
         boolean needsPhone = false;
         
@@ -241,6 +247,9 @@ public class ApiAuthController {
             String emailPrefix = email.split("@")[0]
                     .replaceAll("[^a-zA-Z0-9]", "")  // Remove dots, dashes, etc.
                     .toLowerCase();
+            if (emailPrefix.length() > 40) {
+                emailPrefix = emailPrefix.substring(0, 40);
+            }
             
             // Use only last 6 digits of timestamp for shorter username
             String timestamp = String.valueOf(currentTimeMillis());
@@ -283,12 +292,12 @@ public class ApiAuthController {
             boolean isOAuthAccount = "GOOGLE_OAUTH_NO_PASSWORD".equals(passwordHash);
             
             if (!isOAuthAccount && username != null) {
-                // Check username pattern: ends with underscore followed by 13 digits
+                // Check username pattern: ends with underscore followed by 6-13 digits
                 try {
                     int lastUnderscore = username.lastIndexOf('_');
                     if (lastUnderscore > 0 && lastUnderscore < username.length() - 1) {
                         String suffix = username.substring(lastUnderscore + 1);
-                        if (suffix.length() == 13 && suffix.matches("\\d{13}")) {
+                        if (suffix.matches("\\d{6,13}")) {
                             isOAuthAccount = true;
                         }
                     }
@@ -297,9 +306,16 @@ public class ApiAuthController {
                 }
             }
             
+            if (!isOAuthAccount && Boolean.TRUE.equals(account.getActivated())) {
+                // Verified Google email matches an active account email, so allow Google
+                // as an additional login method without changing password/admin role.
+                isOAuthAccount = true;
+                log.info("Linked verified Google login for existing account: {}", account.getUsername());
+            }
+
             if (!isOAuthAccount) {
                 // Account exists with password and NOT created via OAuth
-                if (!account.getActivated()) {
+                if (!Boolean.TRUE.equals(account.getActivated())) {
                     // SECURITY: Do NOT allow OAuth to take over unactivated password accounts
                     log.warn("SECURITY: Blocked OAuth takeover attempt for unactivated password account: {}", email);
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -313,6 +329,20 @@ public class ApiAuthController {
             
             // OAuth account - allow login even if password was set later
             // This allows users to have both OAuth and password login methods
+            boolean changed = false;
+            if ((account.getPhoto() == null || account.getPhoto().isBlank())
+                    && picture != null && !picture.isBlank()) {
+                account.setPhoto(picture);
+                changed = true;
+            }
+            if ((account.getFullname() == null || account.getFullname().isBlank())
+                    && name != null && !name.isBlank()) {
+                account.setFullname(name);
+                changed = true;
+            }
+            if (changed) {
+                accountService.save(account);
+            }
             
             if (account.getPhone() == null || account.getPhone().trim().isEmpty()) {
                 needsPhone = true; // Existing user without phone
