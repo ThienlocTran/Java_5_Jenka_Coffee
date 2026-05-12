@@ -1,896 +1,421 @@
-# Jenka Coffee - Backend API
+# Jenka Coffee
 
-> RESTful API cho hệ thống E-commerce máy pha cà phê, máy xay cà phê và dụng cụ pha chế chính hãng.
+Jenka Coffee la he thong website ban may pha ca phe, may xay ca phe va phu kien pha che. Source du an gom hai ung dung chinh:
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.4-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-17-007396?logo=java)](https://www.oracle.com/java/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/License-Private-red)](LICENSE)
+- Backend: Spring Boot 3, Java 17, PostgreSQL.
+- Frontend: Vue 3, Vite, Tailwind CSS.
 
-## 📋 Mục Lục
+Du an tap trung vao luong ban hang thuc te cua Jenka Coffee: khach dat don, admin xac nhan hoac huy don, sau do shop lien he khach de trao doi chi tiet ve giao hang, thanh toan va tinh trang san pham.
 
-- [Tổng Quan](#-tổng-quan)
-- [Công Nghệ](#-công-nghệ)
-- [Kiến Trúc](#-kiến-trúc)
-- [Tính Năng](#-tính-năng)
-- [Cài Đặt](#-cài-đặt)
-- [Cấu Hình](#-cấu-hình)
-- [Database](#-database)
-- [API Documentation](#-api-documentation)
-- [Security](#-security)
-- [Deployment](#-deployment)
-- [Troubleshooting](#-troubleshooting)
+## Cau Truc Thu Muc
 
-## 🎯 Tổng Quan
-
-Jenka Coffee Backend là RESTful API được xây dựng với Spring Boot 3, cung cấp các endpoint cho:
-- Quản lý sản phẩm, đơn hàng, người dùng
-- Xác thực & phân quyền (JWT + Google OAuth 2.0)
-- Thanh toán & giỏ hàng
-- Upload ảnh (Cloudinary)
-- Email notifications
-- Admin dashboard & reports
-
-### Đặc Điểm Nổi Bật
-
-- 🚀 **High Performance**: Connection pooling, caching, async processing
-- 🔐 **Security First**: JWT, rate limiting, XSS protection, CSRF tokens
-- 📊 **Scalable**: Stateless architecture, horizontal scaling ready
-- 🗄️ **Database**: PostgreSQL với Flyway migration
-- ☁️ **Cloud-Ready**: Deployed on Railway.app
-- 📧 **Email**: SMTP integration cho OTP & notifications
-- 🖼️ **Image Storage**: Cloudinary CDN
-- 🔄 **CI/CD**: Auto-deploy với Railway
-
-## 🛠 Công Nghệ
-
-### Core Framework
-- **Spring Boot 3.2.4** - Application framework
-- **Spring Security 6** - Authentication & authorization
-- **Spring Data JPA** - Data access layer
-- **Hibernate** - ORM framework
-- **Java 17** - Programming language
-
-### Database
-- **PostgreSQL 15** - Primary database (Neon.tech)
-- **Flyway** - Database migration tool
-- **HikariCP** - Connection pooling
-
-### Security & Authentication
-- **JWT (jjwt 0.12.6)** - Token-based authentication
-- **Google OAuth 2.0** - Social login
-- **Bucket4j 8.10** - Rate limiting
-- **OWASP HTML Sanitizer** - XSS protection
-- **BCrypt** - Password hashing
-
-### External Services
-- **Cloudinary** - Image storage & CDN
-- **Gmail SMTP** - Email service
-- **Vercel Webhook** - Frontend auto-rebuild
-
-### Caching & Performance
-- **Caffeine Cache** - In-memory caching
-- **Spring Cache** - Cache abstraction
-
-### Development Tools
-- **Lombok** - Reduce boilerplate code
-- **Spring Boot DevTools** - Hot reload
-- **Maven** - Build tool
-
-## 🏗 Kiến Trúc
-
-### Layered Architecture
-
-```
-┌─────────────────────────────────────────┐
-│         Presentation Layer              │
-│  (Controllers, DTOs, Exception Handler) │
-├─────────────────────────────────────────┤
-│          Service Layer                  │
-│    (Business Logic, Validation)         │
-├─────────────────────────────────────────┤
-│       Repository Layer                  │
-│    (Data Access, JPA Repositories)      │
-├─────────────────────────────────────────┤
-│         Database Layer                  │
-│      (PostgreSQL, Flyway)               │
-└─────────────────────────────────────────┘
+```text
+D:\JenkaCoffee
++-- Java_5_Jenka_Coffee/                    # Backend Spring Boot
+|   +-- src/main/java/com/springboot/jenka_coffee/
+|   |   +-- api/                            # REST controllers public va admin
+|   |   +-- config/                         # Security, CORS, cache, Cloudinary
+|   |   +-- dto/                            # Request/response DTO
+|   |   +-- entity/                         # JPA entities
+|   |   +-- repository/                     # Spring Data repositories
+|   |   +-- security/                       # JWT service/filter
+|   |   +-- service/                        # Business services
+|   |   +-- util/                           # Slug, image, password helpers
+|   +-- src/main/resources/
+|   |   +-- application.properties          # Local config, khong day len git
+|   |   +-- db/                             # SQL bootstrap/fix scripts
+|   +-- pom.xml
++-- front_end_Jenka_Coffee/jenka-coffee-ui/ # Frontend Vue/Vite
+|   +-- src/
+|   |   +-- components/
+|   |   +-- composables/
+|   |   +-- layouts/
+|   |   +-- router/
+|   |   +-- services/
+|   |   +-- utils/
+|   |   +-- views/
+|   +-- public/
+|   +-- package.json
+|   +-- vite.config.js
++-- docs/                                   # Test cases va execution results
++-- doc_testcase/                           # Audit/fix notes
++-- deploy/                                 # Script deploy VPS/service
++-- Test Defect/                            # Ket qua test defect
 ```
 
-### Package Structure
+## Cong Nghe
 
-```
-com.springboot.jenka_coffee/
-├── api/                          # REST Controllers
-│   ├── ApiAuthController         # Authentication
-│   ├── ApiProductController      # Products (public)
-│   ├── ApiOrderController        # Orders
-│   ├── ApiCartController         # Shopping cart
-│   ├── ApiContactController      # Contact form
-│   ├── ApiFeedbackController     # Store feedback
-│   └── admin/                    # Admin endpoints
-│       ├── ApiAdminProductController
-│       ├── ApiAdminOrderController
-│       ├── ApiAdminAccountController
-│       ├── ApiAdminDashboardController
-│       └── ...
-├── config/                       # Configuration classes
-│   ├── SecurityConfig            # Spring Security
-│   ├── WebConfig                 # CORS, interceptors
-│   ├── CloudinaryConfig          # Cloudinary setup
-│   ├── AsyncConfig               # Async processing
-│   ├── I18nConfig                # Internationalization
-│   └── RateLimitFilter           # Rate limiting
-├── dto/                          # Data Transfer Objects
-│   ├── request/                  # Request DTOs
-│   └── response/                 # Response DTOs
-├── entity/                       # JPA Entities
-│   ├── Account                   # User accounts
-│   ├── Product                   # Products
-│   ├── Order                     # Orders
-│   ├── OrderDetail               # Order items
-│   ├── Category                  # Product categories
-│   ├── News                      # News articles
-│   ├── Contact                   # Contact messages
-│   ├── StoreFeedback             # Store ratings
-│   └── ...
-├── repository/                   # JPA Repositories
-│   ├── AccountRepository
-│   ├── ProductRepository
-│   ├── OrderRepository
-│   └── ...
-├── service/                      # Service interfaces
-│   └── impl/                     # Service implementations
-│       ├── AccountServiceImpl
-│       ├── ProductServiceImpl
-│       ├── OrderServiceImpl
-│       ├── EmailServiceImpl
-│       ├── UploadServiceImpl
-│       ├── GoogleOAuthServiceImpl
-│       ├── VercelWebhookServiceImpl
-│       └── ...
-├── security/                     # Security components
-│   ├── JwtService                # JWT generation/validation
-│   ├── JwtAuthFilter             # JWT authentication filter
-│   └── CustomUserDetailsService  # User details loader
-├── exception/                    # Exception handling
-│   ├── GlobalExceptionHandler    # Global error handler
-│   ├── ResourceNotFoundException
-│   └── ...
-├── util/                         # Utility classes
-│   ├── ImageUtils                # Image processing
-│   ├── SlugUtils                 # URL slug generation
-│   └── ...
-└── JenkaCoffeeApplication        # Main application class
-```
+Backend:
 
-## ✨ Tính Năng
+- Java 17
+- Spring Boot 3.2.4
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+- JWT via `jjwt`
+- Bucket4j va Caffeine cho rate limiting/cache
+- Cloudinary SDK
+- Gmail SMTP
+- Apache Tika va OWASP Java HTML Sanitizer
 
-### Authentication & Authorization
+Frontend:
 
-#### JWT Authentication
-- Stateless token-based authentication
-- Access token (15 minutes) + Refresh token (7 days)
-- Token blacklist cho logout
-- Automatic token refresh
+- Vue 3
+- Vite 7
+- Vue Router
+- Pinia
+- Axios
+- Tailwind CSS
+- Chart.js
+- GSAP, Swiper
+- `@vueuse/head` cho SEO meta
 
-#### Google OAuth 2.0
-- Social login với Google
-- ID Token verification
-- Auto account creation
+## Tinh Nang Hien Co
 
-#### OTP Email Verification
-- 6-digit OTP code
-- 5 minutes expiration
-- Rate limiting (3 requests/minute)
+### Khach Hang
 
-#### Role-Based Access Control (RBAC)
-- **ADMIN**: Full system access
-- **STAFF**: Limited admin access
-- **CUSTOMER**: Customer features only
+- Trang chu voi banner, danh muc icon, san pham noi bat va tin tuc.
+- Danh sach san pham `/product/list` voi loc danh muc, loc gia, sap xep va phan trang.
+- Chi tiet san pham `/san-pham/:slug`, anh san pham, mo ta, trang thai con/het, san pham lien quan.
+- Gio hang `/cart`: them, sua so luong, xoa, mini cart va hieu ung them vao gio.
+- Thanh toan `/checkout`: form thong tin khach, dia chi 63 tinh/thanh, validate UI, chon `cod`, `bank`, `momo`.
+- Tai khoan: dang ky, dang nhap bang username/email/so dien thoai, Google OAuth, OTP, quen/reset mat khau.
+- Ho so ca nhan `/profile`: cap nhat thong tin, doi mat khau, avatar Cloudinary.
+- Lich su don hang `/orders` va chi tiet don theo public order code.
+- Tin tuc `/news` va chi tiet bai viet.
+- Lien he `/contact`.
+- Feedback popup danh gia cua hang.
+- SEO: canonical URL, sitemap, prerender script va robots.txt.
 
-### Product Management
+### Admin
 
-#### CRUD Operations
-- Create, Read, Update, Delete products
-- Bulk operations support
-- Soft delete (available flag)
+- Dashboard `/admin/dashboard`: KPI, doanh thu theo thang, don moi, top san pham ban chay.
+- San pham `/admin/products`: CRUD, upload anh, nhieu anh, bat/tat hien thi, san pham noi bat.
+- Danh muc `/admin/categories`: CRUD va kiem tra ID trung lap.
+- Don hang `/admin/orders`: danh sach, chi tiet, xac nhan don, huy don.
+- Tai khoan `/admin/accounts`: CRUD, khoa/mo khoa, reset mat khau, kiem soat avatar.
+- Tin tuc `/admin/news`: CRUD, upload anh, bat/tat hien thi.
+- Banner `/admin/banners`: bo banner, upload nhieu anh, hieu ung, kich hoat bo banner.
+- Lien he `/admin/contacts`: xem tin nhan, danh dau da doc.
+- Feedback `/admin/feedbacks`: xem va xoa feedback.
+- Bao cao doanh thu `/admin/reports/revenue`: loc theo tuan/thang/quy/nam, bieu do va bang chi tiet.
+- Notification count cho don moi va lien he moi.
 
-#### Image Management
-- Upload to Cloudinary CDN
-- Automatic compression & optimization
-- Multiple images per product
-- Image gallery with display order
+### Bao Mat Va Nen Tang
 
-#### Category Management
-- Hierarchical categories
-- Product count per category
-- Category-based filtering
+- JWT access/refresh token qua HttpOnly cookie, co fallback Authorization header cho dev cross-origin.
+- Blacklist token khi logout.
+- Kiem tra quyen admin tu server, khong tin localStorage.
+- Rate limit cho login, forgot password, OTP, checkout, contact, feedback, visitor ping va mot so public/admin endpoints.
+- Security headers va CSP.
+- Validate DTO bang Bean Validation.
+- XSS protection cho cac field text nhay cam.
+- Upload image co validate kich thuoc, dinh dang, magic bytes.
+- JPA parameterized query, khong noi chuoi SQL tuy tien.
 
-#### Inventory Management
-- Stock tracking
-- Low stock alerts
-- Inventory reports
+## Pham Vi Khong Lam
 
-#### Pricing
-- Regular price & sale price
-- Discount percentage calculation
-- Price history (future feature)
+Nhung muc duoi day da duoc loai khoi pham vi hien tai, khong tinh la bug hay thieu tinh nang:
 
-### Order Management
+- Booking/dat lich sua chua `/booking`, `/admin/booking`.
+- Voucher/ma giam gia/flash sale.
+- Bao cao khach VIP `/admin/reports/vip`.
+- Cong thanh toan tu dong SePay/VNPay/MoMo webhook. Hien tai chi ghi nhan phuong thuc thanh toan de shop lien he xac nhan.
+- Quan ly ton kho bat buoc. San pham co the hien nut lien he thay vi them gio hang khi can.
+- Phi van chuyen tu dong. Shop se trao doi voi khach sau khi xac nhan don.
+- Theo doi giao hang chi tiet. Trang thai don chi gom `Cho xac nhan`, `Da xac nhan`, `Da huy`.
 
-#### Order Processing
-- Multi-step checkout flow
-- Order status tracking (PENDING → CONFIRMED → SHIPPING → DELIVERED)
-- Order cancellation
-- Order history
+## Trang Thai Don Hang
 
-#### Payment Integration
-- COD (Cash on Delivery)
-- Bank transfer
-- Payment status tracking
+Backend va frontend dung chung mapping:
 
-#### Shipping
-- Vietnam provinces support
-- Shipping address validation
-- Delivery tracking
-
-### Shopping Cart
-
-#### Session-Based Cart
-- Add/Remove/Update items
-- Quantity validation
-- Price calculation
-- Cart persistence
-
-#### Cart Operations
-- Merge cart on login
-- Clear cart after checkout
-- Cart expiration (30 days)
-
-### Email Notifications
-
-#### Transactional Emails
-- OTP verification
-- Order confirmation
-- Order status updates
-- Password reset
-- Welcome email
-
-#### Email Templates
-- HTML templates
-- Responsive design
-- Brand styling
-
-### Admin Dashboard
-
-#### Statistics
-- Revenue by day/month/year
-- Order count & status
-- Product sales ranking
-- Customer growth
-
-#### Charts & Reports
-- Line chart (revenue trend)
-- Bar chart (product sales)
-- Pie chart (order status)
-- Export to Excel/PDF
-
-### Content Management
-
-#### News & Blog
-- CRUD news articles
-- Rich text content
-- Featured image
-- Publish/Unpublish
-
-#### Contact Management
-- Contact form submissions
-- Email notifications
-- Admin response tracking
-
-#### Store Feedback
-- 2-step feedback popup
-- Store rating (1-5 stars)
-- Staff rating (1-5 stars)
-- Branch selection (HN/HCM)
-
-### SEO & Performance
-
-#### Sitemap Generation
-- Dynamic XML sitemap
-- Auto-update on content change
-- Submit to search engines
-
-#### Vercel Webhook Integration
-- Auto-rebuild frontend on data change
-- Self-healing pipeline
-- Exponential backoff retry
-- Network-aware triggering
-
-## 🚀 Cài Đặt
-
-### Yêu Cầu Hệ Thống
-
-- **Java**: 17 hoặc cao hơn
-- **Maven**: 3.8+ hoặc cao hơn
-- **PostgreSQL**: 15+ hoặc cao hơn
-- **Git**: 2.x hoặc cao hơn
-
-### Clone Repository
-
-```bash
-git clone https://github.com/your-repo/jenka-coffee.git
-cd jenka-coffee/Java_5_Jenka_Coffee
+```text
+0 = Cho xac nhan
+1 = Da xac nhan
+2 = Da huy
 ```
 
-### Cài Đặt Dependencies
+Ly do nghiep vu: san pham gia tri cao, shop can goi dien xac nhan lai voi khach truoc khi chot giao hang/thanh toan.
 
-```bash
-# Maven sẽ tự động download dependencies
-mvn clean install
+## Yeu Cau Moi Truong
 
-# Hoặc skip tests
-mvn clean install -DskipTests
-```
+Backend:
 
-## ⚙️ Cấu Hình
+- JDK 17
+- Maven hoac Maven Wrapper
+- PostgreSQL/Neon database
 
-### Application Properties
+Frontend:
 
-Tạo file `src/main/resources/application.properties`:
+- Node.js theo `package.json`: `^20.19.0 || >=22.12.0`
+- npm
 
-```properties
-# ============================================================================
-# SERVER CONFIGURATION
-# ============================================================================
-server.port=8080
-spring.application.name=jenka_coffee
+## Cau Hinh Backend
 
-# ============================================================================
-# DATABASE CONFIGURATION (Neon.tech PostgreSQL)
-# ============================================================================
-spring.datasource.url=jdbc:postgresql://your-neon-host/jenka_coffee?sslmode=require
-spring.datasource.username=your-username
-spring.datasource.password=your-password
-spring.datasource.driver-class-name=org.postgresql.Driver
+`Java_5_Jenka_Coffee/src/main/resources/application.properties` la file local config va khong nen day len git. Khi deploy production, cau hinh bang environment variables.
 
-# HikariCP Connection Pool
-spring.datasource.hikari.maximum-pool-size=10
-spring.datasource.hikari.minimum-idle=5
-spring.datasource.hikari.connection-timeout=90000
-spring.datasource.hikari.idle-timeout=600000
-spring.datasource.hikari.max-lifetime=1800000
-spring.datasource.hikari.initialization-fail-timeout=-1
-
-# ============================================================================
-# JPA & HIBERNATE CONFIGURATION
-# ============================================================================
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=false
-spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.open-in-view=false
-
-# ============================================================================
-# FLYWAY MIGRATION
-# ============================================================================
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
-spring.flyway.locations=classpath:db/migration
-
-# ============================================================================
-# JWT CONFIGURATION
-# ============================================================================
-jwt.secret=your-super-secret-key-min-256-bits
-jwt.expiration=900000
-jwt.refresh-expiration=604800000
-
-# ============================================================================
-# GOOGLE OAUTH 2.0
-# ============================================================================
-google.client-id=your-google-client-id.apps.googleusercontent.com
-
-# ============================================================================
-# CLOUDINARY CONFIGURATION
-# ============================================================================
-cloudinary.cloud-name=your-cloud-name
-cloudinary.api-key=your-api-key
-cloudinary.api-secret=your-api-secret
-
-# ============================================================================
-# EMAIL CONFIGURATION (Gmail SMTP)
-# ============================================================================
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your-email@gmail.com
-spring.mail.password=your-app-password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-
-# ============================================================================
-# VERCEL WEBHOOK (Frontend Auto-Rebuild)
-# ============================================================================
-vercel.deploy-hook-url=https://api.vercel.com/v1/integrations/deploy/...
-
-# ============================================================================
-# CORS CONFIGURATION
-# ============================================================================
-cors.allowed-origins=http://localhost:5173,https://jenkacoffee.com
-
-# ============================================================================
-# FILE UPLOAD
-# ============================================================================
-spring.servlet.multipart.max-file-size=10MB
-spring.servlet.multipart.max-request-size=10MB
-
-# ============================================================================
-# LOGGING
-# ============================================================================
-logging.level.root=INFO
-logging.level.com.springboot.jenka_coffee=DEBUG
-logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg%n
-```
-
-### Environment Variables (Production)
-
-Trên Railway.app, cấu hình các biến môi trường:
+Cac bien quan trong:
 
 ```env
-DATABASE_URL=postgresql://...
-JWT_SECRET=your-production-secret
-GOOGLE_CLIENT_ID=your-client-id
-CLOUDINARY_URL=cloudinary://...
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-VERCEL_DEPLOY_HOOK=https://api.vercel.com/...
+SPRING_DATASOURCE_URL=jdbc:postgresql://...
+SPRING_DATASOURCE_USERNAME=...
+SPRING_DATASOURCE_PASSWORD=...
+JWT_SECRET=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+SPRING_MAIL_USERNAME=...
+SPRING_MAIL_PASSWORD=...
+ADMIN_EMAIL=...
+APP_BASE_URL=https://jenkacoffee.com
+APP_CORS_ALLOWED_ORIGINS=https://jenkacoffee.com
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+VERCEL_DEPLOY_HOOK_URL=...
 ```
 
-## 🗄️ Database
+Luu y:
 
-### PostgreSQL Setup (Local)
+- Khong commit secret that len git.
+- Neu file config tung bi day len remote, can rotate secret.
+- `spring.jpa.hibernate.ddl-auto=validate` duoc dung de tranh Hibernate tu y sua schema production.
 
-```bash
-# Tạo database
-createdb jenka_coffee
+## Chay Backend
 
-# Hoặc dùng psql
-psql -U postgres
-CREATE DATABASE jenka_coffee;
+```powershell
+cd D:\JenkaCoffee\Java_5_Jenka_Coffee
+.\mvnw.cmd spring-boot:run
 ```
 
-### Flyway Migration
+Neu may co Maven global:
 
-Migrations được tự động chạy khi start application.
-
-```bash
-# Chạy migrations
-mvn flyway:migrate
-
-# Rollback (nếu cần)
-mvn flyway:undo
-
-# Xem migration history
-mvn flyway:info
+```powershell
+cd D:\JenkaCoffee\Java_5_Jenka_Coffee
+mvn spring-boot:run
 ```
 
-### Database Schema
+Backend mac dinh chay o:
 
-```sql
--- Core tables
-accounts          -- User accounts
-products          -- Products
-categories        -- Product categories
-orders            -- Orders
-order_details     -- Order items
-carts             -- Shopping carts
-cart_items        -- Cart items
-
--- Content tables
-news              -- News articles
-banners           -- Homepage banners
-contacts          -- Contact messages
-store_feedbacks   -- Store ratings
-
--- Auth tables
-otps              -- OTP codes
-jwt_blacklist     -- Blacklisted tokens
+```text
+http://localhost:8080
 ```
 
-### Sample Data
+## Chay Frontend
 
-```bash
-# Import sample data (optional)
-psql -U postgres -d jenka_coffee < sample_data.sql
+```powershell
+cd D:\JenkaCoffee\front_end_Jenka_Coffee\jenka-coffee-ui
+npm install
+npm.cmd run dev
 ```
 
-## 📖 API Documentation
+Frontend dev server mac dinh:
 
-### Base URL
-
-- **Local**: `http://localhost:8080`
-- **Production**: `https://your-app.railway.app`
-
-### Authentication
-
-Tất cả admin endpoints yêu cầu JWT token:
-
-```bash
-# Login
-POST /api/auth/login
-{
-  "email": "admin@example.com",
-  "password": "password"
-}
-
-# Response
-{
-  "status": "SUCCESS",
-  "data": {
-    "accessToken": "eyJhbGc...",
-    "refreshToken": "eyJhbGc...",
-    "account": { ... }
-  }
-}
-
-# Use token in subsequent requests
-Authorization: Bearer eyJhbGc...
+```text
+http://localhost:5173
 ```
 
-### Public Endpoints
+Build production:
 
-```bash
-# Products
-GET    /api/products              # List products
-GET    /api/products/{id}         # Product detail
-GET    /api/products/slug/{slug}  # Product by slug
-GET    /api/categories            # List categories
-
-# News
-GET    /api/news                  # List news
-GET    /api/news/{id}             # News detail
-
-# Contact
-POST   /api/contacts              # Submit contact form
-
-# Feedback
-POST   /api/feedbacks             # Submit store feedback
+```powershell
+cd D:\JenkaCoffee\front_end_Jenka_Coffee\jenka-coffee-ui
+npm.cmd run build
 ```
 
-### Customer Endpoints (Requires Auth)
+Build kem prerender SEO:
 
-```bash
-# Cart
-GET    /api/cart                  # Get cart
-POST   /api/cart/add              # Add to cart
-PUT    /api/cart/update/{id}      # Update quantity
-DELETE /api/cart/remove/{id}      # Remove item
-
-# Orders
-POST   /api/orders/checkout       # Create order
-GET    /api/orders                # Order history
-GET    /api/orders/{id}           # Order detail
-
-# Account
-GET    /api/account/profile       # Get profile
-PUT    /api/account/profile       # Update profile
-POST   /api/account/change-password
-POST   /api/account/upload-avatar
+```powershell
+npm.cmd run build:seo
 ```
 
-### Admin Endpoints (Requires ADMIN Role)
+## API Chinh
 
-```bash
-# Products
-GET    /api/admin/products        # List all products
-POST   /api/admin/products        # Create product
-PUT    /api/admin/products/{id}   # Update product
-DELETE /api/admin/products/{id}   # Delete product
+Public:
 
-# Orders
-GET    /api/admin/orders          # List all orders
-PUT    /api/admin/orders/{id}/status  # Update status
-
-# Accounts
-GET    /api/admin/accounts        # List accounts
-POST   /api/admin/accounts        # Create account
-PUT    /api/admin/accounts/{id}   # Update account
-DELETE /api/admin/accounts/{id}   # Delete account
-
-# Dashboard
-GET    /api/admin/dashboard/stats # Dashboard statistics
-GET    /api/admin/reports/revenue # Revenue report
+```text
+GET  /api/products
+GET  /api/products/slug/{slug}
+GET  /api/products/{id}/images
+GET  /api/categories
+GET  /api/news
+GET  /api/news/{id}
+GET  /api/banners/active
+POST /api/contact/send
+POST /api/feedbacks
+POST /api/visitors/ping
+GET  /sitemap.xml
 ```
 
-### Response Format
+Auth:
 
-```json
-{
-  "status": "SUCCESS",
-  "message": "Operation successful",
-  "data": { ... }
-}
+```text
+POST  /api/auth/login
+POST  /api/auth/logout
+POST  /api/auth/refresh
+POST  /api/auth/signup
+POST  /api/auth/activate
+POST  /api/auth/forgot-password
+POST  /api/auth/reset-password
+POST  /api/auth/verify-otp
+POST  /api/auth/resend-otp
+POST  /api/auth/google-login
+GET   /api/auth/me
+PATCH /api/auth/update-phone
+GET   /api/auth/check-remember
 ```
 
-### Error Response
+Customer:
 
-```json
-{
-  "status": "ERROR",
-  "message": "Error description",
-  "errors": {
-    "field": "Error message"
-  }
-}
+```text
+GET    /api/cart
+POST   /api/cart/add/{id}
+PUT    /api/cart/update/{id}
+DELETE /api/cart/remove/{id}
+DELETE /api/cart/clear
+
+GET  /api/orders/checkout-info
+POST /api/orders/checkout
+GET  /api/orders
+GET  /api/orders/{orderCode}
+
+GET  /api/profile
+PUT  /api/profile
+POST /api/profile/avatar
+POST /api/profile/change-password
 ```
 
-## 🔐 Security
+Admin:
 
-### Security Features
+```text
+GET    /api/admin/dashboard
+GET    /api/admin/dashboard/revenue
+GET    /api/admin/notifications/counts
 
-#### Authentication
-- JWT with RS256 algorithm
-- Token expiration & refresh
-- Token blacklist on logout
-- Secure password hashing (BCrypt)
+GET    /api/admin/products
+POST   /api/admin/products
+PUT    /api/admin/products/{id}
+POST   /api/admin/products/{id}
+PUT    /api/admin/products/{id}/toggle
+PUT    /api/admin/products/{id}/toggle-featured
+PUT    /api/admin/products/{id}/featured-position
+GET    /api/admin/products/inventory
+DELETE /api/admin/products/{id}
 
-#### Authorization
-- Role-based access control (RBAC)
-- Method-level security (@PreAuthorize)
-- Resource ownership validation
+GET    /api/admin/categories
+POST   /api/admin/categories
+PUT    /api/admin/categories/{id}
+DELETE /api/admin/categories/{id}
 
-#### Rate Limiting
-- Sliding window algorithm (Bucket4j)
-- Per-IP rate limiting
-- Auth endpoints: 5 requests/minute
-- API endpoints: 100 requests/minute
+GET    /api/admin/orders
+GET    /api/admin/orders/{id}
+PUT    /api/admin/orders/{id}/status/{status}
+POST   /api/admin/orders/{id}/cancel
+DELETE /api/admin/orders/{id}
 
-#### XSS Protection
-- OWASP HTML Sanitizer
-- Input validation
-- Output encoding
+GET    /api/admin/accounts
+POST   /api/admin/accounts
+PUT    /api/admin/accounts/{username}
+DELETE /api/admin/accounts/{username}
+PUT    /api/admin/accounts/{username}/toggle-status
+PUT    /api/admin/accounts/{username}/lock
+PUT    /api/admin/accounts/{username}/unlock
+PUT    /api/admin/accounts/{username}/reset-password
 
-#### CSRF Protection
-- CSRF tokens for state-changing operations
-- SameSite cookie attribute
+GET    /api/admin/news
+POST   /api/admin/news
+PUT    /api/admin/news/{id}
+PUT    /api/admin/news/{id}/toggle
+DELETE /api/admin/news/{id}
 
-#### SQL Injection Prevention
-- Parameterized queries (JPA)
-- Input validation
-- Prepared statements
+GET    /api/admin/banners
+POST   /api/admin/banners
+PUT    /api/admin/banners/{id}/meta
+POST   /api/admin/banners/{id}/images
+DELETE /api/admin/banners/images/{imageId}
+PUT    /api/admin/banners/{id}/activate
+DELETE /api/admin/banners/{id}
 
-#### CORS Configuration
-- Whitelist allowed origins
-- Credentials support
-- Preflight caching
+GET    /api/admin/contacts
+PATCH  /api/admin/contacts/{id}/read
+PATCH  /api/admin/contacts/mark-all-read
 
-### Security Best Practices
+GET    /api/admin/feedbacks
+DELETE /api/admin/feedbacks/{id}
 
-```java
-// ✅ DO: Use parameterized queries
-@Query("SELECT p FROM Product p WHERE p.name = :name")
-Product findByName(@Param("name") String name);
-
-// ❌ DON'T: String concatenation
-String query = "SELECT * FROM products WHERE name = '" + name + "'";
-
-// ✅ DO: Validate input
-@NotBlank(message = "Name is required")
-@Size(min = 3, max = 100)
-private String name;
-
-// ✅ DO: Sanitize HTML
-String clean = Sanitizers.FORMATTING.sanitize(userInput);
-
-// ✅ DO: Hash passwords
-String hashed = passwordEncoder.encode(password);
+GET    /api/admin/reports/revenue/monthly
+GET    /api/admin/reports/revenue/yearly
+GET    /api/admin/reports/customers/top
+GET    /api/admin/reports/stats/overview
 ```
 
-## 🚢 Deployment
+## Kiem Thu
 
-### Railway.app (Recommended)
+Frontend:
 
-#### Setup
-
-1. Tạo tài khoản Railway.app
-2. Kết nối GitHub repository
-3. Tạo PostgreSQL database
-4. Deploy application
-
-#### Configuration
-
-```toml
-# railway.toml
-[build]
-builder = "NIXPACKS"
-
-[deploy]
-startCommand = "java -jar target/jenka_coffee-0.0.1-SNAPSHOT.jar"
-healthcheckPath = "/actuator/health"
-healthcheckTimeout = 100
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+```powershell
+cd D:\JenkaCoffee\front_end_Jenka_Coffee\jenka-coffee-ui
+npm.cmd run build
 ```
 
-#### Environment Variables
+Backend:
 
-Cấu hình trên Railway dashboard:
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `GOOGLE_CLIENT_ID`
-- `CLOUDINARY_URL`
-- `MAIL_USERNAME`
-- `MAIL_PASSWORD`
-
-### Manual Deployment
-
-```bash
-# Build JAR
-mvn clean package -DskipTests
-
-# Run JAR
-java -jar target/jenka_coffee-0.0.1-SNAPSHOT.jar
-
-# Or with profile
-java -jar -Dspring.profiles.active=prod target/jenka_coffee-0.0.1-SNAPSHOT.jar
+```powershell
+cd D:\JenkaCoffee\Java_5_Jenka_Coffee
+.\mvnw.cmd test
 ```
 
-### Docker (Optional)
+Neu Maven Wrapper loi tren Windows, cai Maven global hoac sua moi truong PowerShell/Java truoc khi chay:
 
-```dockerfile
-FROM openjdk:17-jdk-slim
-WORKDIR /app
-COPY target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
-```bash
-# Build image
-docker build -t jenka-coffee-backend .
-
-# Run container
-docker run -p 8080:8080 \
-  -e DATABASE_URL=... \
-  -e JWT_SECRET=... \
-  jenka-coffee-backend
-```
-
-## 🐛 Troubleshooting
-
-### Database Connection Issues
-
-```bash
-# Check database is running
-psql -U postgres -d jenka_coffee
-
-# Test connection
-telnet your-neon-host 5432
-
-# Check Flyway migrations
-mvn flyway:info
-```
-
-### Port Already in Use
-
-```bash
-# Find process on port 8080
-lsof -i :8080
-
-# Kill process
-kill -9 <PID>
-
-# Or use different port
-mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
-```
-
-### Build Errors
-
-```bash
-# Clean and rebuild
-mvn clean install -U
-
-# Skip tests
-mvn clean install -DskipTests
-
-# Clear Maven cache
-rm -rf ~/.m2/repository
-```
-
-### Memory Issues
-
-```bash
-# Increase heap size
-export MAVEN_OPTS="-Xmx2048m"
-
-# Or in pom.xml
-<argLine>-Xmx2048m</argLine>
-```
-
-## 📚 Tài Liệu Bổ Sung
-
-### Code Documentation
-
-- Javadoc comments trong source code
-- Inline comments cho complex logic
-- README files trong các package
-
-### External Documentation
-
-- [Spring Boot Docs](https://docs.spring.io/spring-boot/docs/current/reference/html/)
-- [Spring Security Docs](https://docs.spring.io/spring-security/reference/)
-- [PostgreSQL Docs](https://www.postgresql.org/docs/)
-
-## 🧪 Testing
-
-### Run Tests
-
-```bash
-# All tests
+```powershell
 mvn test
-
-# Specific test class
-mvn test -Dtest=ProductServiceTest
-
-# Integration tests
-mvn verify
 ```
 
-### Test Coverage
+Ket qua test case va defect hien co nam trong:
 
-```bash
-# Generate coverage report
-mvn jacoco:report
-
-# View report
-open target/site/jacoco/index.html
+```text
+docs/test_cases/
+docs/test_cases/execution_results/
+doc_testcase/
+Test Defect/
 ```
 
-## 📊 Monitoring
+## Deploy
 
-### Health Check
+Frontend:
 
-```bash
-# Application health
-curl http://localhost:8080/actuator/health
+- Vercel.
+- Build command: `npm run build` hoac `npm run build:seo`.
+- Output directory: `dist`.
+- Production API URL cau hinh qua `VITE_API_BASE_URL`.
 
-# Database health
-curl http://localhost:8080/actuator/health/db
+Backend:
+
+- Railway hoac VPS.
+- JAR Spring Boot chay port `8080`.
+- PostgreSQL/Neon.
+- Cloudinary cho anh.
+- Gmail SMTP cho email OTP/reset/don hang.
+
+Script ho tro nam trong:
+
+```text
+deploy/deploy.sh
+deploy/setup-nginx.sh
+deploy/setup-service.sh
+deploy/setup-vps.sh
 ```
 
-### Metrics
+## Luu Y Van Hanh
 
-```bash
-# JVM metrics
-curl http://localhost:8080/actuator/metrics
+- Chi deploy voi origin hop le trong `APP_CORS_ALLOWED_ORIGINS`.
+- Neu chi dung mot domain `jenkacoffee.com`, CSRF risk thap hon. Neu sau nay tach subdomain cho app/api/blog/admin, nen bat CSRF token hoac chinh lai SameSite/CORS.
+- Thanh toan bank/momo hien la thong tin de shop lien he, chua co webhook xac minh giao dich.
+- Khong coi nut dat hang la cam ket giao hang ngay; admin can xac nhan don truoc.
+- Khong xoa cac test/audit docs neu con dung de doi chieu nghiep vu.
 
-# HTTP metrics
-curl http://localhost:8080/actuator/metrics/http.server.requests
-```
+## Lien He Du An
 
-## 🤝 Contributing
-
-Dự án này là private, chỉ dành cho team nội bộ.
-
-## 📄 License
-
-Private - All rights reserved © 2024 Jenka Coffee
-
-## 👥 Team
-
-- **Backend**: Spring Boot 3 + PostgreSQL
-- **Frontend**: Vue 3 + Vite + Tailwind CSS
-- **DevOps**: Railway (Backend) + Vercel (Frontend)
-- **Database**: Neon.tech (PostgreSQL)
-- **Storage**: Cloudinary (Images)
-
-## 📞 Contact
-
-- **Website**: https://jenkacoffee.com
-- **Facebook**: https://www.facebook.com/tung.mia.5
-- **Zalo**: 0817909090
-- **Email**: coffeejenka274@gmail.com
-
----
-
-Made with ❤️ by Jenka Coffee Team
+- Website: https://jenkacoffee.com
+- Backend production du kien: Railway
+- Frontend production du kien: Vercel
+- Database: PostgreSQL/Neon
+- Storage: Cloudinary
