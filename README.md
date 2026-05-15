@@ -404,6 +404,57 @@ deploy/setup-service.sh
 deploy/setup-vps.sh
 ```
 
+### Deploy Backend Len Vietnix VPS
+
+Khuyen nghi deploy backend bang JAR va systemd service. Secret production khong ghi vao code, chi dat trong `/app/jenka/.env` tren VPS.
+
+1. Tao VPS Ubuntu 22.04 tren Vietnix, tro domain/subdomain ve IP VPS.
+2. Chay setup he thong:
+
+```bash
+sudo bash deploy/setup-vps.sh
+```
+
+3. Tao hoac sua `/app/jenka/.env` tren VPS, co the copy tu `.env.example`:
+
+```env
+JWT_SECRET=CHANGE_THIS_TO_RANDOM_64_CHAR_HEX
+ADMIN_EMAIL=jenkagroup6789@gmail.com
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/jenka_coffee?sslmode=disable
+SPRING_DATASOURCE_USERNAME=jenka_user
+SPRING_DATASOURCE_PASSWORD=CHANGE_THIS_DATABASE_PASSWORD
+CLOUDINARY_CLOUD_NAME=dazokqwgd
+CLOUDINARY_API_KEY=766667459983526
+CLOUDINARY_API_SECRET=CHANGE_THIS_CLOUDINARY_API_SECRET
+SPRING_MAIL_USERNAME=jenkacoffee.team@gmail.com
+SPRING_MAIL_PASSWORD=CHANGE_THIS_GMAIL_APP_PASSWORD
+APP_BASE_URL=https://your-domain.com
+APP_CORS_ALLOWED_ORIGINS=https://your-domain.com
+```
+
+4. Tao service:
+
+```bash
+sudo bash deploy/setup-service.sh
+sudo systemctl start jenka
+sudo journalctl -u jenka -f
+```
+
+5. Cau hinh Nginx va SSL:
+
+```bash
+sudo bash deploy/setup-nginx.sh your-domain.com
+sudo certbot --nginx -d your-domain.com
+```
+
+6. Moi lan deploy JAR moi tu may local:
+
+```bash
+bash deploy/deploy.sh user@vps-ip
+```
+
+Can thay `CHANGE_THIS_*` bang gia tri that tren VPS truoc khi start service.
+
 ## Luu Y Van Hanh
 
 - Chi deploy voi origin hop le trong `APP_CORS_ALLOWED_ORIGINS`.

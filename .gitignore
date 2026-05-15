@@ -19,6 +19,8 @@ README.md
 src/main/resources/application.properties
 application.properties
 .env
+.env.*
+!.env.example
 ### IntelliJ IDEA ###
 .idea
 *.iws
