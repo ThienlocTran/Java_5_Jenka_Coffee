@@ -1,0 +1,13 @@
+Jenka Coffee Database
+
+init_production.sql is the single canonical PostgreSQL database bootstrap file.
+
+Use it for a fresh deploy:
+
+psql -U <db_user> -d <db_name> -f src/main/resources/db/init_production.sql
+
+Notes:
+- The script drops and recreates the application tables.
+- Booking and voucher tables/columns are intentionally not part of the schema.
+- Numeric order IDs remain internal; customer-facing order URLs use orderCode.
+- The physical PostgreSQL column is lowercase ordercode, while the Java field/API name stays orderCode.

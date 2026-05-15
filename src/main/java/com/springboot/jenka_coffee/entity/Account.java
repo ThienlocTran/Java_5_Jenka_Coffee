@@ -1,0 +1,172 @@
+package com.springboot.jenka_coffee.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.proxy.HibernateProxy;
+import org.springframework.data.domain.Persistable;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
+
+@Getter
+@Setter
+@ToString
+@RequiredArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "Accounts")
+public class Account implements Serializable, Persistable<String> {
+
+    @Id
+    @Column(name = "Username", length = 50)
+    private String username;
+    
+    /**
+     * JPA FIX: String @Id causes merge() instead of persist()
+     * Implement Persistable to explicitly control isNew() behavior
+     * This flag is set by service layer when creating new accounts
+     */
+    @Transient
+    private boolean isNew = false;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn khỏi JSON response
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
+    private String fullname;
+
+    @Column(name = "Email", length = 100, unique = true)
+    private String email;
+
+    /**
+     * SECURITY FIX: Convert empty email to NULL để tránh unique constraint violation
+     * PostgreSQL unique constraint: nhiều NULL OK, nhiều "" NOT OK
+     */
+    @PrePersist
+    @PreUpdate
+    private void normalizeEmail() {
+        if (email != null && email.trim().isEmpty()) {
+            email = null;
+        }
+    }
+
+    @Column(name = "phone", length = 15, unique = true)
+    private String phone;
+
+    @Column(name = "phone_verified")
+    private Boolean phoneVerified = false;
+
+    @Column(name = "Photo")
+    private String photo;
+
+    @Column(name = "Activated")
+    private Boolean activated = true;
+
+    @Column(name = "Admin")
+    private Boolean admin = false;
+
+    @Column(name = "points")
+    private Integer points = 0;
+
+    @Column(name = "customer_rank", length = 20)
+    private String customerRank = "MEMBER";
+
+    // ===== ACTIVATION & PASSWORD RESET FIELDS =====
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn token khỏi JSON
+    @Column(name = "ActivationToken", length = 100)
+    private String activationToken;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "ActivationTokenExpiry")
+    private LocalDateTime activationTokenExpiry;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "ResetToken", length = 100)
+    private String resetToken;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "ResetTokenExpiry")
+    private LocalDateTime resetTokenExpiry;
+
+    @Column(name = "ActivationMethod", length = 10)
+    private String activationMethod; // EMAIL or PHONE
+    
+    /**
+     * VULN-SESSION-REVOCATION FIX: Track when password was last changed
+     * Used to invalidate old JWT tokens after password reset
+     */
+    @Column(name = "lastPasswordResetDate")
+    private LocalDateTime lastPasswordResetDate;
+
+    @Column(name = "createdate", updatable = false)
+    private LocalDateTime createDate = LocalDateTime.now();
+
+    // Quan hệ 1-N với Order
+    @JsonIgnore // Chặn Account↔Order cycle
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<Order> orders;
+
+    // Quan hệ 1-N với PointHistory
+    @JsonIgnore // Chặn Account↔PointHistory cycle
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<PointHistory> pointHistories;
+
+
+
+    // --- LOGIC HIBERNATE PROXY (Chuẩn chỉ) ---
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null)
+            return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy
+                ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
+                : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy
+                ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
+                : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass)
+            return false;
+        Account account = (Account) o;
+        // So sánh Username (String) thay vì ID (Integer/Long)
+        return getUsername() != null && Objects.equals(getUsername(), account.getUsername());
+    }
+
+    @Override
+    public final int hashCode() {
+        return this instanceof HibernateProxy
+                ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode()
+                : getClass().hashCode();
+    }
+    
+    // --- PERSISTABLE INTERFACE IMPLEMENTATION ---
+    
+    @Override
+    public String getId() {
+        return username;
+    }
+    
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+    
+    /**
+     * Reset isNew flag after persist/load to prevent re-insertion
+     */
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
+}

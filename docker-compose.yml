@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Docker Compose cho LOCAL DEVELOPMENT
+# Production: Dùng PostgreSQL trên Vietnix VPS (không cần Docker)
+
+services:
+  postgres:
+    container_name: jenka-postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=jenka_coffee
+      - POSTGRES_USER=jenka_user
+      - POSTGRES_PASSWORD=jenka_dev_123  # Chỉ dùng local dev
+    volumes:
+      - ./pg-data:/var/lib/postgresql/data        # Lưu data khi tắt container
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Auto init schema
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jenka_user -d jenka_coffee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Để dùng với Spring Boot local:
+# spring.datasource.url=jdbc:postgresql://localhost:5432/jenka_coffee
+# spring.datasource.username=jenka_user
+# spring.datasource.password=jenka_dev_123

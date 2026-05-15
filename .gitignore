@@ -3,7 +3,7 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
+sql-data/
 ### STS ###
 .apt_generated
 .classpath
@@ -12,7 +12,13 @@ target/
 .settings
 .springBeans
 .sts4-cache
+pom.xml
+docker-compose.yml
+README.md
 
+src/main/resources/application.properties
+application.properties
+.env
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -31,3 +37,4 @@ build/
 
 ### VS Code ###
 .vscode/
+.gitnexus

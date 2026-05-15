@@ -1,0 +1,79 @@
+package com.springboot.jenka_coffee.dto.request;
+
+import com.springboot.jenka_coffee.entity.Account;
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class AccountRequest {
+
+    // username validated manually in controller (not required for update)
+    @Size(min = 3, max = 50, message = "{AccountRequest.username.Size}")
+    @Pattern(regexp = "^[a-zA-Z0-9_]*$", message = "{AccountRequest.username.Pattern}")
+    private String username;
+
+    @NotBlank(message = "{AccountRequest.fullname.NotBlank}")
+    @Size(min = 3, max = 100, message = "{AccountRequest.fullname.Size}")
+    private String fullname;
+
+    // @Email rejects empty string — use custom check instead
+    @Pattern(regexp = "^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", message = "{AccountRequest.email.Email}")
+    private String email;
+
+    @Pattern(regexp = "^$|(0|\\+84)(\\s|\\.)?((3[2-9])|(5[689])|(7[06-9])|(8[1-689])|(9[0-46-9]))(\\d)(\\s|\\.)?(\\d{3})(\\s|\\.)?(\\d{3})$", message = "{AccountRequest.phone.Pattern}")
+    private String phone;
+
+    @Size(min = 8, max = 72, message = "{AccountRequest.password.Size}")
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,72}$",
+        message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt (@$!%*?&)"
+    )
+    private String password;
+
+    private Boolean admin = false;
+    private Boolean activated = true;
+    private String photo;
+
+    /**
+     * Format dữ liệu trước khi validation
+     */
+    public void normalize() {
+        if (username != null)
+            username = username.trim().toLowerCase();
+        if (fullname != null)
+            fullname = fullname.trim();
+        if (email != null)
+            email = email.trim().toLowerCase();
+        if (phone != null)
+            phone = phone.trim().replaceAll("\\s", "");
+    }
+
+    /**
+     * Convert DTO to Entity
+     * Note: Caller must set isNew(true) if creating new account
+     */
+    public Account toEntity() {
+        normalize();
+
+        Account account = new Account();
+        account.setUsername(username);
+        account.setFullname(fullname);
+        // SECURITY FIX: Convert empty email to NULL để tránh unique constraint violation
+        account.setEmail(email != null && !email.isEmpty() ? email : null);
+        account.setPhone(phone);
+        account.setPasswordHash(password);
+        account.setAdmin(admin != null ? admin : false);
+        account.setActivated(activated != null ? activated : true);
+        account.setPhoto(photo);
+        account.setPoints(0);
+        account.setCustomerRank("MEMBER");
+        // Note: isNew flag will be set by service layer (createAccount)
+
+        return account;
+    }
+
+}
