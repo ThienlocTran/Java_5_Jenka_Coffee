@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiVisitorController {
 
     private final VisitorStatsRepository visitorStatsRepository;
+    private static final ZoneId STATS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     // Online tracking stays in-memory (ephemeral, 5-min window — intentional)
     private final ConcurrentHashMap<String, Long> onlineUsers = new ConcurrentHashMap<>();
@@ -51,7 +52,7 @@ public class ApiVisitorController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> ping(HttpServletRequest request) {
         String clientId = getClientIdentifier(request);
         long now = System.currentTimeMillis();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(STATS_ZONE);
 
         // 1. Update online status
         onlineUsers.put(clientId, now);
@@ -82,7 +83,7 @@ public class ApiVisitorController {
     /** GET /api/visitors/stats — lấy stats hiện tại */
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> stats() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(STATS_ZONE);
         long now = System.currentTimeMillis();
         int onlineCount = (int) onlineUsers.values().stream()
                 .filter(ts -> (now - ts) <= ONLINE_TIMEOUT_MS)
@@ -115,6 +116,7 @@ public class ApiVisitorController {
     private Map<String, Object> buildStats(LocalDate today, int onlineCount) {
         VisitorStats todayStats = visitorStatsRepository.findByStatDate(today).orElse(null);
 
+        // Use unique visitors consistently for the public visitor counter.
         long todayVisits = todayStats != null ? todayStats.getUniqueVisitors() : 0;
         long totalVisits = 0;
         long monthVisits = 0;
@@ -122,8 +124,8 @@ public class ApiVisitorController {
         // Calculate month total from DB
         LocalDate monthStart = today.withDayOfMonth(1);
         try {
-            totalVisits = visitorStatsRepository.sumTotalVisits();
-            monthVisits = visitorStatsRepository.sumTotalVisitsSince(monthStart);
+            totalVisits = visitorStatsRepository.sumUniqueVisitors();
+            monthVisits = visitorStatsRepository.sumUniqueVisitorsSince(monthStart);
         } catch (Exception e) {
             log.warn("[VISITOR] Failed to read stats from DB: {}", e.getMessage());
         }

@@ -16,11 +16,11 @@ public interface VisitorStatsRepository extends JpaRepository<VisitorStats, Loca
 
     Optional<VisitorStats> findByStatDate(LocalDate date);
 
-    @Query(value = "SELECT COALESCE(SUM(total_visits), 0) FROM visitor_stats", nativeQuery = true)
-    long sumTotalVisits();
+    @Query(value = "SELECT COALESCE(SUM(unique_visitors), 0) FROM visitor_stats", nativeQuery = true)
+    long sumUniqueVisitors();
 
-    @Query(value = "SELECT COALESCE(SUM(total_visits), 0) FROM visitor_stats WHERE stat_date >= :fromDate", nativeQuery = true)
-    long sumTotalVisitsSince(@Param("fromDate") LocalDate fromDate);
+    @Query(value = "SELECT COALESCE(SUM(unique_visitors), 0) FROM visitor_stats WHERE stat_date >= :fromDate", nativeQuery = true)
+    long sumUniqueVisitorsSince(@Param("fromDate") LocalDate fromDate);
 
     @Modifying
     @Transactional

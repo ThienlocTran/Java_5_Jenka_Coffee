@@ -127,6 +127,43 @@ public class ApiAdminAccountController {
         return ResponseEntity.ok(ApiResponse.success("Đã " + status + " tài khoản thành công!", account));
     }
 
+    /**
+     * Set admin role for an account.
+     * Body JSON: { "isAdmin": true/false }
+     * Tách biệt với updateAccount để tránh horizontal privilege escalation.
+     */
+    @PutMapping("/{username}/set-role")
+    public ResponseEntity<ApiResponse<Account>> setAdminRole(
+            @PathVariable String username,
+            @RequestBody Map<String, Object> body,
+            Authentication authentication) {
+
+        // Lấy value isAdmin từ body (hỗ trợ boolean và string)
+        Object rawValue = body.get("isAdmin");
+        if (rawValue == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Thiếu trường 'isAdmin' trong body"));
+        }
+        boolean isAdmin;
+        if (rawValue instanceof Boolean b) {
+            isAdmin = b;
+        } else {
+            isAdmin = Boolean.parseBoolean(rawValue.toString());
+        }
+
+        // Bảo vệ: admin không thể tự xóa quyền của mình
+        String currentUser = authentication != null ? authentication.getName() : null;
+        if (!isAdmin && username.equals(currentUser)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Không thể tự thu hồi quyền admin của chính mình!"));
+        }
+
+        Account account = accountService.setAdminRole(username, isAdmin);
+        account.setPasswordHash(null);
+        String action = isAdmin ? "cấp quyền admin cho" : "thu hồi quyền admin của";
+        return ResponseEntity.ok(ApiResponse.success("Đã " + action + " tài khoản '" + username + "' thành công!", account));
+    }
+
     @PutMapping("/{username}/lock")
     public ResponseEntity<ApiResponse<Void>> lockAccount(@PathVariable String username) {
         Account account = accountService.findByIdOrThrow(username);
