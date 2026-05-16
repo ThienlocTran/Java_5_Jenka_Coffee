@@ -8,6 +8,8 @@ import com.springboot.jenka_coffee.util.ImageUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
+import jakarta.annotation.PostConstruct;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -24,7 +26,10 @@ import java.util.UUID;
 @Service
 public class UploadServiceImpl implements UploadService {
 
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    @Value("${spring.servlet.multipart.max-file-size:10MB}")
+    private String maxFileSizeConfig;
+
+    private long maxFileSizeBytes;
     private final Cloudinary cloudinary;
     private final String uploadDir;
 
@@ -41,6 +46,13 @@ public class UploadServiceImpl implements UploadService {
                 log.warn("Failed to create upload directory: {}", uploadDir);
             }
         }
+    }
+
+    @PostConstruct
+    private void init() {
+        // Parse "5MB", "10MB", ... → bytes
+        this.maxFileSizeBytes = DataSize.parse(maxFileSizeConfig.trim().toUpperCase()).toBytes();
+        log.info("Upload max file size: {} bytes ({} MB)", maxFileSizeBytes, maxFileSizeBytes / 1024 / 1024);
     }
 
     @Override
@@ -80,9 +92,10 @@ public class UploadServiceImpl implements UploadService {
             throw new RuntimeException("File is null or empty");
         }
 
-        // Validate file size
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("File size exceeds maximum allowed size of " + (MAX_FILE_SIZE / 1024 / 1024) + "MB");
+        // Validate file size — giới hạn đọc từ application.properties
+        if (file.getSize() > maxFileSizeBytes) {
+            long limitMB = maxFileSizeBytes / 1024 / 1024;
+            throw new RuntimeException("File size exceeds maximum allowed size of " + limitMB + "MB");
         }
 
         // Validate image file
