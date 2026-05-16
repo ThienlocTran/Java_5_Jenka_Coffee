@@ -15,17 +15,17 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Categories")
+@Table(name = "categories")
 public class Category implements Serializable {
 
     @Id
-    @Column(name = "Id", length = 50)
+    @Column(name = "id", length = 50)
     private String id; // Mã loại (VD: MAY_PHA) - Tự nhập, ko tự tăng
 
-    @Column(name = "Name", length = 100, nullable = false)
+    @Column(name = "name", length = 100, nullable = false)
     private String name;
 
-    @Column(name = "Icon")
+    @Column(name = "icon")
     private String icon; // Tên file icon (VD: May_Pha_Ca_Phe.webp)
 
     // Quan hệ 1-N với Product

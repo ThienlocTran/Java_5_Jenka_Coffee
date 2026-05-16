@@ -16,7 +16,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Payments")
+@Table(name = "payments")
 public class Payment implements Serializable {
 
     @Id
@@ -24,19 +24,19 @@ public class Payment implements Serializable {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "OrderId", nullable = false)
+    @Column(name = "order_id", nullable = false)
     private Long orderId;
 
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "paymentMethod", length = 20, nullable = false)
+    @Column(name = "payment_method", length = 20, nullable = false)
     private String paymentMethod;
 
-    @Column(name = "transactionCode", length = 50)
+    @Column(name = "transaction_code", length = 50)
     private String transactionCode;
 
-    @Column(name = "paymentDate")
+    @Column(name = "payment_date")
     private LocalDateTime paymentDate = LocalDateTime.now();
 
     @Column(name = "status", length = 20)
@@ -49,7 +49,7 @@ public class Payment implements Serializable {
     // N-1 with Order
     @JsonIgnore // Chặn Payment↔Order cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "OrderId", insertable = false, updatable = false)
+    @JoinColumn(name = "order_id", insertable = false, updatable = false)
     @ToString.Exclude
     private Order order;
 

@@ -13,29 +13,29 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "ProductImages")
+@Table(name = "product_images")
 public class ProductImage implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Integer id;
 
-    @Column(name = "ImageUrl", nullable = false)
+    @Column(name = "image_url", nullable = false)
     private String imageUrl;
 
-    @Column(name = "DisplayOrder")
+    @Column(name = "display_order")
     private Integer displayOrder = 0;
 
-    @Column(name = "IsPrimary")
+    @Column(name = "is_primary")
     private Boolean isPrimary = false;
 
-    @Column(name = "CreateDate", updatable = false)
+    @Column(name = "create_date", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ProductId", nullable = false)
+    @JoinColumn(name = "product_id", nullable = false)
     @ToString.Exclude
     private Product product;
 }

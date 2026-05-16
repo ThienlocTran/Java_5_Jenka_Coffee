@@ -1,6 +1,7 @@
 Jenka Coffee Database
 
-init_production.sql is the single canonical PostgreSQL database bootstrap file.
+init_production.sql is the legacy PostgreSQL bootstrap file.
+For an existing VPS database, run migration/normalize_snake_case_schema.sql after pulling source.
 
 Use it for a fresh deploy:
 
@@ -10,4 +11,4 @@ Notes:
 - The script drops and recreates the application tables.
 - Booking and voucher tables/columns are intentionally not part of the schema.
 - Numeric order IDs remain internal; customer-facing order URLs use orderCode.
-- The physical PostgreSQL column is lowercase ordercode, while the Java field/API name stays orderCode.
+- Physical PostgreSQL tables/columns should use snake_case, for example order_code and product_images.

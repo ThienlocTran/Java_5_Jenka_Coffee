@@ -16,18 +16,18 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
+@Table(name = "order_details")
 public class OrderDetail implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "Quantity", nullable = false)
+    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     // --- QUAN HỆ ---
@@ -35,14 +35,14 @@ public class OrderDetail implements Serializable {
     // N-1 với Order
     @JsonIgnore // Chặn Order↔OrderDetail cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @JoinColumn(name = "order_id")
     @ToString.Exclude
     private Order order;
 
     // N-1 với Product
     @JsonIgnoreProperties("orderDetails") // Chặn Product↔OrderDetail cycle
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
+    @JoinColumn(name = "product_id")
     @ToString.Exclude
     private Product product;
 

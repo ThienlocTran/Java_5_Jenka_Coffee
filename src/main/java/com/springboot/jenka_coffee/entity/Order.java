@@ -19,14 +19,14 @@ import java.util.Objects;
 @AllArgsConstructor
 @Entity
 @Table(
-    name = "Orders", // Bắt buộc, vì Order trùng tên khóa SQL
-    indexes = { @Index(name = "idx_order_code", columnList = "ordercode", unique = true) }
+    name = "orders", // Bắt buộc, vì Order trùng tên khóa SQL
+    indexes = { @Index(name = "idx_order_code", columnList = "order_code", unique = true) }
 )
 public class Order implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
     /**
@@ -35,19 +35,19 @@ public class Order implements Serializable {
      * Generated once at checkout; NEVER changes after creation.
      * Keeps numeric PK private (performance / JPA relations unchanged).
      */
-    @Column(name = "ordercode", unique = true, nullable = false, length = 30)
+    @Column(name = "order_code", unique = true, nullable = false, length = 30)
     private String orderCode;
 
-    @Column(name = "Address", nullable = false)
+    @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "CreateDate")
+    @Column(name = "create_date")
     private LocalDateTime createDate = LocalDateTime.now();
 
-    @Column(name = "Phone", length = 15)
+    @Column(name = "phone", length = 15)
     private String phone;
 
-    @Column(name = "Status")
+    @Column(name = "status")
     private Integer status = OrderStatus.NEW.getValue(); // 0: NEW, 1: CONFIRMED, 2: CANCELLED
 
     /**
@@ -71,11 +71,11 @@ public class Order implements Serializable {
         }
     }
 
-    @Column(name = "totalAmount", precision = 18, scale = 2)
+    @Column(name = "total_amount", precision = 18, scale = 2)
     private BigDecimal totalAmount;
 
     // VULN-INFINITE-POINTS FIX: Lưu số điểm thực tế đã sử dụng khi checkout
-    @Column(name = "pointsUsed")
+    @Column(name = "points_used")
     private Integer pointsUsed = 0;
 
     // VULN-058 FIX: note field — lưu ghi chú đơn hàng (đã sanitize trước khi save)
@@ -87,7 +87,7 @@ public class Order implements Serializable {
     // N-1 với Account
     @JsonIgnore // Chặn Account↔Order cycle (tránh StackOverflow khi serialize)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Username")
+    @JoinColumn(name = "username")
     @ToString.Exclude
     private Account account;
 

@@ -18,11 +18,11 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Accounts")
+@Table(name = "accounts")
 public class Account implements Serializable, Persistable<String> {
 
     @Id
-    @Column(name = "Username", length = 50)
+    @Column(name = "username", length = 50)
     private String username;
     
     /**
@@ -37,10 +37,10 @@ public class Account implements Serializable, Persistable<String> {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
+    @Column(name = "fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
     private String fullname;
 
-    @Column(name = "Email", length = 100, unique = true)
+    @Column(name = "email", length = 100, unique = true)
     private String email;
 
     /**
@@ -61,13 +61,13 @@ public class Account implements Serializable, Persistable<String> {
     @Column(name = "phone_verified")
     private Boolean phoneVerified = false;
 
-    @Column(name = "Photo")
+    @Column(name = "photo")
     private String photo;
 
-    @Column(name = "Activated")
+    @Column(name = "activated")
     private Boolean activated = true;
 
-    @Column(name = "Admin")
+    @Column(name = "admin")
     private Boolean admin = false;
 
     @Column(name = "points")
@@ -79,32 +79,32 @@ public class Account implements Serializable, Persistable<String> {
     // ===== ACTIVATION & PASSWORD RESET FIELDS =====
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn token khỏi JSON
-    @Column(name = "ActivationToken", length = 100)
+    @Column(name = "activation_token", length = 100)
     private String activationToken;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ActivationTokenExpiry")
+    @Column(name = "activation_token_expiry")
     private LocalDateTime activationTokenExpiry;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ResetToken", length = 100)
+    @Column(name = "reset_token", length = 100)
     private String resetToken;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ResetTokenExpiry")
+    @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
-    @Column(name = "ActivationMethod", length = 10)
+    @Column(name = "activation_method", length = 10)
     private String activationMethod; // EMAIL or PHONE
     
     /**
      * VULN-SESSION-REVOCATION FIX: Track when password was last changed
      * Used to invalidate old JWT tokens after password reset
      */
-    @Column(name = "lastPasswordResetDate")
+    @Column(name = "last_password_reset_date")
     private LocalDateTime lastPasswordResetDate;
 
-    @Column(name = "createdate", updatable = false)
+    @Column(name = "create_date", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
     // Quan hệ 1-N với Order

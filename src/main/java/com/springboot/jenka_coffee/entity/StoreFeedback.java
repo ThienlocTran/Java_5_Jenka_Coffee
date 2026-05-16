@@ -32,13 +32,13 @@ public class StoreFeedback {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "\"storeRating\"", nullable = false)
+    @Column(name = "store_rating", nullable = false)
     private Integer storeRating; // 1-5 stars
 
-    @Column(name = "\"staffRating\"", nullable = false)
+    @Column(name = "staff_rating", nullable = false)
     private Integer staffRating; // 1-5 stars
 
-    @Column(name = "\"createdAt\"", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
