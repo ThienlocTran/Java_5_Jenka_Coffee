@@ -302,7 +302,7 @@ class AccountServiceImplTest {
     void testAuthenticateUserNotFound() {
         // Arrange
         // MUST match exact constant in AccountServiceImpl.authenticateWithResult() line 116
-        String dummyHash = "$2a$12$dummyHashToPreventTimingAttack1234567890123456789012";
+        String dummyHash = "$2a$12$C6UzMDM.H6dfI/f/IKcEeOth3pR4S6Hc8mYlshC1R6Qz6WmAb4h5m";
         when(accountRepository.findByUsernameOrEmailOrPhone("ghost_user")).thenReturn(Optional.empty());
         when(passwordSecurity.verifyPassword("password123", dummyHash)).thenReturn(false);
 

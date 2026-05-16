@@ -104,24 +104,41 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public AuthResult authenticateWithResult(String identifier, String password) {
         // VULN-BCRYPT-DOS FIX: Giới hạn độ dài password trước khi hash
         if (password == null || password.length() > 72) {
             return AuthResult.invalidCredentials();
         }
         
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
+        String normalizedIdentifier = identifier != null ? identifier.trim() : "";
+        Account account = dao.findByUsernameOrEmailOrPhone(normalizedIdentifier).orElse(null);
         
         // VULN-TIMING-ATTACK FIX: Dummy BCrypt check khi account không tồn tại
         // Đảm bảo response time giống nhau cho cả trường hợp tồn tại và không tồn tại
         if (account == null) {
             // Chạy dummy BCrypt hash để timing giống với trường hợp account tồn tại
-            passwordSecurity.verifyPassword(password, "$2a$12$dummyHashToPreventTimingAttack1234567890123456789012");
+            passwordSecurity.verifyPassword(password, "$2a$12$C6UzMDM.H6dfI/f/IKcEeOth3pR4S6Hc8mYlshC1R6Qz6WmAb4h5m");
             return AuthResult.invalidCredentials();
         }
         
         if (!account.getActivated()) return AuthResult.notActivated(account);
-        if (!passwordSecurity.verifyPassword(password, account.getPasswordHash())) return AuthResult.invalidCredentials();
+        String storedPassword = account.getPasswordHash();
+        boolean passwordMatches = passwordSecurity.verifyPassword(password, storedPassword);
+
+        // Legacy recovery: older builds saved normal-account passwords without BCrypt
+        // because isPasswordHashed() returned the opposite value. Let the user in once,
+        // then upgrade the stored password immediately.
+        if (!passwordMatches && storedPassword != null && !passwordSecurity.isPasswordHashed(storedPassword)
+                && password.equals(storedPassword)) {
+            account.setPasswordHash(passwordSecurity.hashPassword(password));
+            account.setLastPasswordResetDate(LocalDateTime.now());
+            dao.save(account);
+            passwordMatches = true;
+            log.warn("Upgraded legacy plaintext password hash for user '{}'", account.getUsername());
+        }
+
+        if (!passwordMatches) return AuthResult.invalidCredentials();
         return AuthResult.success(account);
     }
 
