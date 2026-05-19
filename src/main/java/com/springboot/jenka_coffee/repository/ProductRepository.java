@@ -65,26 +65,26 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // (findByAvailableTrue removed - unused, use findByAllCriteria instead)
 
     // ── Search (paginated only) ──────────────────────────────────────
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category c WHERE " +
+                   "(:categorySlug IS NULL OR LOWER(c.slug) = :categorySlug) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                    "p.available = true AND " +
-                   "(:keyword IS NULL OR :keyword = '' OR " +
-                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
-           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
-                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:keywordPattern IS NULL OR " +
+                   " LOWER(p.name) LIKE :keywordPattern OR " +
+                   " LOWER(p.description) LIKE :keywordPattern)",
+           countQuery = "SELECT COUNT(p) FROM Product p JOIN p.category c WHERE " +
+                        "(:categorySlug IS NULL OR LOWER(c.slug) = :categorySlug) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "p.available = true AND " +
-                        "(:keyword IS NULL OR :keyword = '' OR " +
-                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                        "(:keywordPattern IS NULL OR " +
+                        " LOWER(p.name) LIKE :keywordPattern OR " +
+                        " LOWER(p.description) LIKE :keywordPattern)")
+    Page<Product> findByAllCriteria(@Param("categorySlug") String categorySlug,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,
-                                    @Param("keyword") String keyword,
+                                    @Param("keywordPattern") String keywordPattern,
                                     Pageable pageable);
 
     @Query(value = "SELECT p.* FROM products p " +

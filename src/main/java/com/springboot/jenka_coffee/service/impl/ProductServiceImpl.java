@@ -390,7 +390,9 @@ public class ProductServiceImpl implements ProductService {
         if (isDefaultHomepageQuery(categoryId, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
-        return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
+        String normalizedCategorySlug = normalizeCategorySlug(categoryId);
+        String normalizedKeywordPattern = normalizeKeywordPattern(keyword);
+        return productRepository.findByAllCriteria(normalizedCategorySlug, minPrice, maxPrice, normalizedKeywordPattern, pageable);
     }
 
     private boolean isDefaultHomepageQuery(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
@@ -398,6 +400,22 @@ public class ProductServiceImpl implements ProductService {
                 && minPrice == null
                 && maxPrice == null
                 && (keyword == null || keyword.isBlank());
+    }
+
+    private String normalizeCategorySlug(String categorySlug) {
+        if (categorySlug == null) {
+            return null;
+        }
+        String normalized = categorySlug.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeKeywordPattern(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String normalized = keyword.trim().toLowerCase();
+        return normalized.isEmpty() ? null : "%" + normalized + "%";
     }
 
     private boolean isDefaultProductSort(Pageable pageable) {
