@@ -87,16 +87,17 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                                     @Param("keyword") String keyword,
                                     Pageable pageable);
 
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-                   "p.available = true AND " +
+    @Query(value = "SELECT p.* FROM products p " +
+                   "WHERE p.available = true AND " +
                    "(:keyword IS NULL OR :keyword = '' OR " +
-                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
-           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
-                        "p.available = true AND " +
+                   " p.name ILIKE :keyword OR " +
+                   " p.description ILIKE :keyword)",
+           countQuery = "SELECT COUNT(*) FROM products p " +
+                        "WHERE p.available = true AND " +
                         "(:keyword IS NULL OR :keyword = '' OR " +
-                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                        " p.name ILIKE :keyword OR " +
+                        " p.description ILIKE :keyword)",
+           nativeQuery = true)
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
     
     // ── Count orders using this product ──────────────────────────────

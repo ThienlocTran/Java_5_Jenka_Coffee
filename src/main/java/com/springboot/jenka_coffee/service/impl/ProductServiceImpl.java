@@ -457,7 +457,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
-        return productRepository.searchProductsPaginated(keyword, pageable);
+        String keywordPattern = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            keywordPattern = "%" + keyword.trim().toLowerCase() + "%";
+        }
+        return productRepository.searchProductsPaginated(keywordPattern, pageable);
     }
     
     @Override

@@ -25,7 +25,8 @@ public class News implements Serializable {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "content", columnDefinition = "NVARCHAR(MAX)")
+    @Lob
+    @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "image")

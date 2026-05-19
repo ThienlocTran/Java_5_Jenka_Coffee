@@ -128,7 +128,7 @@ COMMENT ON TABLE "Categories" IS 'Danh muc san pham (ID tu nhap, VD: MAY_PHA)';
 -- 3. PRODUCTS (Entity: Product.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE products_id_seq;
-CREATE TABLE "Products" (
+CREATE TABLE "products" (
     "Id"             INTEGER       NOT NULL DEFAULT nextval('products_id_seq'),
     "Name"           VARCHAR(200)  NOT NULL,
     slug             VARCHAR(300)  UNIQUE,
@@ -146,13 +146,13 @@ CREATE TABLE "Products" (
         REFERENCES "Categories" ("Id") ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_products_category  ON "Products" ("Categoryid");
-CREATE INDEX idx_products_available ON "Products" ("Available");
-CREATE INDEX idx_products_featured  ON "Products" ("isFeatured");
-CREATE INDEX idx_products_featured_position ON "Products" (featured_position);
-CREATE INDEX idx_products_slug      ON "Products" (slug);
+CREATE INDEX idx_products_category  ON "products" ("Categoryid");
+CREATE INDEX idx_products_available ON "products" ("Available");
+CREATE INDEX idx_products_featured  ON "products" ("isFeatured");
+CREATE INDEX idx_products_featured_position ON "products" (featured_position);
+CREATE INDEX idx_products_slug      ON "products" (slug);
 
-COMMENT ON TABLE "Products" IS 'San pham ca phe va may moc';
+COMMENT ON TABLE "products" IS 'San pham ca phe va may moc';
 
 
 -- ----------------------------------------------------------
@@ -354,8 +354,12 @@ CREATE TABLE banner_image (
     image         VARCHAR(500) NOT NULL,
     title         VARCHAR(200),
     subtitle      VARCHAR(300),
+    object_position VARCHAR(30) NOT NULL DEFAULT 'center',
+    zoom          DOUBLE PRECISION NOT NULL DEFAULT 1.0,
     sort_order    INTEGER      NOT NULL DEFAULT 0,
     CONSTRAINT banner_image_pkey   PRIMARY KEY (id),
+    CONSTRAINT chk_banner_image_object_position CHECK (object_position IN ('center', 'top', 'bottom', 'left', 'right')),
+    CONSTRAINT chk_banner_image_zoom CHECK (zoom >= 1.0 AND zoom <= 1.5),
     CONSTRAINT fk_bannerimage_set  FOREIGN KEY (banner_set_id)
         REFERENCES banner_set (id) ON DELETE CASCADE
 );

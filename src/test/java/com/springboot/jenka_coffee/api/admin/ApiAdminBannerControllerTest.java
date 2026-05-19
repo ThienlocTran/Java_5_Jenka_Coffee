@@ -139,7 +139,7 @@ class ApiAdminBannerControllerTest {
                 "images", "banner.jpg", "image/jpeg", "image".getBytes());
         
         // FIX: Use nullable(List.class) for subtitles since it's not sent in request
-        when(bannerSetService.create(anyString(), anyString(), anyList(), anyList(), nullable(List.class)))
+        when(bannerSetService.create(anyString(), anyString(), anyList(), anyList(), nullable(List.class), nullable(List.class), nullable(List.class)))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -153,7 +153,7 @@ class ApiAdminBannerControllerTest {
                 .andExpect(jsonPath("$.data.id").value(1));
 
         // FIX: Use nullable(List.class) for subtitles in verify
-        verify(bannerSetService).create(anyString(), anyString(), anyList(), anyList(), nullable(List.class));
+        verify(bannerSetService).create(anyString(), anyString(), anyList(), anyList(), nullable(List.class), nullable(List.class), nullable(List.class));
     }
 
     @Test
@@ -166,9 +166,9 @@ class ApiAdminBannerControllerTest {
                         .param("effect", "fade"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Tên banner không hợp lệ (tối đa 100 ký tự)"));
+                .andExpect(jsonPath("$.message").value("Ten banner khong hop le (toi da 100 ky tu)"));
 
-        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
+        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList(), anyList(), anyList());
     }
 
     @Test
@@ -184,9 +184,9 @@ class ApiAdminBannerControllerTest {
                         .param("effect", "fade"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Tên banner không hợp lệ (tối đa 100 ký tự)"));
+                .andExpect(jsonPath("$.message").value("Ten banner khong hop le (toi da 100 ky tu)"));
 
-        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
+        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList(), anyList(), anyList());
     }
 
     @Test
@@ -199,9 +199,9 @@ class ApiAdminBannerControllerTest {
                         .param("effect", "FLASH"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Hiệu ứng không hợp lệ"));
+                .andExpect(jsonPath("$.message").value("Hieu ung khong hop le"));
 
-        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList());
+        verify(bannerSetService, never()).create(anyString(), anyString(), anyList(), anyList(), anyList(), anyList(), anyList());
     }
 
     @Test
@@ -209,7 +209,7 @@ class ApiAdminBannerControllerTest {
     @WithMockUser(roles = "ADMIN")
     void test_create_xssInName_sanitizedAndSaved() throws Exception {
         // Arrange
-        when(bannerSetService.create(anyString(), anyString(), nullable(List.class), nullable(List.class), nullable(List.class)))
+        when(bannerSetService.create(anyString(), anyString(), nullable(List.class), nullable(List.class), nullable(List.class), nullable(List.class), nullable(List.class)))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -223,7 +223,7 @@ class ApiAdminBannerControllerTest {
         // Regex <[^>]*> strips HTML tags but keeps text content inside tags
         // Input: <script>alert(1)</script>Banner
         // Output: alert(1)Banner (not just "Banner")
-        verify(bannerSetService).create(eq("alert(1)Banner"), anyString(), nullable(List.class), nullable(List.class), nullable(List.class));
+        verify(bannerSetService).create(eq("alert(1)Banner"), anyString(), nullable(List.class), nullable(List.class), nullable(List.class), nullable(List.class), nullable(List.class));
     }
 
     @Test
@@ -231,7 +231,7 @@ class ApiAdminBannerControllerTest {
     @WithMockUser(roles = "ADMIN")
     void test_create_noImages_createsSuccessfully() throws Exception {
         // Arrange
-        when(bannerSetService.create(anyString(), anyString(), isNull(), isNull(), isNull()))
+        when(bannerSetService.create(anyString(), anyString(), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -242,7 +242,7 @@ class ApiAdminBannerControllerTest {
                 .andExpect(status().isCreated())  // FIX: 201 not 200
                 .andExpect(jsonPath("$.status").value("SUCCESS"));
 
-        verify(bannerSetService).create(anyString(), anyString(), isNull(), isNull(), isNull());
+        verify(bannerSetService).create(anyString(), anyString(), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -289,7 +289,7 @@ class ApiAdminBannerControllerTest {
                         .param("effect", "BOUNCE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("ERROR"))
-                .andExpect(jsonPath("$.message").value("Hiệu ứng không hợp lệ"));
+                .andExpect(jsonPath("$.message").value("Hieu ung khong hop le"));
 
         verify(bannerSetService, never()).updateMeta(anyLong(), anyString(), anyString());
     }
@@ -373,7 +373,7 @@ class ApiAdminBannerControllerTest {
                 "images", "new.jpg", "image/jpeg", "image".getBytes());
         
         // FIX: Use nullable(List.class) for subtitles since it's not sent in request
-        when(bannerSetService.addImages(anyLong(), anyList(), anyList(), nullable(java.util.List.class)))
+        when(bannerSetService.addImages(anyLong(), anyList(), anyList(), nullable(java.util.List.class), nullable(java.util.List.class), nullable(java.util.List.class)))
                 .thenReturn(testBannerSet);
 
         // Act & Assert
@@ -385,7 +385,7 @@ class ApiAdminBannerControllerTest {
                 .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         // FIX: Use nullable(List.class) for subtitles in verify
-        verify(bannerSetService).addImages(anyLong(), anyList(), anyList(), nullable(java.util.List.class));
+        verify(bannerSetService).addImages(anyLong(), anyList(), anyList(), nullable(java.util.List.class), nullable(java.util.List.class), nullable(java.util.List.class));
     }
 
     @Test

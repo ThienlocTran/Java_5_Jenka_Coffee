@@ -78,7 +78,7 @@ class BannerSetServiceImplTest {
         when(setRepo.save(any(BannerSet.class))).thenReturn(testBannerSet);
 
         // Act
-        BannerSet result = bannerSetService.create(blankName, "fade", null, null, null);
+        BannerSet result = bannerSetService.create(blankName, "fade", null, null, null, null, null);
 
         // Assert
         assertNotNull(result);
@@ -99,7 +99,7 @@ class BannerSetServiceImplTest {
         });
 
         // Act
-        BannerSet result = bannerSetService.create(safeName, "fade", null, null, null);
+        BannerSet result = bannerSetService.create(safeName, "fade", null, null, null, null, null);
 
         // Assert
         assertNotNull(result);
@@ -124,19 +124,18 @@ class BannerSetServiceImplTest {
     }
 
     @Test
-    @DisplayName("TC-BNR-SER-005: RemoveImage imageId not exists - deletes without error")
-    void test_removeImage_notFound_deletesWithoutError() {
+    @DisplayName("TC-BNR-SER-005: RemoveImage imageId not exists - throws ResourceNotFoundException")
+    void test_removeImage_notFound_throwsResourceNotFoundException() {
         // Arrange
         Long imageId = 99999L;
-        doNothing().when(imageRepo).deleteById(imageId);
+        when(imageRepo.existsById(imageId)).thenReturn(false);
 
-        // Act - should not throw exception even if ID doesn't exist
-        assertDoesNotThrow(() -> {
-            bannerSetService.removeImage(imageId);
-        });
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> bannerSetService.removeImage(imageId));
 
         // Assert
-        verify(imageRepo).deleteById(imageId);
+        verify(imageRepo).existsById(imageId);
+        verify(imageRepo, never()).deleteById(imageId);
     }
 
     @Test
@@ -178,7 +177,7 @@ class BannerSetServiceImplTest {
         });
 
         // Act
-        BannerSet result = bannerSetService.create("Test Banner", "fade", images, titles, null);
+        BannerSet result = bannerSetService.create("Test Banner", "fade", images, titles, null, null, null);
 
         // Assert
         assertNotNull(result);
@@ -206,6 +205,7 @@ class BannerSetServiceImplTest {
     @DisplayName("TC-BNR-SER-009: Delete banner - deletes from repository")
     void test_delete_validId_deletesSuccessfully() {
         // Arrange
+        when(setRepo.existsById(1L)).thenReturn(true);
         doNothing().when(setRepo).deleteById(1L);
 
         // Act
@@ -232,7 +232,7 @@ class BannerSetServiceImplTest {
         when(setRepo.save(any(BannerSet.class))).thenReturn(testBannerSet);
 
         // Act
-        BannerSet result = bannerSetService.addImages(1L, images, titles, null);
+        BannerSet result = bannerSetService.addImages(1L, images, titles, null, null, null);
 
         // Assert
         assertNotNull(result);

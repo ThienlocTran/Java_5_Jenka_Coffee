@@ -29,4 +29,10 @@ public class BannerImage {
 
     @Column(name = "sort_order")
     private Integer sortOrder = 0;
+
+    @Column(name = "object_position", length = 30)
+    private String objectPosition = "center";
+
+    @Column
+    private Double zoom = 1.0;
 }

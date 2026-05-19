@@ -41,7 +41,8 @@ public class Product implements Serializable {
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    @Lob
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "create_date", updatable = false)
