@@ -115,11 +115,18 @@ COMMENT ON TABLE "Accounts" IS 'Tai khoan nguoi dung - khach hang va admin';
 -- 2. CATEGORIES (Entity: Category.java)
 -- ----------------------------------------------------------
 CREATE TABLE "Categories" (
-    "Id"   VARCHAR(50)  NOT NULL,
-    "Name" VARCHAR(100) NOT NULL,
-    "Icon" VARCHAR(500),
+    "Id"              VARCHAR(50)  NOT NULL,
+    "Name"            VARCHAR(100) NOT NULL,
+    "Icon"            VARCHAR(500),
+    slug              VARCHAR(160),
+    description       TEXT,
+    meta_title        VARCHAR(255),
+    meta_description  VARCHAR(320),
+    seo_content       TEXT,
     CONSTRAINT "Categories_pkey" PRIMARY KEY ("Id")
 );
+
+CREATE UNIQUE INDEX ux_categories_slug ON "Categories" (slug);
 
 COMMENT ON TABLE "Categories" IS 'Danh muc san pham (ID tu nhap, VD: MAY_PHA)';
 
@@ -483,10 +490,10 @@ INSERT INTO "Accounts" (
 -- BUOC 6: DU LIEU MAU TOI THIEU
 -- Danh muc mac dinh de admin tao san pham ngay
 -- ============================================================
-INSERT INTO "Categories" ("Id", "Name", "Icon") VALUES
-    ('MAY_PHA',   'May Pha Ca Phe',     'may-pha.webp'),
-    ('CA_PHE',    'Ca Phe Nguyen Chat', 'ca-phe.webp'),
-    ('PHU_KIEN',  'Phu Kien',           'phu-kien.webp');
+INSERT INTO "Categories" ("Id", "Name", "Icon", slug) VALUES
+    ('MAY_PHA',   'May Pha Ca Phe',     'may-pha.webp', 'may-pha-ca-phe'),
+    ('CA_PHE',    'Ca Phe Nguyen Chat', 'ca-phe.webp', 'ca-phe'),
+    ('PHU_KIEN',  'Phu Kien',           'phu-kien.webp', 'phu-kien-ca-phe');
 
 -- Tao 1 bo banner trong de admin them anh
 INSERT INTO banner_set (name, effect, active)

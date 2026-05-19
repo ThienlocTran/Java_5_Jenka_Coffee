@@ -20,16 +20,33 @@ public class Category implements Serializable {
 
     @Id
     @Column(name = "id", length = 50)
-    private String id; // Mã loại (VD: MAY_PHA) - Tự nhập, ko tự tăng
+    private String id; // MÃ£ loáº¡i (VD: MAY_PHA) - Tá»± nháº­p, ko tá»± tÄƒng
 
     @Column(name = "name", length = 100, nullable = false)
     private String name;
 
     @Column(name = "icon")
-    private String icon; // Tên file icon (VD: May_Pha_Ca_Phe.webp)
+    private String icon; // TÃªn file icon (VD: May_Pha_Ca_Phe.webp)
 
-    // Quan hệ 1-N với Product
-    @JsonIgnore // Chặn vòng lặp vô tận JSON
+    @Column(name = "slug", length = 160)
+    private String slug;
+
+    @Lob
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "meta_title", length = 255)
+    private String metaTitle;
+
+    @Column(name = "meta_description", length = 320)
+    private String metaDescription;
+
+    @Lob
+    @Column(name = "seo_content", columnDefinition = "TEXT")
+    private String seoContent;
+
+    // Quan há»‡ 1-N vá»›i Product
+    @JsonIgnore // Cháº·n vÃ²ng láº·p vÃ´ táº­n JSON
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Product> products;

@@ -385,12 +385,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+    public Page<Product> filterProductsWithAllCriteria(String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
-        if (isDefaultHomepageQuery(categoryId, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+        if (isDefaultHomepageQuery(categorySlug, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
-        String normalizedCategorySlug = normalizeCategorySlug(categoryId);
+        String normalizedCategorySlug = normalizeCategorySlug(categorySlug);
         String normalizedKeywordPattern = normalizeKeywordPattern(keyword);
         return productRepository.findByAllCriteria(normalizedCategorySlug, minPrice, maxPrice, normalizedKeywordPattern, pageable);
     }
