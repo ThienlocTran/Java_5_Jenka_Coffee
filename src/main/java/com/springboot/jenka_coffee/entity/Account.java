@@ -50,8 +50,11 @@ public class Account implements Serializable, Persistable<String> {
     @PrePersist
     @PreUpdate
     private void normalizeEmail() {
-        if (email != null && email.trim().isEmpty()) {
-            email = null;
+        if (email != null) {
+            email = email.trim().toLowerCase();
+            if (email.isEmpty()) {
+                email = null;
+            }
         }
     }
 

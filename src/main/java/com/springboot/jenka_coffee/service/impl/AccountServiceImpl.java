@@ -99,8 +99,8 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public boolean existsByEmail(String email) {
-        // ✅ Delegate to repository - efficient database query
-        return dao.existsByEmail(email);
+        String normalizedEmail = normalizeEmail(email);
+        return normalizedEmail != null && dao.existsByEmailIgnoreCase(normalizedEmail);
     }
 
     @Override
@@ -110,7 +110,8 @@ public class AccountServiceImpl implements AccountService {
             return AuthResult.invalidCredentials();
         }
         
-        Account account = dao.findByUsernameOrEmailOrPhone(identifier).orElse(null);
+        String normalizedIdentifier = identifier != null ? identifier.trim() : null;
+        Account account = dao.findByUsernameOrEmailOrPhone(normalizedIdentifier).orElse(null);
         
         // VULN-TIMING-ATTACK FIX: Dummy BCrypt check khi account không tồn tại
         // Đảm bảo response time giống nhau cho cả trường hợp tồn tại và không tồn tại
@@ -136,7 +137,7 @@ public class AccountServiceImpl implements AccountService {
         // VULN-PRE-ACCOUNT-HIJACKING FIX: Email phải được verify trước khi activate
         // Không auto-activate nữa, yêu cầu OTP qua phone
         if (email != null && !email.trim().isEmpty()) {
-            newAccount.setEmail(email.trim());
+            newAccount.setEmail(normalizeEmail(email));
         } else {
             newAccount.setEmail(null); // SECURITY FIX: NULL instead of empty string to avoid unique constraint
         }
@@ -172,6 +173,7 @@ public class AccountServiceImpl implements AccountService {
 
         // Validation - check email exists (only if email is provided)
         if (account.getEmail() != null && !account.getEmail().trim().isEmpty()) {
+            account.setEmail(normalizeEmail(account.getEmail()));
             if (existsByEmail(account.getEmail())) {
                 throw new ValidationException("email", "Email đã được sử dụng!");
             }
@@ -230,7 +232,8 @@ public class AccountServiceImpl implements AccountService {
 
         // Validation - check email (if changed)
         String existingEmail = existingAccount.getEmail();
-        String newEmail = updatedAccount.getEmail();
+        String newEmail = normalizeEmail(updatedAccount.getEmail());
+        updatedAccount.setEmail(newEmail);
         boolean emailChanged = !Objects.equals(existingEmail, newEmail)
                 && newEmail != null && !newEmail.trim().isEmpty();
         if (emailChanged && existsByEmail(newEmail)) {
@@ -424,7 +427,11 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account findByEmail(String email) {
-        return dao.findByEmail(email).orElse(null);
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return null;
+        }
+        return dao.findByEmailIgnoreCase(normalizedEmail).orElse(null);
     }
 
     @Override
@@ -436,6 +443,26 @@ public class AccountServiceImpl implements AccountService {
         account.setPhone(phone);
         dao.save(account);
         log.info("Updated phone number for user: {}", username);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "accountSecurity", key = "#username")
+    public Account setAdminRole(String username, boolean isAdmin, String currentAdminUsername) {
+        Account account = findByIdOrThrow(username);
+
+        if (Boolean.TRUE.equals(account.getAdmin()) && !isAdmin) {
+            long adminCount = dao.countByAdminTrue();
+            if (adminCount <= 1) {
+                throw new BusinessRuleException("Không thể hạ quyền admin cuối cùng trong hệ thống!");
+            }
+            if (username.equals(currentAdminUsername)) {
+                throw new BusinessRuleException("Không thể tự gỡ quyền admin của chính bạn!");
+            }
+        }
+
+        account.setAdmin(isAdmin);
+        return dao.save(account);
     }
 
     // ===== SECURITY LAYER METHODS =====
@@ -540,5 +567,13 @@ public class AccountServiceImpl implements AccountService {
         dao.save(account);
         
         log.info("Successfully reset password for user: {}", username);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

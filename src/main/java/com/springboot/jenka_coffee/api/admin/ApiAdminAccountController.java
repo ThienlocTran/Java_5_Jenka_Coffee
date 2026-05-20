@@ -174,6 +174,20 @@ public class ApiAdminAccountController {
         return ResponseEntity.ok(ApiResponse.success("Đã reset mật khẩu thành công!", null));
     }
 
+    @PutMapping("/{username}/set-role")
+    public ResponseEntity<ApiResponse<Account>> setAdminRole(
+            @PathVariable String username,
+            @RequestBody Map<String, Object> body,
+            Authentication authentication) {
+        boolean isAdmin = Boolean.TRUE.equals(body.get("isAdmin"));
+        String currentAdmin = authentication != null ? authentication.getName() : null;
+
+        Account account = accountService.setAdminRole(username, isAdmin, currentAdmin);
+        account.setPasswordHash(null);
+        String roleLabel = isAdmin ? "quản trị viên" : "người dùng";
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật vai trò thành " + roleLabel, account));
+    }
+
     @GetMapping("/check-username")
     public ResponseEntity<ApiResponse<Boolean>> checkUsername(@RequestParam String username) {
         boolean isAvailable = !accountService.existsByUsername(username);
