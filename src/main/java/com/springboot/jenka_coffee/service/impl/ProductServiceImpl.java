@@ -275,6 +275,11 @@ public class ProductServiceImpl implements ProductService {
                 log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
                 return savedProduct;
             } catch (DataIntegrityViolationException e) {
+                if (!isSlugUniqueViolation(e)) {
+                    log.error("Product create failed due to non-slug database constraint: {}", e.getMessage(), e);
+                    throw new BusinessRuleException(resolveCreateConstraintMessage(e));
+                }
+
                 // Slug collision detected (race condition in distributed system)
                 if (attempt < maxAttempts) {
                     log.warn("Slug collision detected on attempt {}, retrying with new slug", attempt);
@@ -296,6 +301,46 @@ public class ProductServiceImpl implements ProductService {
         
         // TC-PRD-CTRL-039 FIX: This should never be reached, but if it does, throw BusinessRuleException
         throw new BusinessRuleException("Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.");
+    }
+
+    private boolean isSlugUniqueViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if ((normalized.contains("slug") && normalized.contains("unique"))
+                        || normalized.contains("products_slug_key")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String resolveCreateConstraintMessage(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if (normalized.contains("categoryid")) {
+                    return "CÆ¡ sá»Ÿ dá»¯ liá»‡u hiá»‡n táº¡i cÃ²n schema cá»§ khÃ´ng khá»›p VPS (categoryid). Cáº§n bá» rÃ ng buá»™c cÅ© nÃ y trÃªn database.";
+                }
+                if (normalized.contains("category_id")) {
+                    return "Danh má»¥c sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+                if (normalized.contains("name")) {
+                    return "TÃªn sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+                if (normalized.contains("price")) {
+                    return "GiÃ¡ sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+            }
+            current = current.getCause();
+        }
+        return "KhÃ´ng thá»ƒ táº¡o sáº£n pháº©m do rÃ ng buá»™c dá»¯ liá»‡u trong database.";
     }
 
     @Override
