@@ -353,6 +353,27 @@ public class AccountServiceImpl implements AccountService {
         return saved;
     }
 
+    @Override
+    @Transactional
+    @CacheEvict(value = "accountSecurity", allEntries = true)
+    public Account setAdminRoleByEmail(String email, boolean isAdmin) {
+        Account account = dao.findByEmail(email)
+                .orElseThrow(() -> new jakarta.validation.ValidationException("Không tìm thấy tài khoản với email: " + email));
+
+        if (!isAdmin && Boolean.TRUE.equals(account.getAdmin())) {
+            long adminCount = dao.countByAdminTrue();
+            if (adminCount <= 1) {
+                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
+                        "Không thể thu hồi quyền admin của người dùng cuối cùng trong hệ thống!");
+            }
+        }
+
+        account.setAdmin(isAdmin);
+        Account saved = dao.save(account);
+        log.info("ADMIN_ROLE_CHANGE: email='{}' user='{}' isAdmin={}", email, account.getUsername(), isAdmin);
+        return saved;
+    }
+
     // ===== ADMIN USER MANAGEMENT METHODS =====
 
 

@@ -79,6 +79,15 @@ public interface AccountService {
      */
     Account setAdminRole(String username, boolean isAdmin);
 
+    /**
+     * Set admin role for an account by email.
+     *
+     * @param email     Account email
+     * @param isAdmin   true = grant admin, false = revoke admin
+     * @return Updated account
+     */
+    Account setAdminRoleByEmail(String email, boolean isAdmin);
+
     /*
      * Lock account (admin function)
      * 

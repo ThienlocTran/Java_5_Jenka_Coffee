@@ -236,8 +236,7 @@ public class ApiAuthController {
                     .body(ApiResponse.error("Email Google chua duoc xac thuc"));
         }
         
-        // Google login may link to an activated password account when the verified
-        // Google email matches. Unactivated accounts stay blocked below.
+        // Google login may link to an existing account when the verified Google email matches.
         Account account = accountService.findByEmail(email);
         boolean needsPhone = false;
         
@@ -314,17 +313,18 @@ public class ApiAuthController {
             }
 
             if (!isOAuthAccount) {
-                // Account exists with password and NOT created via OAuth
                 if (!Boolean.TRUE.equals(account.getActivated())) {
-                    // SECURITY: Do NOT allow OAuth to take over unactivated password accounts
-                    log.warn("SECURITY: Blocked OAuth takeover attempt for unactivated password account: {}", email);
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(ApiResponse.error("Email này đã được đăng ký. Vui lòng kích hoạt tài khoản hoặc đăng nhập bằng mật khẩu."));
+                    // Verified Google email proves ownership, so allow the owner to claim
+                    // an unactivated signup created with the same email.
+                    account.setActivated(true);
+                    account.setActivationToken(null);
+                    account.setActivationTokenExpiry(null);
+                    account = accountService.save(account);
+                    log.info("Activated and linked verified Google login for account: {}", account.getUsername());
                 } else {
-                    // Activated account with password - deny Google OAuth
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(ApiResponse.error("Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng mật khẩu."));
+                    log.info("Linked verified Google login for existing password account: {}", account.getUsername());
                 }
+                isOAuthAccount = true;
             }
             
             // OAuth account - allow login even if password was set later

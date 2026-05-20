@@ -164,6 +164,41 @@ public class ApiAdminAccountController {
         return ResponseEntity.ok(ApiResponse.success("Đã " + action + " tài khoản '" + username + "' thành công!", account));
     }
 
+    @PutMapping("/set-role-by-email")
+    public ResponseEntity<ApiResponse<Account>> setAdminRoleByEmail(
+            @RequestBody Map<String, Object> body,
+            Authentication authentication) {
+
+        Object rawEmail = body.get("email");
+        if (rawEmail == null || rawEmail.toString().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Thiếu trường 'email' trong body"));
+        }
+
+        Object rawValue = body.get("isAdmin");
+        if (rawValue == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Thiếu trường 'isAdmin' trong body"));
+        }
+
+        String email = rawEmail.toString().trim();
+        boolean isAdmin = rawValue instanceof Boolean b
+                ? b
+                : Boolean.parseBoolean(rawValue.toString());
+
+        String currentUser = authentication != null ? authentication.getName() : null;
+        Account currentAccount = currentUser != null ? accountService.findById(currentUser) : null;
+        if (!isAdmin && currentAccount != null && email.equalsIgnoreCase(currentAccount.getEmail())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Không thể tự thu hồi quyền admin của chính mình!"));
+        }
+
+        Account account = accountService.setAdminRoleByEmail(email, isAdmin);
+        account.setPasswordHash(null);
+        String action = isAdmin ? "cấp quyền admin cho" : "thu hồi quyền admin của";
+        return ResponseEntity.ok(ApiResponse.success("Đã " + action + " tài khoản có email '" + email + "' thành công!", account));
+    }
+
     @PutMapping("/{username}/lock")
     public ResponseEntity<ApiResponse<Void>> lockAccount(@PathVariable String username) {
         Account account = accountService.findByIdOrThrow(username);
