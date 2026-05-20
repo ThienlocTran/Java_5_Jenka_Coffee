@@ -18,6 +18,26 @@ public class ProductRequest {
     private String name;
     
     private String description;
+
+    private String shortDescription;
+
+    private String detailDescription;
+
+    private String specificationsJson;
+
+    private String featuresJson;
+
+    private String warrantyInfo;
+
+    private String shippingInfo;
+
+    private String suitableFor;
+
+    private String faqJson;
+
+    private String metaTitle;
+
+    private String metaDescription;
     
     @NotNull(message = "Giá sản phẩm không được để trống")
     @Min(value = 0, message = "Giá sản phẩm phải lớn hơn hoặc bằng 0")

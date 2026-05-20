@@ -135,11 +135,8 @@ public class ApiAdminProductController {
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> updateProductPut(
             @PathVariable Integer id,
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("price") BigDecimal price,
+            @ModelAttribute ProductRequest request,
             @RequestParam("categoryId") String categoryId,
-            @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
         
         try {
@@ -147,9 +144,7 @@ public class ApiAdminProductController {
             productValidator.validateImageFile(imageFile);
             
             // Delegate to service - Service sẽ validate price
-            Product product = productService.updateProductFromRequest(
-                id, name, description, price, categoryId, available, imageFile
-            );
+            Product product = productService.updateProductFromRequest(id, request, categoryId, imageFile);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm thành công", product));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -171,14 +166,11 @@ public class ApiAdminProductController {
     @PostMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> updateProductPost(
             @PathVariable Integer id,
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("price") BigDecimal price,
+            @ModelAttribute ProductRequest request,
             @RequestParam("categoryId") String categoryId,
-            @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
         
-        return updateProductPut(id, name, description, price, categoryId, available, imageFile);
+        return updateProductPut(id, request, categoryId, imageFile);
     }
 
     /**

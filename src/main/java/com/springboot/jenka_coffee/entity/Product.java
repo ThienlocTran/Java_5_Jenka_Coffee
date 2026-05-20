@@ -44,6 +44,36 @@ public class Product implements Serializable {
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
+    @Column(name = "detail_description", columnDefinition = "TEXT")
+    private String detailDescription;
+
+    @Column(name = "specifications_json", columnDefinition = "TEXT")
+    private String specificationsJson;
+
+    @Column(name = "features_json", columnDefinition = "TEXT")
+    private String featuresJson;
+
+    @Column(name = "warranty_info", columnDefinition = "TEXT")
+    private String warrantyInfo;
+
+    @Column(name = "shipping_info", columnDefinition = "TEXT")
+    private String shippingInfo;
+
+    @Column(name = "suitable_for", columnDefinition = "TEXT")
+    private String suitableFor;
+
+    @Column(name = "faq_json", columnDefinition = "TEXT")
+    private String faqJson;
+
+    @Column(name = "meta_title", length = 255)
+    private String metaTitle;
+
+    @Column(name = "meta_description", columnDefinition = "TEXT")
+    private String metaDescription;
+
     @Column(name = "createDate", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 

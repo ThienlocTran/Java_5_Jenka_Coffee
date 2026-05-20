@@ -610,6 +610,16 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
+        product.setShortDescription(request.getShortDescription());
+        product.setDetailDescription(request.getDetailDescription());
+        product.setSpecificationsJson(request.getSpecificationsJson());
+        product.setFeaturesJson(request.getFeaturesJson());
+        product.setWarrantyInfo(request.getWarrantyInfo());
+        product.setShippingInfo(request.getShippingInfo());
+        product.setSuitableFor(request.getSuitableFor());
+        product.setFaqJson(request.getFaqJson());
+        product.setMetaTitle(request.getMetaTitle());
+        product.setMetaDescription(request.getMetaDescription());
         product.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP));
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
@@ -624,15 +634,19 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     @Transactional
-    public Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price,
-                                           String categoryId, Boolean available, MultipartFile imageFile) {
+    public Product updateProductFromRequest(Integer id, ProductRequest request,
+                                           String categoryId, MultipartFile imageFile) {
         log.info("Updating product ID: {}", id);
         
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new BusinessRuleException("Tên sản phẩm không được để trống");
+        }
+
         // Validate price - FIX BUG Ở ĐÂY!
-        if (price == null) {
+        if (request.getPrice() == null) {
             throw new BusinessRuleException("Giá sản phẩm không được để trống");
         }
-        if (price.compareTo(BigDecimal.ZERO) < 0) {
+        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessRuleException("Giá sản phẩm không thể âm");
         }
         
@@ -644,10 +658,21 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
         
         // Update fields
-        existing.setName(name);
-        existing.setDescription(description);
-        existing.setPrice(price.setScale(0, RoundingMode.HALF_UP)); // Không còn null!
-        existing.setAvailable(available);
+        existing.setName(request.getName());
+        existing.setDescription(request.getDescription());
+        existing.setShortDescription(request.getShortDescription());
+        existing.setDetailDescription(request.getDetailDescription());
+        existing.setSpecificationsJson(request.getSpecificationsJson());
+        existing.setFeaturesJson(request.getFeaturesJson());
+        existing.setWarrantyInfo(request.getWarrantyInfo());
+        existing.setShippingInfo(request.getShippingInfo());
+        existing.setSuitableFor(request.getSuitableFor());
+        existing.setFaqJson(request.getFaqJson());
+        existing.setMetaTitle(request.getMetaTitle());
+        existing.setMetaDescription(request.getMetaDescription());
+        existing.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP)); // Không còn null!
+        existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
+        existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
         existing.setCategory(category);
         
         // Save with image

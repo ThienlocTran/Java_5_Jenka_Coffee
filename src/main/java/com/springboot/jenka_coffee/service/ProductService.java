@@ -44,8 +44,7 @@ public interface ProductService {
     // Admin operations with business logic
     Product createProductFromRequest(ProductRequest request, String categoryId, MultipartFile imageFile);
     
-    Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price, 
-                                     String categoryId, Boolean available, MultipartFile imageFile);
+    Product updateProductFromRequest(Integer id, ProductRequest request, String categoryId, MultipartFile imageFile);
     
     void deleteProductWithValidation(Integer id);
     
