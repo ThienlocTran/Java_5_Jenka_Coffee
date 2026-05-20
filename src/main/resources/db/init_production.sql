@@ -115,9 +115,14 @@ COMMENT ON TABLE "Accounts" IS 'Tai khoan nguoi dung - khach hang va admin';
 -- 2. CATEGORIES (Entity: Category.java)
 -- ----------------------------------------------------------
 CREATE TABLE "Categories" (
-    "Id"   VARCHAR(50)  NOT NULL,
-    "Name" VARCHAR(100) NOT NULL,
-    "Icon" VARCHAR(500),
+    "Id"               VARCHAR(50)    NOT NULL,
+    "Name"             VARCHAR(100)   NOT NULL,
+    "Icon"             VARCHAR(500),
+    image_crop_x       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_y       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_width   NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_crop_height  NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_zoom         NUMERIC(4,2)   NOT NULL DEFAULT 1.00,
     CONSTRAINT "Categories_pkey" PRIMARY KEY ("Id")
 );
 

@@ -116,6 +116,7 @@ public class CategoryServiceImpl implements CategoryService {
     public Category createCategory(CategoryRequest request) {
         // Normalize data
         request.normalize();
+        request.validateImageDisplay();
 
         // Check duplicate
         if (categoryRepository.existsById(request.getId())) {
@@ -152,6 +153,13 @@ public class CategoryServiceImpl implements CategoryService {
             Map<String, String> icons = getCategoryIcons();
             existing.setIcon(icons.get(existing.getId()));
         }
+
+        request.validateImageDisplay();
+        existing.setImageCropX(request.getImageCropX());
+        existing.setImageCropY(request.getImageCropY());
+        existing.setImageCropWidth(request.getImageCropWidth());
+        existing.setImageCropHeight(request.getImageCropHeight());
+        existing.setImageZoom(request.getImageZoom());
 
         return categoryRepository.save(existing);
     }
