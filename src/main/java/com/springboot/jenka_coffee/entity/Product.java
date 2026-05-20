@@ -20,28 +20,28 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Products")
+@Table(name = "products")
 public class Product implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Integer id;
 
-    @Column(name = "Name", length = 200, nullable = false)
+    @Column(name = "name", length = 200, nullable = false)
     private String name;
 
     @Column(name = "slug", unique = true)
     private String slug;
 
-    @Column(name = "Image")
+    @Column(name = "image")
     private String image;
 
     @Min(value = 0, message = "Giá sản phẩm phải lớn hơn 0")
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "short_description", columnDefinition = "TEXT")
@@ -74,27 +74,27 @@ public class Product implements Serializable {
     @Column(name = "meta_description", length = 320)
     private String metaDescription;
 
-    @Column(name = "createDate", updatable = false)
+    @Column(name = "create_date", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
-    @Column(name = "Available")
+    @Column(name = "available")
     private Boolean available = true;
 
     // Featured product flag for homepage highlighting
-    @Column(name = "isFeatured")
+    @Column(name = "is_featured")
     private Boolean featured = false;
 
     @Column(name = "featured_position")
     private Integer featuredPosition;
 
-    @Column(name = "requireContact")
+    @Column(name = "require_contact")
     private Boolean requireContact = false; // Sản phẩm yêu cầu liên hệ (không thể mua online)
 
     // --- CÁC MỐI QUAN HỆ ---
 
     @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"}) // Chặn Category↔Product cycle và lỗi proxy
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Categoryid", nullable = false)
+    @JoinColumn(name = "category_id", nullable = false)
     @ToString.Exclude
     private Category category;
 

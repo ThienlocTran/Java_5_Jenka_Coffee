@@ -266,8 +266,10 @@ public class ProductServiceImpl implements ProductService {
         int maxAttempts = 3;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                // Generate slug from product name
-                product.setSlug(generateUniqueSlug(product.getName()));
+                // Generate slug from product name only when missing/blank
+                if (product.getSlug() == null || product.getSlug().isBlank()) {
+                    product.setSlug(generateUniqueSlug(product.getName()));
+                }
                 
                 Product savedProduct = productRepository.save(product);
                 log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
@@ -483,16 +485,16 @@ public class ProductServiceImpl implements ProductService {
     private String generateUniqueSlug(String productName) {
         String baseSlug = SlugUtils.toSlug(productName);
         String slug = baseSlug;
-        int counter = 0;
+        int counter = 2;
         int maxRetries = 10;
         
         // Try to find unique slug, with retry limit to prevent infinite loop
-        while (counter < maxRetries && productRepository.existsBySlug(slug)) {
-            counter++;
+        while (counter <= maxRetries && productRepository.existsBySlug(slug)) {
             slug = baseSlug + "-" + counter;
+            counter++;
         }
         
-        if (counter >= maxRetries) {
+        if (productRepository.existsBySlug(slug)) {
             // Fallback: append timestamp to guarantee uniqueness
             slug = baseSlug + "-" + System.currentTimeMillis();
             log.warn("Slug generation exceeded max retries, using timestamp: {}", slug);
@@ -573,8 +575,12 @@ public class ProductServiceImpl implements ProductService {
         }
         
         // Get category
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new BusinessRuleException("Danh mục sản phẩm không được để trống");
+        }
+
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy danh mục với ID: " + categoryId));
 
         // Build product entity
         Product product = buildProductFromRequest(request, category);
@@ -654,8 +660,12 @@ public class ProductServiceImpl implements ProductService {
         Product existing = findById(id);
         
         // Get category
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new BusinessRuleException("Danh mục sản phẩm không được để trống");
+        }
+
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy danh mục với ID: " + categoryId));
         
         // Update fields
         existing.setName(request.getName());
