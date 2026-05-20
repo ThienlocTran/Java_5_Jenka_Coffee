@@ -431,7 +431,38 @@ public class AccountServiceImpl implements AccountService {
         if (normalizedEmail == null) {
             return null;
         }
-        return dao.findByEmailIgnoreCase(normalizedEmail).orElse(null);
+        List<Account> matches = dao.findAllByEmailIgnoreCase(normalizedEmail);
+        if (matches == null || matches.isEmpty()) {
+            return null;
+        }
+
+        return matches.stream()
+                .sorted((left, right) -> {
+                    int adminCompare = Boolean.compare(Boolean.TRUE.equals(right.getAdmin()), Boolean.TRUE.equals(left.getAdmin()));
+                    if (adminCompare != 0) {
+                        return adminCompare;
+                    }
+
+                    int activeCompare = Boolean.compare(Boolean.TRUE.equals(right.getActivated()), Boolean.TRUE.equals(left.getActivated()));
+                    if (activeCompare != 0) {
+                        return activeCompare;
+                    }
+
+                    LocalDateTime leftDate = left.getCreateDate();
+                    LocalDateTime rightDate = right.getCreateDate();
+                    if (leftDate == null && rightDate == null) {
+                        return 0;
+                    }
+                    if (leftDate == null) {
+                        return 1;
+                    }
+                    if (rightDate == null) {
+                        return -1;
+                    }
+                    return leftDate.compareTo(rightDate);
+                })
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

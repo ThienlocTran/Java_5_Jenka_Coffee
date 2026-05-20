@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -108,7 +109,7 @@ class AccountServiceImplTest {
         newAccount.setPasswordHash("password123");
 
         when(accountRepository.existsById("newuser")).thenReturn(false);
-        when(accountRepository.existsByEmail("existing@test.com")).thenReturn(true);
+        when(accountRepository.existsByEmailIgnoreCase("existing@test.com")).thenReturn(true);
 
         // Act & Assert
         ValidationException exception = assertThrows(ValidationException.class, () -> {
@@ -117,7 +118,7 @@ class AccountServiceImplTest {
 
         assertEquals("Email đã được sử dụng!", exception.getMessage());
         verify(accountRepository).existsById("newuser");
-        verify(accountRepository).existsByEmail("existing@test.com");
+        verify(accountRepository).existsByEmailIgnoreCase("existing@test.com");
         verify(accountRepository, never()).save(any());
     }
 
@@ -204,7 +205,7 @@ class AccountServiceImplTest {
         newAccount.setPasswordHash("password123");
 
         when(accountRepository.existsById("newuser")).thenReturn(false);
-        when(accountRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(accountRepository.existsByEmailIgnoreCase("new@test.com")).thenReturn(false);
         when(passwordSecurity.isPasswordHashed(anyString())).thenReturn(false);
         when(passwordSecurity.hashPassword(anyString())).thenReturn("$2a$12$hashedPassword");
         when(accountRepository.save(any())).thenThrow(new RuntimeException("Database error"));
@@ -228,7 +229,7 @@ class AccountServiceImplTest {
         newAccount.setPasswordHash("plainPassword");
 
         when(accountRepository.existsById("newuser")).thenReturn(false);
-        when(accountRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(accountRepository.existsByEmailIgnoreCase("new@test.com")).thenReturn(false);
         when(passwordSecurity.isPasswordHashed("plainPassword")).thenReturn(false);
         when(passwordSecurity.hashPassword("plainPassword")).thenReturn("$2a$12$hashedPassword");
         when(accountRepository.save(any())).thenReturn(newAccount);
@@ -239,7 +240,7 @@ class AccountServiceImplTest {
         // Assert
         assertNotNull(result);
         verify(accountRepository).existsById("newuser");
-        verify(accountRepository).existsByEmail("new@test.com");
+        verify(accountRepository).existsByEmailIgnoreCase("new@test.com");
         verify(passwordSecurity).hashPassword("plainPassword");
         verify(accountRepository).save(any());
     }
@@ -411,7 +412,7 @@ class AccountServiceImplTest {
     // Expected result: Return account
     void testFindByEmailSuccess() {
         // Arrange
-        when(accountRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testAccount));
+        when(accountRepository.findAllByEmailIgnoreCase("test@example.com")).thenReturn(Collections.singletonList(testAccount));
 
         // Act
         Account result = accountService.findByEmail("test@example.com");
@@ -419,7 +420,7 @@ class AccountServiceImplTest {
         // Assert
         assertNotNull(result);
         assertEquals("testuser", result.getUsername());
-        verify(accountRepository).findByEmail("test@example.com");
+        verify(accountRepository).findAllByEmailIgnoreCase("test@example.com");
     }
 
     @Test
@@ -427,14 +428,14 @@ class AccountServiceImplTest {
     // Expected result: Return null
     void testFindByEmailNotFound() {
         // Arrange
-        when(accountRepository.findByEmail("notfound@example.com")).thenReturn(Optional.empty());
+        when(accountRepository.findAllByEmailIgnoreCase("notfound@example.com")).thenReturn(Collections.emptyList());
 
         // Act
         Account result = accountService.findByEmail("notfound@example.com");
 
         // Assert
         assertNull(result);
-        verify(accountRepository).findByEmail("notfound@example.com");
+        verify(accountRepository).findAllByEmailIgnoreCase("notfound@example.com");
     }
 
     @Test

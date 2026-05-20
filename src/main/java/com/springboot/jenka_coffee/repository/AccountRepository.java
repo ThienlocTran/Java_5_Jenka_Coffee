@@ -38,6 +38,8 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          */
         Optional<Account> findByEmailIgnoreCase(String email);
 
+        List<Account> findAllByEmailIgnoreCase(String email);
+
         /**
          * Find account by username
          */
