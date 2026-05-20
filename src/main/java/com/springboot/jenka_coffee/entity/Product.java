@@ -71,7 +71,7 @@ public class Product implements Serializable {
     @Column(name = "meta_title", length = 255)
     private String metaTitle;
 
-    @Column(name = "meta_description", columnDefinition = "TEXT")
+    @Column(name = "meta_description", length = 320)
     private String metaDescription;
 
     @Column(name = "createDate", updatable = false)

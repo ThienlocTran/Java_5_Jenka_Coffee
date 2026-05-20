@@ -149,7 +149,7 @@ CREATE TABLE "Products" (
     suitable_for     TEXT,
     faq_json         TEXT,
     meta_title       VARCHAR(255),
-    meta_description TEXT,
+    meta_description VARCHAR(320),
     "createDate"     TIMESTAMP     NOT NULL DEFAULT NOW(),
     "Available"      BOOLEAN       NOT NULL DEFAULT TRUE,
     "isFeatured"     BOOLEAN       NOT NULL DEFAULT FALSE,
