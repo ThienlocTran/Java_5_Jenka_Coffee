@@ -32,23 +32,19 @@ public class Category implements Serializable {
     @Column(name = "slug", length = 300, unique = true)
     private String slug;
 
-    /**
-     * Production VPS categories schema does not guarantee these optional crop columns.
-     * Keep them out of Hibernate mapping so public category/product reads do not fail.
-     */
-    @Transient
+    @Column(name = "image_crop_x", nullable = false, precision = 5, scale = 2)
     private BigDecimal imageCropX = BigDecimal.ZERO;
 
-    @Transient
+    @Column(name = "image_crop_y", nullable = false, precision = 5, scale = 2)
     private BigDecimal imageCropY = BigDecimal.ZERO;
 
-    @Transient
+    @Column(name = "image_crop_width", nullable = false, precision = 5, scale = 2)
     private BigDecimal imageCropWidth = new BigDecimal("100.00");
 
-    @Transient
+    @Column(name = "image_crop_height", nullable = false, precision = 5, scale = 2)
     private BigDecimal imageCropHeight = new BigDecimal("100.00");
 
-    @Transient
+    @Column(name = "image_zoom", nullable = false, precision = 5, scale = 2)
     private BigDecimal imageZoom = new BigDecimal("1.00");
 
     @JsonIgnore

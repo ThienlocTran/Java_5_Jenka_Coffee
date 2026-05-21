@@ -152,7 +152,11 @@ public class CategoryServiceImpl implements CategoryService {
             if (isCategorySlugConstraint(constraintName, ex)) {
                 throw new DuplicateResourceException("Slug SEO đã tồn tại: " + normalizedSlug);
             }
-            throw new DuplicateResourceException(
+            String missingField = extractNotNullColumn(ex);
+            if (missingField != null) {
+                throw new IllegalArgumentException("Lỗi dữ liệu danh mục: " + missingField + " không được để trống");
+            }
+            throw new IllegalArgumentException(
                     "Vi phạm ràng buộc dữ liệu categories"
                             + (constraintName == null ? "" : ": " + constraintName));
         }
@@ -162,6 +166,11 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", allEntries = true)
     public Category updateCategory(String id, CategoryRequest request) {
         Category existing = findByIdOrThrow(id);
+        boolean hasImageCropX = request.getImageCropX() != null;
+        boolean hasImageCropY = request.getImageCropY() != null;
+        boolean hasImageCropWidth = request.getImageCropWidth() != null;
+        boolean hasImageCropHeight = request.getImageCropHeight() != null;
+        boolean hasImageZoom = request.getImageZoom() != null;
 
         // Normalize data
         request.normalize();
@@ -179,13 +188,41 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         request.validateImageDisplay();
-        existing.setImageCropX(request.getImageCropX());
-        existing.setImageCropY(request.getImageCropY());
-        existing.setImageCropWidth(request.getImageCropWidth());
-        existing.setImageCropHeight(request.getImageCropHeight());
-        existing.setImageZoom(request.getImageZoom());
+        existing.setImageCropX(resolveCropValue(
+                hasImageCropX ? request.getImageCropX() : existing.getImageCropX(),
+                java.math.BigDecimal.ZERO));
+        existing.setImageCropY(resolveCropValue(
+                hasImageCropY ? request.getImageCropY() : existing.getImageCropY(),
+                java.math.BigDecimal.ZERO));
+        existing.setImageCropWidth(resolveCropValue(
+                hasImageCropWidth ? request.getImageCropWidth() : existing.getImageCropWidth(),
+                new java.math.BigDecimal("100.00")));
+        existing.setImageCropHeight(resolveCropValue(
+                hasImageCropHeight ? request.getImageCropHeight() : existing.getImageCropHeight(),
+                new java.math.BigDecimal("100.00")));
+        existing.setImageZoom(resolveCropValue(
+                hasImageZoom ? request.getImageZoom() : existing.getImageZoom(),
+                new java.math.BigDecimal("1.00")));
 
-        return categoryRepository.save(existing);
+        try {
+            return categoryRepository.save(existing);
+        } catch (DataIntegrityViolationException ex) {
+            String constraintName = extractConstraintName(ex);
+            logger.warn("Category update data integrity violation (constraint={}): {}", constraintName, ex.getMessage());
+            if (isCategoryIdConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + existing.getId());
+            }
+            if (isCategorySlugConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Slug SEO đã tồn tại: " + existing.getSlug());
+            }
+            String missingField = extractNotNullColumn(ex);
+            if (missingField != null) {
+                throw new IllegalArgumentException("Lỗi dữ liệu danh mục: " + missingField + " không được để trống");
+            }
+            throw new IllegalArgumentException(
+                    "Vi phạm ràng buộc dữ liệu categories"
+                            + (constraintName == null ? "" : ": " + constraintName));
+        }
     }
 
     private String extractConstraintName(DataIntegrityViolationException exception) {
@@ -225,5 +262,28 @@ public class CategoryServiceImpl implements CategoryService {
             current = current.getCause();
         }
         return false;
+    }
+
+    private String extractNotNullColumn(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase();
+                if (lower.contains("null value in column")) {
+                    int start = message.indexOf('"');
+                    int end = start >= 0 ? message.indexOf('"', start + 1) : -1;
+                    if (start >= 0 && end > start) {
+                        return message.substring(start + 1, end);
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private java.math.BigDecimal resolveCropValue(java.math.BigDecimal value, java.math.BigDecimal fallback) {
+        return value != null ? value : fallback;
     }
 }
