@@ -370,6 +370,11 @@ CREATE TABLE banner_image (
     title         VARCHAR(200),
     subtitle      VARCHAR(300),
     sort_order    INTEGER      NOT NULL DEFAULT 0,
+    image_crop_x  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_y  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_width NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_crop_height NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_zoom    NUMERIC(4,2) NOT NULL DEFAULT 1.00,
     CONSTRAINT banner_image_pkey   PRIMARY KEY (id),
     CONSTRAINT fk_bannerimage_set  FOREIGN KEY (banner_set_id)
         REFERENCES banner_set (id) ON DELETE CASCADE

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -38,7 +39,12 @@ public class ApiAdminBannerController {
             @RequestParam(value = "effect", defaultValue = "fade") String effect,
             @RequestParam(value = "images", required = false) List<MultipartFile> images,
             @RequestParam(value = "titles", required = false) List<String> titles,
-            @RequestParam(value = "subtitles", required = false) List<String> subtitles) {
+            @RequestParam(value = "subtitles", required = false) List<String> subtitles,
+            @RequestParam(value = "imageCropXs", required = false) List<BigDecimal> imageCropXs,
+            @RequestParam(value = "imageCropYs", required = false) List<BigDecimal> imageCropYs,
+            @RequestParam(value = "imageCropWidths", required = false) List<BigDecimal> imageCropWidths,
+            @RequestParam(value = "imageCropHeights", required = false) List<BigDecimal> imageCropHeights,
+            @RequestParam(value = "imageZooms", required = false) List<BigDecimal> imageZooms) {
 
         if (name == null || name.isBlank() || name.length() > 100) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Tên banner không hợp lệ (tối đa 100 ký tự)"));
@@ -48,7 +54,10 @@ public class ApiAdminBannerController {
         }
 
         String safeName = name.replaceAll("<[^>]*>", "").trim();
-        BannerSet saved = bannerSetService.create(safeName, effect, images, titles, subtitles);
+        BannerSet saved = bannerSetService.create(
+                safeName, effect, images, titles, subtitles,
+                imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
+        );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tạo bộ banner thành công", saved));
     }
@@ -76,10 +85,18 @@ public class ApiAdminBannerController {
             @PathVariable Long id,
             @RequestParam("images") List<MultipartFile> images,
             @RequestParam(value = "titles", required = false) List<String> titles,
-            @RequestParam(value = "subtitles", required = false) List<String> subtitles) {
+            @RequestParam(value = "subtitles", required = false) List<String> subtitles,
+            @RequestParam(value = "imageCropXs", required = false) List<BigDecimal> imageCropXs,
+            @RequestParam(value = "imageCropYs", required = false) List<BigDecimal> imageCropYs,
+            @RequestParam(value = "imageCropWidths", required = false) List<BigDecimal> imageCropWidths,
+            @RequestParam(value = "imageCropHeights", required = false) List<BigDecimal> imageCropHeights,
+            @RequestParam(value = "imageZooms", required = false) List<BigDecimal> imageZooms) {
 
         return ResponseEntity.ok(ApiResponse.success("Đã thêm ảnh",
-                bannerSetService.addImages(id, images, titles, subtitles)));
+                bannerSetService.addImages(
+                        id, images, titles, subtitles,
+                        imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
+                )));
     }
 
     @PutMapping("/{id}/images")
