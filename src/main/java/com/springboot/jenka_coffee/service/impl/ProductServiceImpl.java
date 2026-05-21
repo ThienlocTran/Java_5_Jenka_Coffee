@@ -26,7 +26,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -683,7 +682,7 @@ public class ProductServiceImpl implements ProductService {
         product.setFaqJson(request.getFaqJson());
         product.setMetaTitle(request.getMetaTitle());
         product.setMetaDescription(request.getMetaDescription());
-        product.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP));
+        product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
         product.setCategory(category);
@@ -737,7 +736,7 @@ public class ProductServiceImpl implements ProductService {
         existing.setFaqJson(request.getFaqJson());
         existing.setMetaTitle(request.getMetaTitle());
         existing.setMetaDescription(request.getMetaDescription());
-        existing.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP)); // Không còn null!
+        existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
         existing.setCategory(category);
