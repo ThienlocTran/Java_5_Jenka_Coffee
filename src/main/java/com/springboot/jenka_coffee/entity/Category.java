@@ -52,6 +52,9 @@ public class Category implements Serializable {
     @ToString.Exclude
     private List<Product> products;
 
+    @Transient
+    private Long productCount;
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) {

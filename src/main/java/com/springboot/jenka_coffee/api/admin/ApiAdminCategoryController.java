@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -36,56 +37,64 @@ public class ApiAdminCategoryController {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<Category> categoryPage = categoryService.findAllPaginated(pageable);
+        List<Category> categories = categoryPage.getContent().stream()
+                .map(this::attachProductCount)
+                .toList();
 
         Map<String, Object> data = new HashMap<>();
-        data.put("items", categoryPage.getContent());
+        data.put("items", categories);
         data.put("currentPage", categoryPage.getNumber());
         data.put("totalPages", categoryPage.getTotalPages());
         data.put("totalItems", categoryPage.getTotalElements());
 
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách danh mục thành công", data));
+        return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch danh má»¥c thÃ nh cÃ´ng", data));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Category>> getCategory(@PathVariable String id) {
-        Category category = categoryService.findByIdOrThrow(id);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin danh mục thành công", category));
+        Category category = attachProductCount(categoryService.findByIdOrThrow(id));
+        return ResponseEntity.ok(ApiResponse.success("Láº¥y thÃ´ng tin danh má»¥c thÃ nh cÃ´ng", category));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<Category>> createCategory(@Valid @RequestBody CategoryRequest request) {
         if (request.getId() == null || request.getId().isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("ID danh mục không được để trống"));
+                    .body(ApiResponse.error("ID danh má»¥c khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng"));
         }
 
-        Category category = categoryService.createCategory(request);
-        return ResponseEntity.ok(ApiResponse.success("Thêm mới danh mục thành công", category));
+        Category category = attachProductCount(categoryService.createCategory(request));
+        return ResponseEntity.ok(ApiResponse.success("ThÃªm má»›i danh má»¥c thÃ nh cÃ´ng", category));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Category>> updateCategory(
             @PathVariable String id,
             @Valid @RequestBody CategoryRequest request) {
-        Category category = categoryService.updateCategory(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật danh mục thành công", category));
+        Category category = attachProductCount(categoryService.updateCategory(id, request));
+        return ResponseEntity.ok(ApiResponse.success("Cáº­p nháº­t danh má»¥c thÃ nh cÃ´ng", category));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable String id) {
         categoryService.deleteOrThrow(id);
-        return ResponseEntity.ok(ApiResponse.success("Xóa danh mục thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("XÃ³a danh má»¥c thÃ nh cÃ´ng", null));
     }
 
     @GetMapping("/check-id/{id}")
     public ResponseEntity<ApiResponse<Boolean>> checkCategoryId(@PathVariable String id) {
         boolean isAvailable = !categoryService.existsById(id.toUpperCase().trim());
-        return ResponseEntity.ok(ApiResponse.success("Kiểm tra ID thành công", isAvailable));
+        return ResponseEntity.ok(ApiResponse.success("Kiá»ƒm tra ID thÃ nh cÃ´ng", isAvailable));
     }
 
     @GetMapping("/product-count/{id}")
     public ResponseEntity<ApiResponse<Long>> getProductCount(@PathVariable String id) {
         long count = categoryService.countProductsByCategory(id);
-        return ResponseEntity.ok(ApiResponse.success("Lấy số lượng sản phẩm thành công", count));
+        return ResponseEntity.ok(ApiResponse.success("Láº¥y sá»‘ lÆ°á»£ng sáº£n pháº©m thÃ nh cÃ´ng", count));
+    }
+
+    private Category attachProductCount(Category category) {
+        category.setProductCount(categoryService.countProductsByCategory(category.getId()));
+        return category;
     }
 }
