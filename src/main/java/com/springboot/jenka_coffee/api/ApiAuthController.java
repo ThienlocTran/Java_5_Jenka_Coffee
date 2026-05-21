@@ -438,17 +438,24 @@ public class ApiAuthController {
      * Frontend sẽ gọi endpoint này khi load trang login để auto-fill username
      */
     @GetMapping("/check-remember")
-    public ResponseEntity<ApiResponse<Map<String, String>>> checkRememberMe(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> checkRememberMe(
+            HttpServletRequest request,
+            HttpServletResponse response) {
         String username = cookieService.getRememberMeUsername(request);
         
         if (username != null) {
-            // Verify account still exists and is active
-            Account account = accountService.findById(username);
-            if (account != null && account.getActivated()) {
-                Map<String, String> data = new HashMap<>();
-                data.put("username", username);
-                return ResponseEntity.ok(ApiResponse.success("Remember cookie found", data));
+            try {
+                // Verify account still exists and is active
+                Account account = accountService.findById(username);
+                if (account != null && account.getActivated()) {
+                    Map<String, String> data = new HashMap<>();
+                    data.put("username", username);
+                    return ResponseEntity.ok(ApiResponse.success("Remember cookie found", data));
+                }
+            } catch (Exception e) {
+                log.warn("REMEMBER_ME: Failed to resolve remembered user '{}': {}", username, e.getMessage());
             }
+            cookieService.deleteRememberMeCookie(response);
         }
         
         return ResponseEntity.ok(ApiResponse.success("No remember cookie", null));
