@@ -30,6 +30,30 @@ public class BannerImage {
     @Column(name = "subtitle", length = 300)
     private String subtitle;
 
+    @Column(name = "headline", length = 255)
+    private String headline;
+
+    @Column(name = "sub_headline", length = 500)
+    private String subHeadline;
+
+    @Column(name = "primary_cta_text", length = 120)
+    private String primaryCtaText;
+
+    @Column(name = "primary_cta_link", length = 500)
+    private String primaryCtaLink;
+
+    @Column(name = "secondary_cta_text", length = 120)
+    private String secondaryCtaText;
+
+    @Column(name = "secondary_cta_link", length = 500)
+    private String secondaryCtaLink;
+
+    @Column(name = "target_link", length = 500)
+    private String targetLink;
+
+    @Column(name = "active", nullable = false)
+    private Boolean active = true;
+
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 0;
 

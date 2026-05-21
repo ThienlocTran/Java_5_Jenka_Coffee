@@ -13,6 +13,14 @@ public class BannerImageUpdateRequest {
     private Long id;
     private String title;
     private String subtitle;
+    private String headline;
+    private String subHeadline;
+    private String primaryCtaText;
+    private String primaryCtaLink;
+    private String secondaryCtaText;
+    private String secondaryCtaLink;
+    private String targetLink;
+    private Boolean active;
     private Integer sortOrder;
     private BigDecimal imageCropX;
     private BigDecimal imageCropY;

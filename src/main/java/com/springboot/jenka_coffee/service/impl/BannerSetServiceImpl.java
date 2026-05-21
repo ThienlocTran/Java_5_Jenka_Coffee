@@ -52,12 +52,18 @@ public class BannerSetServiceImpl implements BannerSetService {
     public BannerSet create(String name, String effect,
                             List<MultipartFile> files,
                             List<String> titles, List<String> subtitles,
+                            List<String> headlines, List<String> subHeadlines,
+                            List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                            List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                             List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                             List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
                             List<BigDecimal> imageZooms) {
         List<String> uploadedUrls = uploadImages(files);
         return createBannerSetInDatabase(
                 name, effect, uploadedUrls, titles, subtitles,
+                headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
+                secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
                 imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
         );
     }
@@ -66,6 +72,10 @@ public class BannerSetServiceImpl implements BannerSetService {
     protected BannerSet createBannerSetInDatabase(String name, String effect,
                                                   List<String> imageUrls,
                                                   List<String> titles, List<String> subtitles,
+                                                  List<String> headlines, List<String> subHeadlines,
+                                                  List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                                                  List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                                  List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                                   List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                                   List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
                                                   List<BigDecimal> imageZooms) {
@@ -84,7 +94,18 @@ public class BannerSetServiceImpl implements BannerSetService {
                 img.setImage(url);
                 img.setTitle(safeGet(titles, i));
                 img.setSubtitle(safeGet(subtitles, i));
-                img.setSortOrder(i);
+                applyHeroContent(
+                        img,
+                        safeGet(headlines, i),
+                        safeGet(subHeadlines, i),
+                        safeGet(primaryCtaTexts, i),
+                        safeGet(primaryCtaLinks, i),
+                        safeGet(secondaryCtaTexts, i),
+                        safeGet(secondaryCtaLinks, i),
+                        safeGet(targetLinks, i),
+                        safeBooleanGet(actives, i)
+                );
+                img.setSortOrder(safeIntegerGet(sortOrders, i, i));
                 applyImageDisplay(
                         img,
                         safeDecimalGet(imageCropXs, i),
@@ -112,12 +133,18 @@ public class BannerSetServiceImpl implements BannerSetService {
     @Override
     public BannerSet addImages(Long id, List<MultipartFile> files,
                                List<String> titles, List<String> subtitles,
+                               List<String> headlines, List<String> subHeadlines,
+                               List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                               List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                               List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
                                List<BigDecimal> imageZooms) {
         List<String> uploadedUrls = uploadImages(files);
         return addImagesToDatabase(
                 id, uploadedUrls, titles, subtitles,
+                headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
+                secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
                 imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
         );
     }
@@ -140,11 +167,22 @@ public class BannerSetServiceImpl implements BannerSetService {
 
             BannerImage image = existingImages.get(request.getId());
             if (image == null) {
-                throw new IllegalArgumentException("Không tìm thấy ảnh banner #" + request.getId() + " trong bộ #" + id);
+                throw new IllegalArgumentException("Khong tim thay anh banner #" + request.getId() + " trong bo #" + id);
             }
 
             image.setTitle(sanitizeText(request.getTitle()));
             image.setSubtitle(sanitizeText(request.getSubtitle()));
+            applyHeroContent(
+                    image,
+                    request.getHeadline(),
+                    request.getSubHeadline(),
+                    request.getPrimaryCtaText(),
+                    request.getPrimaryCtaLink(),
+                    request.getSecondaryCtaText(),
+                    request.getSecondaryCtaLink(),
+                    request.getTargetLink(),
+                    request.getActive()
+            );
             if (request.getSortOrder() != null) {
                 image.setSortOrder(request.getSortOrder());
             }
@@ -165,6 +203,10 @@ public class BannerSetServiceImpl implements BannerSetService {
     @Transactional
     protected BannerSet addImagesToDatabase(Long id, List<String> imageUrls,
                                             List<String> titles, List<String> subtitles,
+                                            List<String> headlines, List<String> subHeadlines,
+                                            List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                            List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                             List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                             List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
                                             List<BigDecimal> imageZooms) {
@@ -181,7 +223,18 @@ public class BannerSetServiceImpl implements BannerSetService {
                 img.setImage(url);
                 img.setTitle(safeGet(titles, i));
                 img.setSubtitle(safeGet(subtitles, i));
-                img.setSortOrder(base + i);
+                applyHeroContent(
+                        img,
+                        safeGet(headlines, i),
+                        safeGet(subHeadlines, i),
+                        safeGet(primaryCtaTexts, i),
+                        safeGet(primaryCtaLinks, i),
+                        safeGet(secondaryCtaTexts, i),
+                        safeGet(secondaryCtaLinks, i),
+                        safeGet(targetLinks, i),
+                        safeBooleanGet(actives, i)
+                );
+                img.setSortOrder(safeIntegerGet(sortOrders, i, base + i));
                 applyImageDisplay(
                         img,
                         safeDecimalGet(imageCropXs, i),
@@ -257,9 +310,42 @@ public class BannerSetServiceImpl implements BannerSetService {
         return list.get(i);
     }
 
+    private Boolean safeBooleanGet(List<Boolean> list, int i) {
+        if (list == null || i >= list.size()) return null;
+        return list.get(i);
+    }
+
+    private Integer safeIntegerGet(List<Integer> list, int i, int fallback) {
+        if (list == null || i >= list.size() || list.get(i) == null) return fallback;
+        return list.get(i);
+    }
+
     private String sanitizeText(String value) {
         if (value == null || value.isBlank()) return null;
         return value.replaceAll("<[^>]*>", "").trim();
+    }
+
+    private void applyHeroContent(BannerImage image,
+                                  String headline,
+                                  String subHeadline,
+                                  String primaryCtaText,
+                                  String primaryCtaLink,
+                                  String secondaryCtaText,
+                                  String secondaryCtaLink,
+                                  String targetLink,
+                                  Boolean active) {
+        image.setHeadline(sanitizeText(headline));
+        image.setSubHeadline(sanitizeText(subHeadline));
+        image.setPrimaryCtaText(sanitizeText(primaryCtaText));
+        image.setPrimaryCtaLink(sanitizeText(primaryCtaLink));
+        image.setSecondaryCtaText(sanitizeText(secondaryCtaText));
+        image.setSecondaryCtaLink(sanitizeText(secondaryCtaLink));
+        image.setTargetLink(sanitizeText(targetLink));
+        if (active != null) {
+            image.setActive(active);
+        } else if (image.getActive() == null) {
+            image.setActive(true);
+        }
     }
 
     private void applyImageDisplay(BannerImage image,

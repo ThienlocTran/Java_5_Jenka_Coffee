@@ -363,13 +363,21 @@ COMMENT ON TABLE banner_set IS 'Bo banner slide show. Chi 1 bo active tai 1 thoi
 -- 12. BANNER IMAGE (Entity: BannerImage.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE banner_image_id_seq;
-CREATE TABLE banner_image (
-    id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
-    banner_set_id BIGINT       NOT NULL,
-    image         VARCHAR(500) NOT NULL,
-    title         VARCHAR(200),
-    subtitle      VARCHAR(300),
-    sort_order    INTEGER      NOT NULL DEFAULT 0,
+  CREATE TABLE banner_image (
+      id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
+      banner_set_id BIGINT       NOT NULL,
+      image         VARCHAR(500) NOT NULL,
+      title         VARCHAR(200),
+      subtitle      VARCHAR(300),
+      headline      VARCHAR(255),
+      sub_headline  VARCHAR(500),
+      primary_cta_text VARCHAR(120),
+      primary_cta_link VARCHAR(500),
+      secondary_cta_text VARCHAR(120),
+      secondary_cta_link VARCHAR(500),
+      target_link   VARCHAR(500),
+      active        BOOLEAN      NOT NULL DEFAULT TRUE,
+      sort_order    INTEGER      NOT NULL DEFAULT 0,
     image_crop_x  NUMERIC(5,2) NOT NULL DEFAULT 0,
     image_crop_y  NUMERIC(5,2) NOT NULL DEFAULT 0,
     image_crop_width NUMERIC(5,2) NOT NULL DEFAULT 100,
