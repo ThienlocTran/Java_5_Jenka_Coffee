@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BannerSetServiceImpl implements BannerSetService {
 
+    private static final String DISPLAY_MODE_IMAGE_ONLY = "IMAGE_ONLY";
+    private static final String DISPLAY_MODE_TEXT_OVERLAY = "TEXT_OVERLAY";
     private static final BigDecimal CROP_MIN = BigDecimal.ZERO;
     private static final BigDecimal CROP_MAX = new BigDecimal("100.00");
     private static final BigDecimal CROP_SIZE_MIN = new BigDecimal("1.00");
@@ -54,7 +56,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                             List<String> titles, List<String> subtitles,
                             List<String> headlines, List<String> subHeadlines,
                             List<String> primaryCtaTexts, List<String> primaryCtaLinks,
-                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks, List<String> displayModes,
                             List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                             List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                             List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
@@ -63,7 +65,7 @@ public class BannerSetServiceImpl implements BannerSetService {
         return createBannerSetInDatabase(
                 name, effect, uploadedUrls, titles, subtitles,
                 headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
-                secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
+                secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
                 imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
         );
     }
@@ -75,6 +77,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                                                   List<String> headlines, List<String> subHeadlines,
                                                   List<String> primaryCtaTexts, List<String> primaryCtaLinks,
                                                   List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                                  List<String> displayModes,
                                                   List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                                   List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                                   List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
@@ -102,6 +105,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                         safeGet(primaryCtaLinks, i),
                         safeGet(secondaryCtaTexts, i),
                         safeGet(secondaryCtaLinks, i),
+                        safeGet(displayModes, i),
                         safeGet(targetLinks, i),
                         safeBooleanGet(actives, i)
                 );
@@ -135,7 +139,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                                List<String> titles, List<String> subtitles,
                                List<String> headlines, List<String> subHeadlines,
                                List<String> primaryCtaTexts, List<String> primaryCtaLinks,
-                               List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                               List<String> secondaryCtaTexts, List<String> secondaryCtaLinks, List<String> displayModes,
                                List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
@@ -144,7 +148,7 @@ public class BannerSetServiceImpl implements BannerSetService {
         return addImagesToDatabase(
                 id, uploadedUrls, titles, subtitles,
                 headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
-                secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
+                secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
                 imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
         );
     }
@@ -180,6 +184,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                     request.getPrimaryCtaLink(),
                     request.getSecondaryCtaText(),
                     request.getSecondaryCtaLink(),
+                    request.getDisplayMode(),
                     request.getTargetLink(),
                     request.getActive()
             );
@@ -206,6 +211,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                                             List<String> headlines, List<String> subHeadlines,
                                             List<String> primaryCtaTexts, List<String> primaryCtaLinks,
                                             List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                            List<String> displayModes,
                                             List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
                                             List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
                                             List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
@@ -231,6 +237,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                         safeGet(primaryCtaLinks, i),
                         safeGet(secondaryCtaTexts, i),
                         safeGet(secondaryCtaLinks, i),
+                        safeGet(displayModes, i),
                         safeGet(targetLinks, i),
                         safeBooleanGet(actives, i)
                 );
@@ -332,6 +339,7 @@ public class BannerSetServiceImpl implements BannerSetService {
                                   String primaryCtaLink,
                                   String secondaryCtaText,
                                   String secondaryCtaLink,
+                                  String displayMode,
                                   String targetLink,
                                   Boolean active) {
         image.setHeadline(sanitizeText(headline));
@@ -340,6 +348,7 @@ public class BannerSetServiceImpl implements BannerSetService {
         image.setPrimaryCtaLink(sanitizeText(primaryCtaLink));
         image.setSecondaryCtaText(sanitizeText(secondaryCtaText));
         image.setSecondaryCtaLink(sanitizeText(secondaryCtaLink));
+        image.setDisplayMode(normalizeDisplayMode(displayMode));
         image.setTargetLink(sanitizeText(targetLink));
         if (active != null) {
             image.setActive(active);
@@ -386,5 +395,16 @@ public class BannerSetServiceImpl implements BannerSetService {
             return max;
         }
         return value;
+    }
+
+    private String normalizeDisplayMode(String value) {
+        if (value == null || value.isBlank()) {
+            return DISPLAY_MODE_IMAGE_ONLY;
+        }
+        String normalized = value.trim().toUpperCase();
+        if (DISPLAY_MODE_TEXT_OVERLAY.equals(normalized)) {
+            return DISPLAY_MODE_TEXT_OVERLAY;
+        }
+        return DISPLAY_MODE_IMAGE_ONLY;
     }
 }

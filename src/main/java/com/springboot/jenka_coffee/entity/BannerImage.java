@@ -51,6 +51,9 @@ public class BannerImage {
     @Column(name = "target_link", length = 500)
     private String targetLink;
 
+    @Column(name = "display_mode", length = 30)
+    private String displayMode = "IMAGE_ONLY";
+
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 

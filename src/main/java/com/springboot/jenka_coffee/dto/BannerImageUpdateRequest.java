@@ -20,6 +20,7 @@ public class BannerImageUpdateRequest {
     private String secondaryCtaText;
     private String secondaryCtaLink;
     private String targetLink;
+    private String displayMode;
     private Boolean active;
     private Integer sortOrder;
     private BigDecimal imageCropX;

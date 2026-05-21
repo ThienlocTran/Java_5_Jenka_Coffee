@@ -46,6 +46,7 @@ public class ApiAdminBannerController {
             @RequestParam(value = "primaryCtaLinks", required = false) List<String> primaryCtaLinks,
             @RequestParam(value = "secondaryCtaTexts", required = false) List<String> secondaryCtaTexts,
             @RequestParam(value = "secondaryCtaLinks", required = false) List<String> secondaryCtaLinks,
+            @RequestParam(value = "displayModes", required = false) List<String> displayModes,
             @RequestParam(value = "targetLinks", required = false) List<String> targetLinks,
             @RequestParam(value = "actives", required = false) List<Boolean> actives,
             @RequestParam(value = "sortOrders", required = false) List<Integer> sortOrders,
@@ -66,7 +67,7 @@ public class ApiAdminBannerController {
         BannerSet saved = bannerSetService.create(
                 safeName, effect, images, titles, subtitles,
                 headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
-                secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
+                secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
                 imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
         );
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -103,6 +104,7 @@ public class ApiAdminBannerController {
             @RequestParam(value = "primaryCtaLinks", required = false) List<String> primaryCtaLinks,
             @RequestParam(value = "secondaryCtaTexts", required = false) List<String> secondaryCtaTexts,
             @RequestParam(value = "secondaryCtaLinks", required = false) List<String> secondaryCtaLinks,
+            @RequestParam(value = "displayModes", required = false) List<String> displayModes,
             @RequestParam(value = "targetLinks", required = false) List<String> targetLinks,
             @RequestParam(value = "actives", required = false) List<Boolean> actives,
             @RequestParam(value = "sortOrders", required = false) List<Integer> sortOrders,
@@ -116,7 +118,7 @@ public class ApiAdminBannerController {
                 bannerSetService.addImages(
                         id, images, titles, subtitles,
                         headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
-                        secondaryCtaTexts, secondaryCtaLinks, targetLinks, actives, sortOrders,
+                        secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
                         imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
                 )));
     }
