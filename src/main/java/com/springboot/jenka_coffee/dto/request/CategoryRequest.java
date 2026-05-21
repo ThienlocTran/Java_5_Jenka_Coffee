@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.dto.request;
 
 import com.springboot.jenka_coffee.entity.Category;
+import com.springboot.jenka_coffee.util.SlugUtils;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -26,6 +27,8 @@ public class CategoryRequest {
     private String name;
 
     private String icon;
+
+    private String slug;
 
     @DecimalMin(value = "0.00", message = "imageCropX must be between 0 and 100")
     @DecimalMax(value = "100.00", message = "imageCropX must be between 0 and 100")
@@ -54,6 +57,10 @@ public class CategoryRequest {
             name = name.trim();
         if (icon != null)
             icon = icon.trim();
+        if (slug != null)
+            slug = slug.trim().toLowerCase();
+        if (slug == null || slug.isBlank())
+            slug = SlugUtils.toSlug(name);
         applyImageDisplayDefaults();
         clampImageDisplay();
     }
@@ -113,6 +120,7 @@ public class CategoryRequest {
         category.setId(id);
         category.setName(name);
         category.setIcon(icon);
+        category.setSlug(slug);
         category.setImageCropX(imageCropX);
         category.setImageCropY(imageCropY);
         category.setImageCropWidth(imageCropWidth);

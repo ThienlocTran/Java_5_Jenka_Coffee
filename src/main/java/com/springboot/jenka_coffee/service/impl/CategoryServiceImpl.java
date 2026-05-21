@@ -9,6 +9,9 @@ import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CategoryService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 @Service
 @Transactional
 public class CategoryServiceImpl implements CategoryService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
@@ -117,11 +122,15 @@ public class CategoryServiceImpl implements CategoryService {
         // Normalize data
         request.normalize();
         request.validateImageDisplay();
+        String normalizedId = request.getId();
+        String normalizedSlug = request.getSlug();
 
-        // Check duplicate
-        if (categoryRepository.existsById(request.getId())) {
-            throw new DuplicateResourceException(
-                    "Category", "id", request.getId());
+        if (categoryRepository.existsById(normalizedId)) {
+            throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + normalizedId);
+        }
+        if (normalizedSlug != null && !normalizedSlug.isBlank()
+                && categoryRepository.existsBySlugIgnoreCase(normalizedSlug)) {
+            throw new DuplicateResourceException("Slug SEO đã tồn tại: " + normalizedSlug);
         }
 
         Category category = request.toEntity();
@@ -132,7 +141,21 @@ public class CategoryServiceImpl implements CategoryService {
             category.setIcon(icons.get(category.getId()));
         }
 
-        return categoryRepository.save(category);
+        try {
+            return categoryRepository.save(category);
+        } catch (DataIntegrityViolationException ex) {
+            String constraintName = extractConstraintName(ex);
+            logger.warn("Category create data integrity violation (constraint={}): {}", constraintName, ex.getMessage());
+            if (isCategoryIdConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + normalizedId);
+            }
+            if (isCategorySlugConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Slug SEO đã tồn tại: " + normalizedSlug);
+            }
+            throw new DuplicateResourceException(
+                    "Vi phạm ràng buộc dữ liệu categories"
+                            + (constraintName == null ? "" : ": " + constraintName));
+        }
     }
 
     @Override
@@ -145,6 +168,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         // Update fields from request
         existing.setName(request.getName());
+        existing.setSlug(request.getSlug());
 
         // Update icon if provided, otherwise keep existing or set from predefined list
         if (request.getIcon() != null && !request.getIcon().isEmpty()) {
@@ -162,5 +186,44 @@ public class CategoryServiceImpl implements CategoryService {
         existing.setImageZoom(request.getImageZoom());
 
         return categoryRepository.save(existing);
+    }
+
+    private String extractConstraintName(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if (normalized.contains("categories_pkey")) return "categories_pkey";
+                if (normalized.contains("ux_categories_slug")) return "ux_categories_slug";
+                if (normalized.contains("categories_slug_key")) return "categories_slug_key";
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private boolean isCategoryIdConstraint(String constraintName, DataIntegrityViolationException exception) {
+        return "categories_pkey".equals(constraintName)
+                || containsConstraintText(exception, "categories_pkey");
+    }
+
+    private boolean isCategorySlugConstraint(String constraintName, DataIntegrityViolationException exception) {
+        return "ux_categories_slug".equals(constraintName)
+                || "categories_slug_key".equals(constraintName)
+                || containsConstraintText(exception, "ux_categories_slug")
+                || containsConstraintText(exception, "categories_slug_key");
+    }
+
+    private boolean containsConstraintText(DataIntegrityViolationException exception, String expected) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains(expected.toLowerCase())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

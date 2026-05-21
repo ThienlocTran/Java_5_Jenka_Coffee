@@ -29,6 +29,9 @@ public class Category implements Serializable {
     @Column(name = "icon", length = 500)
     private String icon;
 
+    @Column(name = "slug", length = 300, unique = true)
+    private String slug;
+
     /**
      * Production VPS categories schema does not guarantee these optional crop columns.
      * Keep them out of Hibernate mapping so public category/product reads do not fail.

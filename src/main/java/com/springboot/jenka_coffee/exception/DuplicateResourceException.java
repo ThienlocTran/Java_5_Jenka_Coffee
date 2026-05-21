@@ -12,11 +12,17 @@ public class DuplicateResourceException extends RuntimeException {
     private final String fieldName;
     private final Object fieldValue;
 
+    public DuplicateResourceException(String message) {
+        super(message);
+        this.resourceName = null;
+        this.fieldName = null;
+        this.fieldValue = null;
+    }
+
     public DuplicateResourceException(String resourceName, String fieldName, Object fieldValue) {
         super(String.format("%s với %s='%s' đã tồn tại", resourceName, fieldName, fieldValue));
         this.resourceName = resourceName;
         this.fieldName = fieldName;
         this.fieldValue = fieldValue;
     }
-
 }
