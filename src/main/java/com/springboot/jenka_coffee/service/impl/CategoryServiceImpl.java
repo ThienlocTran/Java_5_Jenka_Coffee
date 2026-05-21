@@ -134,6 +134,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category category = request.toEntity();
+        applyCategoryImageCrop(category, request, null);
 
         // Set icon from predefined list if not provided
         if (category.getIcon() == null || category.getIcon().isEmpty()) {
@@ -166,11 +167,6 @@ public class CategoryServiceImpl implements CategoryService {
     @CacheEvict(value = "categories", allEntries = true)
     public Category updateCategory(String id, CategoryRequest request) {
         Category existing = findByIdOrThrow(id);
-        boolean hasImageCropX = request.getImageCropX() != null;
-        boolean hasImageCropY = request.getImageCropY() != null;
-        boolean hasImageCropWidth = request.getImageCropWidth() != null;
-        boolean hasImageCropHeight = request.getImageCropHeight() != null;
-        boolean hasImageZoom = request.getImageZoom() != null;
 
         // Normalize data
         request.normalize();
@@ -188,21 +184,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         request.validateImageDisplay();
-        existing.setImageCropX(resolveCropValue(
-                hasImageCropX ? request.getImageCropX() : existing.getImageCropX(),
-                java.math.BigDecimal.ZERO));
-        existing.setImageCropY(resolveCropValue(
-                hasImageCropY ? request.getImageCropY() : existing.getImageCropY(),
-                java.math.BigDecimal.ZERO));
-        existing.setImageCropWidth(resolveCropValue(
-                hasImageCropWidth ? request.getImageCropWidth() : existing.getImageCropWidth(),
-                new java.math.BigDecimal("100.00")));
-        existing.setImageCropHeight(resolveCropValue(
-                hasImageCropHeight ? request.getImageCropHeight() : existing.getImageCropHeight(),
-                new java.math.BigDecimal("100.00")));
-        existing.setImageZoom(resolveCropValue(
-                hasImageZoom ? request.getImageZoom() : existing.getImageZoom(),
-                new java.math.BigDecimal("1.00")));
+        applyCategoryImageCrop(existing, request, existing);
 
         try {
             return categoryRepository.save(existing);
@@ -285,5 +267,28 @@ public class CategoryServiceImpl implements CategoryService {
 
     private java.math.BigDecimal resolveCropValue(java.math.BigDecimal value, java.math.BigDecimal fallback) {
         return value != null ? value : fallback;
+    }
+
+    private void applyCategoryImageCrop(Category target, CategoryRequest request, Category fallbackSource) {
+        target.setImageCropX(resolveCropValue(
+                request.getImageCropX(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropX(), java.math.BigDecimal.ZERO)
+                        : java.math.BigDecimal.ZERO));
+        target.setImageCropY(resolveCropValue(
+                request.getImageCropY(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropY(), java.math.BigDecimal.ZERO)
+                        : java.math.BigDecimal.ZERO));
+        target.setImageCropWidth(resolveCropValue(
+                request.getImageCropWidth(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropWidth(), new java.math.BigDecimal("100.00"))
+                        : new java.math.BigDecimal("100.00")));
+        target.setImageCropHeight(resolveCropValue(
+                request.getImageCropHeight(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropHeight(), new java.math.BigDecimal("100.00"))
+                        : new java.math.BigDecimal("100.00")));
+        target.setImageZoom(resolveCropValue(
+                request.getImageZoom(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageZoom(), new java.math.BigDecimal("1.00"))
+                        : new java.math.BigDecimal("1.00")));
     }
 }
