@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.dto.BannerImageUpdateRequest;
 import com.springboot.jenka_coffee.entity.BannerImage;
 import com.springboot.jenka_coffee.entity.BannerSet;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
@@ -15,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -96,6 +100,38 @@ public class BannerSetServiceImpl implements BannerSetService {
         
         // STEP 2: Save to database in transaction
         return addImagesToDatabase(id, uploadedUrls, titles, subtitles);
+    }
+
+    @Override
+    @Transactional
+    public BannerSet updateImages(Long id, List<BannerImageUpdateRequest> images) {
+        BannerSet set = findById(id);
+        if (images == null) {
+            return set;
+        }
+
+        Map<Long, BannerImage> existingImages = set.getImages().stream()
+                .collect(Collectors.toMap(BannerImage::getId, Function.identity()));
+
+        for (BannerImageUpdateRequest request : images) {
+            if (request == null || request.getId() == null) {
+                continue;
+            }
+
+            BannerImage image = existingImages.get(request.getId());
+            if (image == null) {
+                throw new IllegalArgumentException("Không tìm thấy ảnh banner #" + request.getId() + " trong bộ #" + id);
+            }
+
+            image.setTitle(sanitizeText(request.getTitle()));
+            image.setSubtitle(sanitizeText(request.getSubtitle()));
+            if (request.getSortOrder() != null) {
+                image.setSortOrder(request.getSortOrder());
+            }
+        }
+
+        set.getImages().sort(java.util.Comparator.comparing(img -> img.getSortOrder() == null ? Integer.MAX_VALUE : img.getSortOrder()));
+        return setRepo.save(set);
     }
     
     @Transactional
@@ -199,11 +235,14 @@ public class BannerSetServiceImpl implements BannerSetService {
 
     private String safeGet(List<String> list, int i) {
         if (list == null || i >= list.size()) return null;
-        String v = list.get(i);
-        if (v == null || v.isBlank()) return null;
+        return sanitizeText(list.get(i));
+    }
+
+    private String sanitizeText(String value) {
+        if (value == null || value.isBlank()) return null;
         // VULN-067 FIX: Strip HTML tags khỏi title/subtitle — ngăn Stored XSS trên homepage
         // VULN #12 PATTERN: Should use HtmlUtils.htmlEscape() instead of regex
         // But for now keeping existing implementation for backward compatibility
-        return v.replaceAll("<[^>]*>", "").trim();
+        return value.replaceAll("<[^>]*>", "").trim();
     }
 }

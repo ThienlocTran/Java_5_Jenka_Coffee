@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.service;
 
+import com.springboot.jenka_coffee.dto.BannerImageUpdateRequest;
 import com.springboot.jenka_coffee.entity.BannerSet;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +17,7 @@ public interface BannerSetService {
     /** Thêm ảnh vào bộ */
     BannerSet addImages(Long id, List<MultipartFile> files,
                         List<String> titles, List<String> subtitles);
+    BannerSet updateImages(Long id, List<BannerImageUpdateRequest> images);
     /** Xóa 1 ảnh khỏi bộ */
     void removeImage(Long imageId);
     /** Xóa cả bộ */

@@ -80,6 +80,14 @@ public class GlobalExceptionHandler {
         String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
         logger.warn("Data integrity violation: {}", ex.getMessage());
 
+        String bannerFriendly = BannerDataIntegrityException.toFriendlyMessage(ex.getMessage());
+        if (bannerFriendly != null) {
+            HttpStatus status = msg.contains("duplicate key") || msg.contains("unique constraint")
+                    ? HttpStatus.CONFLICT
+                    : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(ApiResponse.error(bannerFriendly));
+        }
+
         if (msg.contains("null value in column") && msg.contains("image_crop_")) {
             String columnName = extractColumnName(ex.getMessage());
             String friendly = "Lỗi dữ liệu danh mục: "
