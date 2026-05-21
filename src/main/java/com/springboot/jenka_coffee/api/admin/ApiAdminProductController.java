@@ -316,13 +316,13 @@ public class ApiAdminProductController {
      * POST /api/admin/products/{id}/images
      */
     @PostMapping(value = "/{id}/images", consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse<Void>> uploadProductImages(
+    public ResponseEntity<ApiResponse<List<ProductImage>>> uploadProductImages(
             @PathVariable Integer id,
             @RequestParam("images") List<MultipartFile> images) {
         try {
             productValidator.validateImageFiles(images);
-            productService.saveProductImages(id, images);
-            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", null));
+            List<ProductImage> savedImages = productService.saveProductImages(id, images);
+            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", savedImages));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));

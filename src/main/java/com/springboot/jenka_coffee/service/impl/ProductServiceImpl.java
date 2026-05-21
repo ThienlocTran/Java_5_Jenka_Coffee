@@ -147,7 +147,7 @@ public class ProductServiceImpl implements ProductService {
     // - 2-3 admins uploading simultaneously = connection pool exhausted
     // SOLUTION: Upload ALL images outside transaction, then save to DB in one transaction
     // TC-PRD-CTRL-043B FIX: Propagate exceptions instead of swallowing them
-    public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
+    public List<ProductImage> saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
         // STEP 1: Upload all images OUTSIDE transaction (no DB connection held)
         List<String> uploadedUrls = new ArrayList<>();
         List<String> failedFiles = new ArrayList<>();
@@ -166,8 +166,7 @@ public class ProductServiceImpl implements ProductService {
                 } catch (Exception e) {
                     failedFiles.add(file.getOriginalFilename());
                     log.error("Error uploading product image '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
-                    // TC-PRD-CTRL-043B FIX: Propagate exception instead of silent fail
-                    throw new RuntimeException("Storage service unavailable: " + e.getMessage(), e);
+                    throw new RuntimeException("Upload image failed: " + e.getMessage(), e);
                 }
             }
         }
@@ -179,8 +178,15 @@ public class ProductServiceImpl implements ProductService {
         
         // STEP 2: Save all image URLs to database in single transaction (fast)
         if (!uploadedUrls.isEmpty()) {
-            saveProductImagesToDB(productId, uploadedUrls);
+            try {
+                return saveProductImagesToDB(productId, uploadedUrls);
+            } catch (Exception e) {
+                log.error("Failed to save uploaded product images to DB for product {}", productId, e);
+                throw new RuntimeException("DB save failed after upload: " + e.getMessage(), e);
+            }
         }
+
+        return List.of();
     }
     
     /**
@@ -188,21 +194,27 @@ public class ProductServiceImpl implements ProductService {
      * Saves multiple image URLs to database in a single transaction
      */
     @Transactional
-    protected void saveProductImagesToDB(Integer productId, List<String> imageUrls) {
+    protected List<ProductImage> saveProductImagesToDB(Integer productId, List<String> imageUrls) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        int order = 0;
+        int order = productImageRepository.findByProductIdOrderByDisplayOrderAscIdAsc(productId).stream()
+                .map(ProductImage::getDisplayOrder)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(-1) + 1;
+        List<ProductImage> savedImages = new ArrayList<>();
         for (String imageUrl : imageUrls) {
             ProductImage productImage = new ProductImage();
             productImage.setProduct(product);
             productImage.setImageUrl(imageUrl);
             productImage.setDisplayOrder(order++);
-            productImage.setIsPrimary(order == 1); // First image is primary
-            productImageRepository.save(productImage);
+            productImage.setIsPrimary(false);
+            savedImages.add(productImageRepository.save(productImage));
         }
         
         log.info("Saved {} product images to database for product ID: {}", imageUrls.size(), productId);
+        return savedImages;
     }
 
     @Transactional

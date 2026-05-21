@@ -52,7 +52,7 @@ public interface ProductService {
 
     Product updateFeaturedPosition(Integer id, Integer position);
     
-    void saveProductImages(Integer productId, List<MultipartFile> images);
+    List<ProductImage> saveProductImages(Integer productId, List<MultipartFile> images);
     
     List<ProductImage> getProductImages(Integer productId);
     
