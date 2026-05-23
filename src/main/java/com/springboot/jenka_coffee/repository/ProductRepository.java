@@ -99,6 +99,22 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
     
+    // ── Admin filtered list (keyword + categoryId + available) ───────
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:available IS NULL OR p.available = :available) AND " +
+                   "(:keyword IS NULL OR :keyword = '' OR " +
+                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
+                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:available IS NULL OR p.available = :available) AND " +
+                        "(:keyword IS NULL OR :keyword = '' OR " +
+                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findByAdminCriteria(@Param("categoryId") String categoryId,
+                                      @Param("available") Boolean available,
+                                      @Param("keyword") String keyword,
+                                      Pageable pageable);
+
     // ── Count orders using this product ──────────────────────────────
     @Query("SELECT COUNT(od) FROM OrderDetail od WHERE od.product.id = :productId")
     long countOrdersByProductId(@Param("productId") Integer productId);

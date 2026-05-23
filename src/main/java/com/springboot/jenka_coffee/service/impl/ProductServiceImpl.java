@@ -394,7 +394,7 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
-        
+
         // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
         try {
             vercelWebhookService.triggerRebuild();
@@ -412,15 +412,26 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<Product> findByAdminCriteria(String categoryId, Boolean available, String keyword, Pageable pageable) {
+        return productRepository.findByAdminCriteria(
+                (categoryId == null || categoryId.isBlank()) ? null : categoryId,
+                available,
+                (keyword == null || keyword.isBlank()) ? null : keyword,
+                pageable
+        );
+    }
+
+    @Override
     @Cacheable("categoryCounts")
     public Map<String, Long> getCategoryCounts() {
         Map<String, Long> counts = new HashMap<>();
         List<Object[]> results = productRepository.countProductsGroupedByCategory();
         long total = 0L;
         for (Object[] result : results) {
-            String categoryId = (String) result[0];
+            String catId = (String) result[0];
             Long count = (Long) result[1];
-            counts.put(categoryId, count);
+            counts.put(catId, count);
             total += count;
         }
         counts.put("ALL", total);

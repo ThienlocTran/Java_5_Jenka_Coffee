@@ -32,6 +32,8 @@ public interface ProductService {
 
     Page<Product> findAllPaginated(Pageable pageable);
 
+    Page<Product> findByAdminCriteria(String categoryId, Boolean available, String keyword, Pageable pageable);
+
     Map<String, Long> getCategoryCounts();
 
     void toggleAvailable(Integer id);

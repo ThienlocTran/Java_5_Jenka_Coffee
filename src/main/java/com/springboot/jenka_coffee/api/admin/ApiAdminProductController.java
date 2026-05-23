@@ -52,20 +52,31 @@ public class ApiAdminProductController {
     private final ProductValidator productValidator;
 
     /**
-     * GET /api/admin/products?page=0&size=10
+     * GET /api/admin/products?page=0&size=10&keyword=...&categoryId=...&status=1|0
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> listProducts(
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "status", required = false) String status) {
+
         try {
             // Validate pagination
             size = Math.min(Math.max(size, 1), 100);
             page = Math.max(page, 0);
 
+            // Map status param to Boolean: "1" → true, "0" → false, blank/null → null (no filter)
+            Boolean available = null;
+            if ("1".equals(status)) {
+                available = true;
+            } else if ("0".equals(status)) {
+                available = false;
+            }
+
             Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
-            Page<Product> productPage = productService.findAllPaginated(pageable);
+            Page<Product> productPage = productService.findByAdminCriteria(categoryId, available, keyword, pageable);
 
             Map<String, Object> data = new HashMap<>();
             data.put("items", productPage.getContent());
