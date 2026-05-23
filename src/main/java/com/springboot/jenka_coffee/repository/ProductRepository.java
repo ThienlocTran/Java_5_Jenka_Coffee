@@ -119,5 +119,11 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("SELECT COUNT(od) FROM OrderDetail od WHERE od.product.id = :productId")
     long countOrdersByProductId(@Param("productId") Integer productId);
 
+    // ── Home add-on products for homepage section ─────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category " +
+           "WHERE p.homeAddon = true AND p.available = true " +
+           "ORDER BY COALESCE(p.homeAddonPosition, 999999) ASC, p.createDate DESC")
+    List<Product> findHomeAddonProducts(Pageable pageable);
+
     long countByCreateDateGreaterThanEqualAndCreateDateLessThan(LocalDateTime from, LocalDateTime to);
 }

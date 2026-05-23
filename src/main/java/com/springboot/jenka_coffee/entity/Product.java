@@ -90,6 +90,13 @@ public class Product implements Serializable {
     @Column(name = "require_contact")
     private Boolean requireContact = false; // Sản phẩm yêu cầu liên hệ (không thể mua online)
 
+    // Home add-on section flag
+    @Column(name = "is_home_addon")
+    private Boolean homeAddon = false;
+
+    @Column(name = "home_addon_position")
+    private Integer homeAddonPosition;
+
     // --- CÁC MỐI QUAN HỆ ---
 
     @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"}) // Chặn Category↔Product cycle và lỗi proxy

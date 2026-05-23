@@ -95,6 +95,19 @@ public class ApiProductController {
         return ResponseEntity.ok(ApiResponse.success("Products fetched successfully", responseData));
     }
 
+    @GetMapping("/home-addons")
+    public ResponseEntity<ApiResponse<List<Product>>> getHomeAddonProducts(
+            @RequestParam(value = "limit", defaultValue = "12") int limit) {
+        try {
+            limit = Math.min(Math.max(limit, 1), 50);
+            List<Product> items = productService.getHomeAddonProducts(limit);
+            return ResponseEntity.ok(ApiResponse.success("Home addon products fetched successfully", items));
+        } catch (Exception e) {
+            log.error("Error getting home addon products", e);
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi lấy sản phẩm bán kèm"));
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductDetail(@PathVariable("id") Integer id) {
         try {

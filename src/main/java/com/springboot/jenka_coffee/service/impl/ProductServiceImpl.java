@@ -696,6 +696,8 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
+        product.setHomeAddon(request.getIsHomeAddon() != null ? request.getIsHomeAddon() : false);
+        product.setHomeAddonPosition(request.getHomeAddonPosition());
         product.setCategory(category);
         product.setId(null); // Force INSERT
         return product;
@@ -750,8 +752,10 @@ public class ProductServiceImpl implements ProductService {
         existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
+        existing.setHomeAddon(request.getIsHomeAddon() != null ? request.getIsHomeAddon() : Boolean.TRUE.equals(existing.getHomeAddon()));
+        existing.setHomeAddonPosition(request.getHomeAddonPosition() != null ? request.getHomeAddonPosition() : existing.getHomeAddonPosition());
         existing.setCategory(category);
-        
+
         // Save with image
         return saveProduct(existing, imageFile);
     }
@@ -830,5 +834,12 @@ public class ProductServiceImpl implements ProductService {
                 .max(Integer::compareTo)
                 .map(position -> position + 1)
                 .orElse(1);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Product> getHomeAddonProducts(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        return productRepository.findHomeAddonProducts(PageRequest.of(0, safeLimit));
     }
 }
