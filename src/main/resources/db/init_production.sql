@@ -115,9 +115,14 @@ COMMENT ON TABLE "Accounts" IS 'Tai khoan nguoi dung - khach hang va admin';
 -- 2. CATEGORIES (Entity: Category.java)
 -- ----------------------------------------------------------
 CREATE TABLE "Categories" (
-    "Id"   VARCHAR(50)  NOT NULL,
-    "Name" VARCHAR(100) NOT NULL,
-    "Icon" VARCHAR(500),
+    "Id"               VARCHAR(50)    NOT NULL,
+    "Name"             VARCHAR(100)   NOT NULL,
+    "Icon"             VARCHAR(500),
+    image_crop_x       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_y       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_width   NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_crop_height  NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_zoom         NUMERIC(4,2)   NOT NULL DEFAULT 1.00,
     CONSTRAINT "Categories_pkey" PRIMARY KEY ("Id")
 );
 
@@ -135,6 +140,16 @@ CREATE TABLE "Products" (
     "Image"          VARCHAR(500),
     price            NUMERIC(18,2) NOT NULL,
     description      TEXT,
+    short_description TEXT,
+    detail_description TEXT,
+    specifications_json TEXT,
+    features_json    TEXT,
+    warranty_info    TEXT,
+    shipping_info    TEXT,
+    suitable_for     TEXT,
+    faq_json         TEXT,
+    meta_title       VARCHAR(255),
+    meta_description VARCHAR(320),
     "createDate"     TIMESTAMP     NOT NULL DEFAULT NOW(),
     "Available"      BOOLEAN       NOT NULL DEFAULT TRUE,
     "isFeatured"     BOOLEAN       NOT NULL DEFAULT FALSE,
@@ -348,13 +363,26 @@ COMMENT ON TABLE banner_set IS 'Bo banner slide show. Chi 1 bo active tai 1 thoi
 -- 12. BANNER IMAGE (Entity: BannerImage.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE banner_image_id_seq;
-CREATE TABLE banner_image (
-    id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
-    banner_set_id BIGINT       NOT NULL,
-    image         VARCHAR(500) NOT NULL,
-    title         VARCHAR(200),
-    subtitle      VARCHAR(300),
-    sort_order    INTEGER      NOT NULL DEFAULT 0,
+  CREATE TABLE banner_image (
+      id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
+      banner_set_id BIGINT       NOT NULL,
+      image         VARCHAR(500) NOT NULL,
+      title         VARCHAR(200),
+      subtitle      VARCHAR(300),
+      headline      VARCHAR(255),
+      sub_headline  VARCHAR(500),
+      primary_cta_text VARCHAR(120),
+      primary_cta_link VARCHAR(500),
+      secondary_cta_text VARCHAR(120),
+      secondary_cta_link VARCHAR(500),
+      target_link   VARCHAR(500),
+      active        BOOLEAN      NOT NULL DEFAULT TRUE,
+      sort_order    INTEGER      NOT NULL DEFAULT 0,
+    image_crop_x  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_y  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_width NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_crop_height NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_zoom    NUMERIC(4,2) NOT NULL DEFAULT 1.00,
     CONSTRAINT banner_image_pkey   PRIMARY KEY (id),
     CONSTRAINT fk_bannerimage_set  FOREIGN KEY (banner_set_id)
         REFERENCES banner_set (id) ON DELETE CASCADE

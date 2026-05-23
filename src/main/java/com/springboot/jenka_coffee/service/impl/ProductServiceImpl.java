@@ -26,7 +26,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -147,7 +146,7 @@ public class ProductServiceImpl implements ProductService {
     // - 2-3 admins uploading simultaneously = connection pool exhausted
     // SOLUTION: Upload ALL images outside transaction, then save to DB in one transaction
     // TC-PRD-CTRL-043B FIX: Propagate exceptions instead of swallowing them
-    public void saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
+    public List<ProductImage> saveProductImages(Integer productId, List<MultipartFile> imageFiles) {
         // STEP 1: Upload all images OUTSIDE transaction (no DB connection held)
         List<String> uploadedUrls = new ArrayList<>();
         List<String> failedFiles = new ArrayList<>();
@@ -166,8 +165,7 @@ public class ProductServiceImpl implements ProductService {
                 } catch (Exception e) {
                     failedFiles.add(file.getOriginalFilename());
                     log.error("Error uploading product image '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
-                    // TC-PRD-CTRL-043B FIX: Propagate exception instead of silent fail
-                    throw new RuntimeException("Storage service unavailable: " + e.getMessage(), e);
+                    throw new RuntimeException("Upload image failed: " + e.getMessage(), e);
                 }
             }
         }
@@ -179,8 +177,15 @@ public class ProductServiceImpl implements ProductService {
         
         // STEP 2: Save all image URLs to database in single transaction (fast)
         if (!uploadedUrls.isEmpty()) {
-            saveProductImagesToDB(productId, uploadedUrls);
+            try {
+                return saveProductImagesToDB(productId, uploadedUrls);
+            } catch (Exception e) {
+                log.error("Failed to save uploaded product images to DB for product {}", productId, e);
+                throw new RuntimeException("DB save failed after upload: " + e.getMessage(), e);
+            }
         }
+
+        return List.of();
     }
     
     /**
@@ -188,21 +193,27 @@ public class ProductServiceImpl implements ProductService {
      * Saves multiple image URLs to database in a single transaction
      */
     @Transactional
-    protected void saveProductImagesToDB(Integer productId, List<String> imageUrls) {
+    protected List<ProductImage> saveProductImagesToDB(Integer productId, List<String> imageUrls) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        int order = 0;
+        int order = productImageRepository.findByProductIdOrderByDisplayOrderAscIdAsc(productId).stream()
+                .map(ProductImage::getDisplayOrder)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(-1) + 1;
+        List<ProductImage> savedImages = new ArrayList<>();
         for (String imageUrl : imageUrls) {
             ProductImage productImage = new ProductImage();
             productImage.setProduct(product);
             productImage.setImageUrl(imageUrl);
             productImage.setDisplayOrder(order++);
-            productImage.setIsPrimary(order == 1); // First image is primary
-            productImageRepository.save(productImage);
+            productImage.setIsPrimary(false);
+            savedImages.add(productImageRepository.save(productImage));
         }
         
         log.info("Saved {} product images to database for product ID: {}", imageUrls.size(), productId);
+        return savedImages;
     }
 
     @Transactional
@@ -266,13 +277,20 @@ public class ProductServiceImpl implements ProductService {
         int maxAttempts = 3;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                // Generate slug from product name
-                product.setSlug(generateUniqueSlug(product.getName()));
+                // Generate slug from product name only when missing/blank
+                if (product.getSlug() == null || product.getSlug().isBlank()) {
+                    product.setSlug(generateUniqueSlug(product.getName()));
+                }
                 
                 Product savedProduct = productRepository.save(product);
                 log.info("Successfully created product with ID: {} and slug: {}", savedProduct.getId(), savedProduct.getSlug());
                 return savedProduct;
             } catch (DataIntegrityViolationException e) {
+                if (!isSlugUniqueViolation(e)) {
+                    log.error("Product create failed due to non-slug database constraint: {}", e.getMessage(), e);
+                    throw new BusinessRuleException(resolveCreateConstraintMessage(e));
+                }
+
                 // Slug collision detected (race condition in distributed system)
                 if (attempt < maxAttempts) {
                     log.warn("Slug collision detected on attempt {}, retrying with new slug", attempt);
@@ -294,6 +312,46 @@ public class ProductServiceImpl implements ProductService {
         
         // TC-PRD-CTRL-039 FIX: This should never be reached, but if it does, throw BusinessRuleException
         throw new BusinessRuleException("Không thể tạo sản phẩm sau nhiều lần thử. Vui lòng thử lại.");
+    }
+
+    private boolean isSlugUniqueViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if ((normalized.contains("slug") && normalized.contains("unique"))
+                        || normalized.contains("products_slug_key")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String resolveCreateConstraintMessage(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if (normalized.contains("categoryid")) {
+                    return "CÆ¡ sá»Ÿ dá»¯ liá»‡u hiá»‡n táº¡i cÃ²n schema cá»§ khÃ´ng khá»›p VPS (categoryid). Cáº§n bá» rÃ ng buá»™c cÅ© nÃ y trÃªn database.";
+                }
+                if (normalized.contains("category_id")) {
+                    return "Danh má»¥c sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+                if (normalized.contains("name")) {
+                    return "TÃªn sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+                if (normalized.contains("price")) {
+                    return "GiÃ¡ sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                }
+            }
+            current = current.getCause();
+        }
+        return "KhÃ´ng thá»ƒ táº¡o sáº£n pháº©m do rÃ ng buá»™c dá»¯ liá»‡u trong database.";
     }
 
     @Override
@@ -483,16 +541,16 @@ public class ProductServiceImpl implements ProductService {
     private String generateUniqueSlug(String productName) {
         String baseSlug = SlugUtils.toSlug(productName);
         String slug = baseSlug;
-        int counter = 0;
+        int counter = 2;
         int maxRetries = 10;
         
         // Try to find unique slug, with retry limit to prevent infinite loop
-        while (counter < maxRetries && productRepository.existsBySlug(slug)) {
-            counter++;
+        while (counter <= maxRetries && productRepository.existsBySlug(slug)) {
             slug = baseSlug + "-" + counter;
+            counter++;
         }
         
-        if (counter >= maxRetries) {
+        if (productRepository.existsBySlug(slug)) {
             // Fallback: append timestamp to guarantee uniqueness
             slug = baseSlug + "-" + System.currentTimeMillis();
             log.warn("Slug generation exceeded max retries, using timestamp: {}", slug);
@@ -573,8 +631,12 @@ public class ProductServiceImpl implements ProductService {
         }
         
         // Get category
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new BusinessRuleException("Danh mục sản phẩm không được để trống");
+        }
+
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy danh mục với ID: " + categoryId));
 
         // Build product entity
         Product product = buildProductFromRequest(request, category);
@@ -610,7 +672,17 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice().setScale(0, RoundingMode.HALF_UP));
+        product.setShortDescription(request.getShortDescription());
+        product.setDetailDescription(request.getDetailDescription());
+        product.setSpecificationsJson(request.getSpecificationsJson());
+        product.setFeaturesJson(request.getFeaturesJson());
+        product.setWarrantyInfo(request.getWarrantyInfo());
+        product.setShippingInfo(request.getShippingInfo());
+        product.setSuitableFor(request.getSuitableFor());
+        product.setFaqJson(request.getFaqJson());
+        product.setMetaTitle(request.getMetaTitle());
+        product.setMetaDescription(request.getMetaDescription());
+        product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
         product.setCategory(category);
@@ -624,15 +696,19 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     @Transactional
-    public Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price,
-                                           String categoryId, Boolean available, MultipartFile imageFile) {
+    public Product updateProductFromRequest(Integer id, ProductRequest request,
+                                           String categoryId, MultipartFile imageFile) {
         log.info("Updating product ID: {}", id);
         
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new BusinessRuleException("Tên sản phẩm không được để trống");
+        }
+
         // Validate price - FIX BUG Ở ĐÂY!
-        if (price == null) {
+        if (request.getPrice() == null) {
             throw new BusinessRuleException("Giá sản phẩm không được để trống");
         }
-        if (price.compareTo(BigDecimal.ZERO) < 0) {
+        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessRuleException("Giá sản phẩm không thể âm");
         }
         
@@ -640,14 +716,29 @@ public class ProductServiceImpl implements ProductService {
         Product existing = findById(id);
         
         // Get category
+        if (categoryId == null || categoryId.isBlank()) {
+            throw new BusinessRuleException("Danh mục sản phẩm không được để trống");
+        }
+
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với ID: " + categoryId));
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy danh mục với ID: " + categoryId));
         
         // Update fields
-        existing.setName(name);
-        existing.setDescription(description);
-        existing.setPrice(price.setScale(0, RoundingMode.HALF_UP)); // Không còn null!
-        existing.setAvailable(available);
+        existing.setName(request.getName());
+        existing.setDescription(request.getDescription());
+        existing.setShortDescription(request.getShortDescription());
+        existing.setDetailDescription(request.getDetailDescription());
+        existing.setSpecificationsJson(request.getSpecificationsJson());
+        existing.setFeaturesJson(request.getFeaturesJson());
+        existing.setWarrantyInfo(request.getWarrantyInfo());
+        existing.setShippingInfo(request.getShippingInfo());
+        existing.setSuitableFor(request.getSuitableFor());
+        existing.setFaqJson(request.getFaqJson());
+        existing.setMetaTitle(request.getMetaTitle());
+        existing.setMetaDescription(request.getMetaDescription());
+        existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
+        existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
+        existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
         existing.setCategory(category);
         
         // Save with image

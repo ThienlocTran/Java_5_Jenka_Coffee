@@ -2,8 +2,11 @@ package com.springboot.jenka_coffee.util;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Utility class for image processing operations
@@ -83,22 +86,59 @@ public class ImageUtils {
      * Generate safe filename for upload
      */
     public static String generateSafeFilename(String originalFilename) {
-        if (originalFilename == null) {
-            return "image_" + System.currentTimeMillis() + ".jpg";
+        return generateSafeFilename(originalFilename, "image");
+    }
+
+    public static String generateSafeFilename(String originalFilename, String fallbackBaseName) {
+        String extension = getSafeImageExtension(originalFilename);
+        String baseName = sanitizeFilenameBase(originalFilename, fallbackBaseName);
+        return baseName + "-" + UUID.randomUUID() + "." + extension;
+    }
+
+    public static String generateSafePublicId(String originalFilename, String fallbackBaseName) {
+        String baseName = sanitizeFilenameBase(originalFilename, fallbackBaseName);
+        return baseName + "-" + UUID.randomUUID();
+    }
+
+    private static String sanitizeFilenameBase(String originalFilename, String fallbackBaseName) {
+        String fallback = (fallbackBaseName == null || fallbackBaseName.isBlank()) ? "image" : fallbackBaseName;
+        String candidate = originalFilename == null ? "" : originalFilename;
+        int lastDot = candidate.lastIndexOf(".");
+        if (lastDot > 0) {
+            candidate = candidate.substring(0, lastDot);
         }
 
-        String extension = getFileExtension(originalFilename);
-        String baseName = originalFilename.substring(0, originalFilename.lastIndexOf("."));
+        String normalized = Normalizer.normalize(candidate, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-+|-+$", "");
 
-        // Remove special characters and spaces
-        baseName = baseName.replaceAll("[^a-zA-Z0-9]", "_");
-
-        // Limit length
-        if (baseName.length() > 50) {
-            baseName = baseName.substring(0, 50);
+        if (normalized.isBlank()) {
+            normalized = fallback.replaceAll("[^a-zA-Z0-9]+", "-")
+                    .toLowerCase(Locale.ROOT)
+                    .replaceAll("-{2,}", "-")
+                    .replaceAll("^-+|-+$", "");
         }
 
-        return baseName + "_" + System.currentTimeMillis() + "." + extension;
+        if (normalized.isBlank()) {
+            normalized = "image";
+        }
+
+        if (normalized.length() > 80) {
+            normalized = normalized.substring(0, 80).replaceAll("-+$", "");
+        }
+
+        return normalized;
+    }
+
+    public static String getSafeImageExtension(String originalFilename) {
+        String extension = getFileExtension(originalFilename).toLowerCase(Locale.ROOT);
+        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
+            return "jpg";
+        }
+        return extension;
     }
 
     /**

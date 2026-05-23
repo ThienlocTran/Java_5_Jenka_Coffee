@@ -144,6 +144,8 @@ public interface AccountService {
      * @param phone Phone number
      */
     void updatePhone(String username, String phone);
+
+    Account setAdminRole(String username, boolean isAdmin, String currentAdminUsername);
     
     // ===== SECURITY LAYER METHODS =====
     

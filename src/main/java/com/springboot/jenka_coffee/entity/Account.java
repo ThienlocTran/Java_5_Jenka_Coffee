@@ -18,13 +18,13 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Accounts")
+@Table(name = "accounts")
 public class Account implements Serializable, Persistable<String> {
 
     @Id
-    @Column(name = "Username", length = 50)
+    @Column(name = "username", length = 50)
     private String username;
-    
+
     /**
      * JPA FIX: String @Id causes merge() instead of persist()
      * Implement Persistable to explicitly control isNew() behavior
@@ -33,25 +33,27 @@ public class Account implements Serializable, Persistable<String> {
     @Transient
     private boolean isNew = false;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn khỏi JSON response
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "Fullname", nullable = false) // Thêm nullable=false cho chặt chẽ
+    @Column(name = "fullname", nullable = false)
     private String fullname;
 
-    @Column(name = "Email", length = 100, unique = true)
+    @Column(name = "email", length = 100, unique = true)
     private String email;
 
     /**
-     * SECURITY FIX: Convert empty email to NULL để tránh unique constraint violation
-     * PostgreSQL unique constraint: nhiều NULL OK, nhiều "" NOT OK
+     * Convert empty email to NULL to avoid unique constraint violations.
      */
     @PrePersist
     @PreUpdate
     private void normalizeEmail() {
-        if (email != null && email.trim().isEmpty()) {
-            email = null;
+        if (email != null) {
+            email = email.trim().toLowerCase();
+            if (email.isEmpty()) {
+                email = null;
+            }
         }
     }
 
@@ -61,13 +63,13 @@ public class Account implements Serializable, Persistable<String> {
     @Column(name = "phone_verified")
     private Boolean phoneVerified = false;
 
-    @Column(name = "Photo")
+    @Column(name = "photo")
     private String photo;
 
-    @Column(name = "Activated")
+    @Column(name = "activated")
     private Boolean activated = true;
 
-    @Column(name = "Admin")
+    @Column(name = "admin")
     private Boolean admin = false;
 
     @Column(name = "points")
@@ -76,69 +78,62 @@ public class Account implements Serializable, Persistable<String> {
     @Column(name = "customer_rank", length = 20)
     private String customerRank = "MEMBER";
 
-    // ===== ACTIVATION & PASSWORD RESET FIELDS =====
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Ẩn token khỏi JSON
-    @Column(name = "ActivationToken", length = 100)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "activation_token", length = 100)
     private String activationToken;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ActivationTokenExpiry")
+    @Column(name = "activation_token_expiry")
     private LocalDateTime activationTokenExpiry;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ResetToken", length = 100)
+    @Column(name = "reset_token", length = 100)
     private String resetToken;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Column(name = "ResetTokenExpiry")
+    @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
-    @Column(name = "ActivationMethod", length = 10)
-    private String activationMethod; // EMAIL or PHONE
-    
+    @Column(name = "activation_method", length = 10)
+    private String activationMethod;
+
     /**
-     * VULN-SESSION-REVOCATION FIX: Track when password was last changed
-     * Used to invalidate old JWT tokens after password reset
+     * Used to invalidate old JWT tokens after password reset.
      */
-    @Column(name = "lastPasswordResetDate")
+    @Column(name = "last_password_reset_date")
     private LocalDateTime lastPasswordResetDate;
 
-    @Column(name = "createdate", updatable = false)
+    @Column(name = "create_date", nullable = false, updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
-    // Quan hệ 1-N với Order
-    @JsonIgnore // Chặn Account↔Order cycle
+    @JsonIgnore
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Order> orders;
 
-    // Quan hệ 1-N với PointHistory
-    @JsonIgnore // Chặn Account↔PointHistory cycle
+    @JsonIgnore
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<PointHistory> pointHistories;
 
-
-
-    // --- LOGIC HIBERNATE PROXY (Chuẩn chỉ) ---
-
     @Override
     public final boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null)
+        }
+        if (o == null) {
             return false;
+        }
         Class<?> oEffectiveClass = o instanceof HibernateProxy
                 ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                 : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                 : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass)
+        if (thisEffectiveClass != oEffectiveClass) {
             return false;
+        }
         Account account = (Account) o;
-        // So sánh Username (String) thay vì ID (Integer/Long)
         return getUsername() != null && Objects.equals(getUsername(), account.getUsername());
     }
 
@@ -148,21 +143,19 @@ public class Account implements Serializable, Persistable<String> {
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode()
                 : getClass().hashCode();
     }
-    
-    // --- PERSISTABLE INTERFACE IMPLEMENTATION ---
-    
+
     @Override
     public String getId() {
         return username;
     }
-    
+
     @Override
     public boolean isNew() {
         return isNew;
     }
-    
+
     /**
-     * Reset isNew flag after persist/load to prevent re-insertion
+     * Reset isNew flag after persist/load to prevent re-insertion.
      */
     @PostPersist
     @PostLoad

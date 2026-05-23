@@ -16,51 +16,49 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "OrderDetails")
+@Table(name = "order_details")
 public class OrderDetail implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "Quantity", nullable = false)
+    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    // --- QUAN HỆ ---
-
-    // N-1 với Order
-    @JsonIgnore // Chặn Order↔OrderDetail cycle (tránh StackOverflow khi serialize)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Orderid")
+    @JoinColumn(name = "order_id")
     @ToString.Exclude
     private Order order;
 
-    // N-1 với Product
-    @JsonIgnoreProperties("orderDetails") // Chặn Product↔OrderDetail cycle
+    @JsonIgnoreProperties("orderDetails")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Productid")
+    @JoinColumn(name = "product_id")
     @ToString.Exclude
     private Product product;
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null)
+        }
+        if (o == null) {
             return false;
+        }
         Class<?> oEffectiveClass = o instanceof HibernateProxy
                 ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                 : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                 : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass)
+        if (thisEffectiveClass != oEffectiveClass) {
             return false;
+        }
         OrderDetail that = (OrderDetail) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }

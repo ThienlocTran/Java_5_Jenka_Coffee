@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -15,40 +16,62 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Categories")
+@Table(name = "categories")
 public class Category implements Serializable {
 
     @Id
-    @Column(name = "Id", length = 50)
-    private String id; // Mã loại (VD: MAY_PHA) - Tự nhập, ko tự tăng
+    @Column(name = "id", length = 50)
+    private String id;
 
-    @Column(name = "Name", length = 100, nullable = false)
+    @Column(name = "name", length = 100, nullable = false)
     private String name;
 
-    @Column(name = "Icon")
-    private String icon; // Tên file icon (VD: May_Pha_Ca_Phe.webp)
+    @Column(name = "icon", length = 500)
+    private String icon;
 
-    // Quan hệ 1-N với Product
-    @JsonIgnore // Chặn vòng lặp vô tận JSON
+    @Column(name = "slug", length = 300, unique = true)
+    private String slug;
+
+    @Column(name = "image_crop_x", nullable = false, precision = 5, scale = 2)
+    private BigDecimal imageCropX = BigDecimal.ZERO;
+
+    @Column(name = "image_crop_y", nullable = false, precision = 5, scale = 2)
+    private BigDecimal imageCropY = BigDecimal.ZERO;
+
+    @Column(name = "image_crop_width", nullable = false, precision = 5, scale = 2)
+    private BigDecimal imageCropWidth = new BigDecimal("100.00");
+
+    @Column(name = "image_crop_height", nullable = false, precision = 5, scale = 2)
+    private BigDecimal imageCropHeight = new BigDecimal("100.00");
+
+    @Column(name = "image_zoom", nullable = false, precision = 5, scale = 2)
+    private BigDecimal imageZoom = new BigDecimal("1.00");
+
+    @JsonIgnore
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Product> products;
 
-    // --- LOGIC HIBERNATE PROXY ---
+    @Transient
+    private Long productCount;
+
     @Override
     public final boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null)
+        }
+        if (o == null) {
             return false;
+        }
         Class<?> oEffectiveClass = o instanceof HibernateProxy
                 ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                 : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                 : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass)
+        if (thisEffectiveClass != oEffectiveClass) {
             return false;
+        }
         Category category = (Category) o;
         return getId() != null && Objects.equals(getId(), category.getId());
     }

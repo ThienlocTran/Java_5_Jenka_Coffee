@@ -1,5 +1,6 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.dto.BannerImageUpdateRequest;
 import com.springboot.jenka_coffee.entity.BannerImage;
 import com.springboot.jenka_coffee.entity.BannerSet;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
@@ -14,12 +15,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class BannerSetServiceImpl implements BannerSetService {
+
+    private static final String DISPLAY_MODE_IMAGE_ONLY = "IMAGE_ONLY";
+    private static final String DISPLAY_MODE_TEXT_OVERLAY = "TEXT_OVERLAY";
+    private static final BigDecimal CROP_MIN = BigDecimal.ZERO;
+    private static final BigDecimal CROP_MAX = new BigDecimal("100.00");
+    private static final BigDecimal CROP_SIZE_MIN = new BigDecimal("1.00");
+    private static final BigDecimal DEFAULT_CROP_SIZE = new BigDecimal("100.00");
+    private static final BigDecimal DEFAULT_ZOOM = new BigDecimal("1.00");
+    private static final BigDecimal ZOOM_MAX = new BigDecimal("2.00");
 
     private final BannerSetRepository setRepo;
     private final BannerImageRepository imageRepo;
@@ -33,48 +47,81 @@ public class BannerSetServiceImpl implements BannerSetService {
     @Override
     public BannerSet findById(Long id) {
         return setRepo.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("BannerSet not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("BannerSet not found: " + id));
     }
 
-    // VULN #11 PATTERN FIX: Connection Pool Exhaustion Prevention
-    // PROBLEM: @Transactional methods hold DB connection during Cloudinary uploads
-    // SOLUTION: Upload images OUTSIDE transaction, then save to DB in transaction
     @Override
     public BannerSet create(String name, String effect,
                             List<MultipartFile> files,
-                            List<String> titles, List<String> subtitles) {
-        // STEP 1: Upload images OUTSIDE transaction (no DB connection held)
+                            List<String> titles, List<String> subtitles,
+                            List<String> headlines, List<String> subHeadlines,
+                            List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks, List<String> displayModes,
+                            List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
+                            List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
+                            List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
+                            List<BigDecimal> imageZooms) {
         List<String> uploadedUrls = uploadImages(files);
-        
-        // STEP 2: Save to database in transaction (fast, no network I/O)
-        return createBannerSetInDatabase(name, effect, uploadedUrls, titles, subtitles);
+        return createBannerSetInDatabase(
+                name, effect, uploadedUrls, titles, subtitles,
+                headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
+                secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
+                imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
+        );
     }
-    
+
     @Transactional
     protected BannerSet createBannerSetInDatabase(String name, String effect,
-                                                   List<String> imageUrls,
-                                                   List<String> titles, List<String> subtitles) {
+                                                  List<String> imageUrls,
+                                                  List<String> titles, List<String> subtitles,
+                                                  List<String> headlines, List<String> subHeadlines,
+                                                  List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                                                  List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                                  List<String> displayModes,
+                                                  List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
+                                                  List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
+                                                  List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
+                                                  List<BigDecimal> imageZooms) {
         BannerSet set = new BannerSet();
         set.setName(name);
         set.setEffect(effect != null ? effect : "fade");
         set = setRepo.save(set);
-        
-        // Add images with pre-uploaded URLs
+
         if (imageUrls != null) {
             for (int i = 0; i < imageUrls.size(); i++) {
                 String url = imageUrls.get(i);
                 if (url == null) continue;
-                
+
                 BannerImage img = new BannerImage();
                 img.setBannerSet(set);
                 img.setImage(url);
                 img.setTitle(safeGet(titles, i));
                 img.setSubtitle(safeGet(subtitles, i));
-                img.setSortOrder(i);
+                applyHeroContent(
+                        img,
+                        safeGet(headlines, i),
+                        safeGet(subHeadlines, i),
+                        safeGet(primaryCtaTexts, i),
+                        safeGet(primaryCtaLinks, i),
+                        safeGet(secondaryCtaTexts, i),
+                        safeGet(secondaryCtaLinks, i),
+                        safeGet(displayModes, i),
+                        safeGet(targetLinks, i),
+                        safeBooleanGet(actives, i)
+                );
+                img.setSortOrder(safeIntegerGet(sortOrders, i, i));
+                applyImageDisplay(
+                        img,
+                        safeDecimalGet(imageCropXs, i),
+                        safeDecimalGet(imageCropYs, i),
+                        safeDecimalGet(imageCropWidths, i),
+                        safeDecimalGet(imageCropHeights, i),
+                        safeDecimalGet(imageZooms, i)
+                );
                 set.getImages().add(img);
             }
         }
-        
+
         return setRepo.save(set);
     }
 
@@ -87,38 +134,126 @@ public class BannerSetServiceImpl implements BannerSetService {
         return setRepo.save(set);
     }
 
-    // VULN #11 PATTERN FIX: Upload images outside transaction
     @Override
     public BannerSet addImages(Long id, List<MultipartFile> files,
-                               List<String> titles, List<String> subtitles) {
-        // STEP 1: Upload images OUTSIDE transaction
+                               List<String> titles, List<String> subtitles,
+                               List<String> headlines, List<String> subHeadlines,
+                               List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                               List<String> secondaryCtaTexts, List<String> secondaryCtaLinks, List<String> displayModes,
+                               List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
+                               List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
+                               List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
+                               List<BigDecimal> imageZooms) {
         List<String> uploadedUrls = uploadImages(files);
-        
-        // STEP 2: Save to database in transaction
-        return addImagesToDatabase(id, uploadedUrls, titles, subtitles);
+        return addImagesToDatabase(
+                id, uploadedUrls, titles, subtitles,
+                headlines, subHeadlines, primaryCtaTexts, primaryCtaLinks,
+                secondaryCtaTexts, secondaryCtaLinks, displayModes, targetLinks, actives, sortOrders,
+                imageCropXs, imageCropYs, imageCropWidths, imageCropHeights, imageZooms
+        );
     }
-    
+
+    @Override
+    @Transactional
+    public BannerSet updateImages(Long id, List<BannerImageUpdateRequest> images) {
+        BannerSet set = findById(id);
+        if (images == null) {
+            return set;
+        }
+
+        Map<Long, BannerImage> existingImages = set.getImages().stream()
+                .collect(Collectors.toMap(BannerImage::getId, Function.identity()));
+
+        for (BannerImageUpdateRequest request : images) {
+            if (request == null || request.getId() == null) {
+                continue;
+            }
+
+            BannerImage image = existingImages.get(request.getId());
+            if (image == null) {
+                throw new IllegalArgumentException("Khong tim thay anh banner #" + request.getId() + " trong bo #" + id);
+            }
+
+            image.setTitle(sanitizeText(request.getTitle()));
+            image.setSubtitle(sanitizeText(request.getSubtitle()));
+            applyHeroContent(
+                    image,
+                    request.getHeadline(),
+                    request.getSubHeadline(),
+                    request.getPrimaryCtaText(),
+                    request.getPrimaryCtaLink(),
+                    request.getSecondaryCtaText(),
+                    request.getSecondaryCtaLink(),
+                    request.getDisplayMode(),
+                    request.getTargetLink(),
+                    request.getActive()
+            );
+            if (request.getSortOrder() != null) {
+                image.setSortOrder(request.getSortOrder());
+            }
+            applyImageDisplay(
+                    image,
+                    request.getImageCropX(),
+                    request.getImageCropY(),
+                    request.getImageCropWidth(),
+                    request.getImageCropHeight(),
+                    request.getImageZoom()
+            );
+        }
+
+        set.getImages().sort(java.util.Comparator.comparing(img -> img.getSortOrder() == null ? Integer.MAX_VALUE : img.getSortOrder()));
+        return setRepo.save(set);
+    }
+
     @Transactional
     protected BannerSet addImagesToDatabase(Long id, List<String> imageUrls,
-                                            List<String> titles, List<String> subtitles) {
+                                            List<String> titles, List<String> subtitles,
+                                            List<String> headlines, List<String> subHeadlines,
+                                            List<String> primaryCtaTexts, List<String> primaryCtaLinks,
+                                            List<String> secondaryCtaTexts, List<String> secondaryCtaLinks,
+                                            List<String> displayModes,
+                                            List<String> targetLinks, List<Boolean> actives, List<Integer> sortOrders,
+                                            List<BigDecimal> imageCropXs, List<BigDecimal> imageCropYs,
+                                            List<BigDecimal> imageCropWidths, List<BigDecimal> imageCropHeights,
+                                            List<BigDecimal> imageZooms) {
         BannerSet set = findById(id);
         int base = set.getImages().size();
-        
+
         if (imageUrls != null) {
             for (int i = 0; i < imageUrls.size(); i++) {
                 String url = imageUrls.get(i);
                 if (url == null) continue;
-                
+
                 BannerImage img = new BannerImage();
                 img.setBannerSet(set);
                 img.setImage(url);
                 img.setTitle(safeGet(titles, i));
                 img.setSubtitle(safeGet(subtitles, i));
-                img.setSortOrder(base + i);
+                applyHeroContent(
+                        img,
+                        safeGet(headlines, i),
+                        safeGet(subHeadlines, i),
+                        safeGet(primaryCtaTexts, i),
+                        safeGet(primaryCtaLinks, i),
+                        safeGet(secondaryCtaTexts, i),
+                        safeGet(secondaryCtaLinks, i),
+                        safeGet(displayModes, i),
+                        safeGet(targetLinks, i),
+                        safeBooleanGet(actives, i)
+                );
+                img.setSortOrder(safeIntegerGet(sortOrders, i, base + i));
+                applyImageDisplay(
+                        img,
+                        safeDecimalGet(imageCropXs, i),
+                        safeDecimalGet(imageCropYs, i),
+                        safeDecimalGet(imageCropWidths, i),
+                        safeDecimalGet(imageCropHeights, i),
+                        safeDecimalGet(imageZooms, i)
+                );
                 set.getImages().add(img);
             }
         }
-        
+
         return setRepo.save(set);
     }
 
@@ -148,22 +283,16 @@ public class BannerSetServiceImpl implements BannerSetService {
         return setRepo.findByActiveTrue().orElse(null);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    /**
-     * VULN #11 FIX: Upload images outside transaction to prevent connection pool exhaustion
-     * Returns list of uploaded URLs (null for failed uploads)
-     */
     private List<String> uploadImages(List<MultipartFile> files) {
         if (files == null) return null;
-        
+
         List<String> urls = new java.util.ArrayList<>();
         for (MultipartFile f : files) {
             if (f == null || f.isEmpty()) {
                 urls.add(null);
                 continue;
             }
-            
+
             try {
                 String url = uploadService.saveImage(f);
                 urls.add(url);
@@ -178,32 +307,104 @@ public class BannerSetServiceImpl implements BannerSetService {
         return urls;
     }
 
-    private void appendImages(BannerSet set, List<MultipartFile> files,
-                              List<String> titles, List<String> subtitles) {
-        if (files == null) return;
-        int base = set.getImages().size();
-        for (int i = 0; i < files.size(); i++) {
-            MultipartFile f = files.get(i);
-            if (f == null || f.isEmpty()) continue;
-            String url = uploadService.saveImage(f);
-            if (url == null) continue;
-            BannerImage img = new BannerImage();
-            img.setBannerSet(set);
-            img.setImage(url);
-            img.setTitle(safeGet(titles, i));
-            img.setSubtitle(safeGet(subtitles, i));
-            img.setSortOrder(base + i);
-            set.getImages().add(img);
+    private String safeGet(List<String> list, int i) {
+        if (list == null || i >= list.size()) return null;
+        return sanitizeText(list.get(i));
+    }
+
+    private BigDecimal safeDecimalGet(List<BigDecimal> list, int i) {
+        if (list == null || i >= list.size()) return null;
+        return list.get(i);
+    }
+
+    private Boolean safeBooleanGet(List<Boolean> list, int i) {
+        if (list == null || i >= list.size()) return null;
+        return list.get(i);
+    }
+
+    private Integer safeIntegerGet(List<Integer> list, int i, int fallback) {
+        if (list == null || i >= list.size() || list.get(i) == null) return fallback;
+        return list.get(i);
+    }
+
+    private String sanitizeText(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.replaceAll("<[^>]*>", "").trim();
+    }
+
+    private void applyHeroContent(BannerImage image,
+                                  String headline,
+                                  String subHeadline,
+                                  String primaryCtaText,
+                                  String primaryCtaLink,
+                                  String secondaryCtaText,
+                                  String secondaryCtaLink,
+                                  String displayMode,
+                                  String targetLink,
+                                  Boolean active) {
+        image.setHeadline(sanitizeText(headline));
+        image.setSubHeadline(sanitizeText(subHeadline));
+        image.setPrimaryCtaText(sanitizeText(primaryCtaText));
+        image.setPrimaryCtaLink(sanitizeText(primaryCtaLink));
+        image.setSecondaryCtaText(sanitizeText(secondaryCtaText));
+        image.setSecondaryCtaLink(sanitizeText(secondaryCtaLink));
+        image.setDisplayMode(normalizeDisplayMode(displayMode));
+        image.setTargetLink(sanitizeText(targetLink));
+        if (active != null) {
+            image.setActive(active);
+        } else if (image.getActive() == null) {
+            image.setActive(true);
         }
     }
 
-    private String safeGet(List<String> list, int i) {
-        if (list == null || i >= list.size()) return null;
-        String v = list.get(i);
-        if (v == null || v.isBlank()) return null;
-        // VULN-067 FIX: Strip HTML tags khỏi title/subtitle — ngăn Stored XSS trên homepage
-        // VULN #12 PATTERN: Should use HtmlUtils.htmlEscape() instead of regex
-        // But for now keeping existing implementation for backward compatibility
-        return v.replaceAll("<[^>]*>", "").trim();
+    private void applyImageDisplay(BannerImage image,
+                                   BigDecimal cropX,
+                                   BigDecimal cropY,
+                                   BigDecimal cropWidth,
+                                   BigDecimal cropHeight,
+                                   BigDecimal zoom) {
+        BigDecimal normalizedWidth = clamp(defaultDecimal(cropWidth, DEFAULT_CROP_SIZE), CROP_SIZE_MIN, CROP_MAX);
+        BigDecimal normalizedHeight = clamp(defaultDecimal(cropHeight, DEFAULT_CROP_SIZE), CROP_SIZE_MIN, CROP_MAX);
+        BigDecimal normalizedX = clamp(defaultDecimal(cropX, CROP_MIN), CROP_MIN, CROP_MAX);
+        BigDecimal normalizedY = clamp(defaultDecimal(cropY, CROP_MIN), CROP_MIN, CROP_MAX);
+        BigDecimal normalizedZoom = clamp(defaultDecimal(zoom, DEFAULT_ZOOM), DEFAULT_ZOOM, ZOOM_MAX);
+
+        if (normalizedX.add(normalizedWidth).compareTo(CROP_MAX) > 0) {
+            normalizedX = CROP_MAX.subtract(normalizedWidth).max(BigDecimal.ZERO);
+        }
+        if (normalizedY.add(normalizedHeight).compareTo(CROP_MAX) > 0) {
+            normalizedY = CROP_MAX.subtract(normalizedHeight).max(BigDecimal.ZERO);
+        }
+
+        image.setImageCropX(normalizedX);
+        image.setImageCropY(normalizedY);
+        image.setImageCropWidth(normalizedWidth);
+        image.setImageCropHeight(normalizedHeight);
+        image.setImageZoom(normalizedZoom);
+    }
+
+    private BigDecimal defaultDecimal(BigDecimal value, BigDecimal fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private BigDecimal clamp(BigDecimal value, BigDecimal min, BigDecimal max) {
+        if (value.compareTo(min) < 0) {
+            return min;
+        }
+        if (value.compareTo(max) > 0) {
+            return max;
+        }
+        return value;
+    }
+
+    private String normalizeDisplayMode(String value) {
+        if (value == null || value.isBlank()) {
+            return DISPLAY_MODE_IMAGE_ONLY;
+        }
+        String normalized = value.trim().toUpperCase();
+        if (DISPLAY_MODE_TEXT_OVERLAY.equals(normalized)) {
+            return DISPLAY_MODE_TEXT_OVERLAY;
+        }
+        return DISPLAY_MODE_IMAGE_ONLY;
     }
 }

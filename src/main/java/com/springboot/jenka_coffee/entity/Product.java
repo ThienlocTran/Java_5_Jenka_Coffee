@@ -20,51 +20,81 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Products")
+@Table(name = "products")
 public class Product implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id")
+    @Column(name = "id")
     private Integer id;
 
-    @Column(name = "Name", length = 200, nullable = false)
+    @Column(name = "name", length = 200, nullable = false)
     private String name;
 
     @Column(name = "slug", unique = true)
     private String slug;
 
-    @Column(name = "Image")
+    @Column(name = "image")
     private String image;
 
     @Min(value = 0, message = "Giá sản phẩm phải lớn hơn 0")
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "createDate", updatable = false)
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
+    @Column(name = "detail_description", columnDefinition = "TEXT")
+    private String detailDescription;
+
+    @Column(name = "specifications_json", columnDefinition = "TEXT")
+    private String specificationsJson;
+
+    @Column(name = "features_json", columnDefinition = "TEXT")
+    private String featuresJson;
+
+    @Column(name = "warranty_info", columnDefinition = "TEXT")
+    private String warrantyInfo;
+
+    @Column(name = "shipping_info", columnDefinition = "TEXT")
+    private String shippingInfo;
+
+    @Column(name = "suitable_for", columnDefinition = "TEXT")
+    private String suitableFor;
+
+    @Column(name = "faq_json", columnDefinition = "TEXT")
+    private String faqJson;
+
+    @Column(name = "meta_title", length = 255)
+    private String metaTitle;
+
+    @Column(name = "meta_description", length = 320)
+    private String metaDescription;
+
+    @Column(name = "create_date", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
-    @Column(name = "Available")
+    @Column(name = "available")
     private Boolean available = true;
 
     // Featured product flag for homepage highlighting
-    @Column(name = "isFeatured")
+    @Column(name = "is_featured")
     private Boolean featured = false;
 
     @Column(name = "featured_position")
     private Integer featuredPosition;
 
-    @Column(name = "requireContact")
+    @Column(name = "require_contact")
     private Boolean requireContact = false; // Sản phẩm yêu cầu liên hệ (không thể mua online)
 
     // --- CÁC MỐI QUAN HỆ ---
 
     @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"}) // Chặn Category↔Product cycle và lỗi proxy
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "Categoryid", nullable = false)
+    @JoinColumn(name = "category_id", nullable = false)
     @ToString.Exclude
     private Category category;
 

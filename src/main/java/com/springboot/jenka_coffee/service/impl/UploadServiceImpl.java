@@ -45,23 +45,23 @@ public class UploadServiceImpl implements UploadService {
 
     @Override
     public String saveImage(MultipartFile file) {
-        return uploadToCloudinary(file);
+        return uploadToCloudinary(file, "image");
     }
 
     @Override
     public String saveProductImage(MultipartFile file) {
-        return uploadToCloudinary(file);
+        return uploadToCloudinary(file, "product-image");
     }
 
     @Override
     public String saveNewsImage(MultipartFile file) {
-        return uploadToCloudinary(file);
+        return uploadToCloudinary(file, "news-image");
     }
 
     @Override
     public String saveImageWithCompression(MultipartFile file, int targetWidth, float quality) {
         // targetWidth/quality ignored — Cloudinary handles optimization server-side
-        return uploadToCloudinary(file);
+        return uploadToCloudinary(file, "image");
     }
 
     /**
@@ -74,7 +74,7 @@ public class UploadServiceImpl implements UploadService {
      * @return the secure URL of uploaded image
      * @throws RuntimeException if upload fails
      */
-    private String uploadToCloudinary(MultipartFile file) {
+    private String uploadToCloudinary(MultipartFile file, String fallbackBaseName) {
         if (file == null || file.isEmpty()) {
             log.warn("Attempted to upload null or empty file");
             throw new RuntimeException("File is null or empty");
@@ -100,8 +100,9 @@ public class UploadServiceImpl implements UploadService {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(tempFile, ObjectUtils.asMap(
                     "resource_type", "auto",
                     "folder", "jenka_coffee",
-                    "use_filename", true,
-                    "unique_filename", true,
+                    "public_id", ImageUtils.generateSafePublicId(file.getOriginalFilename(), fallbackBaseName),
+                    "use_filename", false,
+                    "unique_filename", false,
                     "quality", "auto:good",
                     "fetch_format", "auto"
             ));

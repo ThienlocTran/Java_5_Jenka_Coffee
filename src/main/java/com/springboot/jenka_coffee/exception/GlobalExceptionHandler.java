@@ -50,9 +50,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateResource(DuplicateResourceException ex) {
+        logger.warn("Duplicate resource: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler({
             ValidationException.class,
-            DuplicateResourceException.class,
             BusinessRuleException.class,
             InvalidFileException.class,
             IllegalStateException.class,
@@ -73,6 +78,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
         String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+
+        String bannerFriendly = BannerDataIntegrityException.toFriendlyMessage(ex.getMessage());
+        if (bannerFriendly != null) {
+            HttpStatus status = msg.contains("duplicate key") || msg.contains("unique constraint")
+                    ? HttpStatus.CONFLICT
+                    : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(ApiResponse.error(bannerFriendly));
+        }
+
+        if (msg.contains("null value in column") && msg.contains("image_crop_")) {
+            String columnName = extractColumnName(ex.getMessage());
+            String friendly = "Lỗi dữ liệu danh mục: "
+                    + (columnName == null ? "vùng hiển thị ảnh danh mục" : columnName + " không được để trống");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(friendly));
+        }
+
         String friendly;
         if (msg.contains("phone") || msg.contains("accounts_phone_key")) {
             friendly = "Số điện thoại này đã được đăng ký. Vui lòng dùng số khác.";
@@ -80,10 +102,13 @@ public class GlobalExceptionHandler {
             friendly = "Email này đã được đăng ký. Vui lòng dùng email khác.";
         } else if (msg.contains("username") || msg.contains("accounts_pkey")) {
             friendly = "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.";
+        } else if (msg.contains("categories_pkey")) {
+            friendly = "Mã loại hàng đã tồn tại.";
+        } else if (msg.contains("ux_categories_slug") || msg.contains("categories_slug_key")) {
+            friendly = "Slug SEO đã tồn tại.";
         } else {
-            friendly = "Dữ liệu đã tồn tại. Vui lòng kiểm tra lại thông tin.";
+            friendly = "Vi phạm ràng buộc dữ liệu. Vui lòng kiểm tra lại thông tin.";
         }
-        logger.warn("Data integrity violation: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(friendly));
     }
 
@@ -139,7 +164,7 @@ public class GlobalExceptionHandler {
     // ================================================================
     // These handlers MUST be defined BEFORE the catch-all Exception handler
     // to prevent security exceptions from being swallowed and returned as 500
-    
+
     /**
      * Handle Spring Security AccessDeniedException (403 Forbidden)
      * Thrown when authenticated user lacks required role/permission
@@ -152,7 +177,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("Bạn không có quyền truy cập tài nguyên này!"));
     }
-    
+
     /**
      * Handle Spring Security AuthenticationException (401 Unauthorized)
      * Thrown when user is not authenticated (missing/invalid token)
@@ -165,7 +190,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Vui lòng đăng nhập để tiếp tục!"));
     }
-    
+
     /**
      * Handle missing required headers (400 Bad Request)
      * Thrown when required header (e.g., Authorization) is missing
@@ -178,11 +203,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Thiếu thông tin xác thực trong request!"));
     }
-    
+
     // ================================================================
     // SPRING MVC EXCEPTION HANDLERS (TC-PRD-CTRL-040, TC-PRD-CTRL-041)
     // ================================================================
-    
+
     /**
      * TC-PRD-CTRL-040 FIX: Handle missing required request parameters (400 Bad Request)
      * Thrown when required @RequestParam is missing from request
@@ -196,7 +221,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Thiếu tham số bắt buộc: " + ex.getParameterName()));
     }
-    
+
     /**
      * TC-PRD-CTRL-041 FIX: Handle unsupported media type (415 Unsupported Media Type)
      * Thrown when request Content-Type doesn't match expected type
@@ -214,11 +239,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .body(ApiResponse.error("Content-Type không hỗ trợ. Vui lòng sử dụng: " + supportedTypes));
     }
-    
+
     // ================================================================
     // CATCH-ALL EXCEPTION HANDLER (MUST BE LAST)
     // ================================================================
-    
+
     @SneakyThrows
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalError(Exception ex, HttpServletRequest request) {
@@ -233,22 +258,34 @@ public class GlobalExceptionHandler {
             logger.debug("Async/channel closed (client disconnected): {}", ex.getMessage());
             return ResponseEntity.ok().build(); // Empty 200 — connection already gone, body irrelevant
         }
-        
+
         // Ignore favicon noise
         String uri = request.getRequestURI();
         if (uri != null && uri.contains("favicon")) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
-        
+
         // SECURITY FIX: Không leak stack trace ra client
         // Log chi tiết ở backend, trả generic message cho client
         logger.error("Internal Server Error at {}: {}", uri, ex.getMessage(), ex);
-        
+
         // Production: Generic error message
         // Development: Có thể thêm chi tiết (check via profile)
         String errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại sau!";
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(errorMessage));
+    }
+
+    private String extractColumnName(String message) {
+        if (message == null) {
+            return null;
+        }
+        int start = message.indexOf('"');
+        int end = start >= 0 ? message.indexOf('"', start + 1) : -1;
+        if (start >= 0 && end > start) {
+            return message.substring(start + 1, end);
+        }
+        return null;
     }
 }

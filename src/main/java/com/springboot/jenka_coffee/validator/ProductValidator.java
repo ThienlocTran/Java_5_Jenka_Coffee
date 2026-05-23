@@ -15,40 +15,43 @@ import java.util.List;
  */
 @Component
 public class ProductValidator {
-    
+
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
-        "image/jpeg", "image/jpg", "image/png", "image/webp"
+        "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"
     );
-    
+    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = List.of(
+        "jpg", "jpeg", "png", "webp", "gif"
+    );
+
     // TC-PRD-CTRL-046 FIX: Apache Tika for magic byte detection
     // Prevents fake image RCE attack where attacker sends PE binary with MIME type "image/jpeg"
     private static final Tika tika = new Tika();
-    
+
     /**
      * Validate product price
      */
     public void validatePrice(BigDecimal price) {
         if (price == null) {
-            throw new BusinessRuleException("Giá sản phẩm không được để trống");
+            throw new BusinessRuleException("Gia san pham khong duoc de trong");
         }
         if (price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Giá sản phẩm không thể âm");
+            throw new BusinessRuleException("Gia san pham khong the am");
         }
     }
-    
+
     /**
      * Validate product name
      */
     public void validateName(String name) {
         if (name == null || name.isBlank()) {
-            throw new BusinessRuleException("Tên sản phẩm không được để trống");
+            throw new BusinessRuleException("Ten san pham khong duoc de trong");
         }
         if (name.length() > 255) {
-            throw new BusinessRuleException("Tên sản phẩm không được vượt quá 255 ký tự");
+            throw new BusinessRuleException("Ten san pham khong duoc vuot qua 255 ky tu");
         }
     }
-    
+
     /**
      * Validate image file
      * TC-PRD-CTRL-046 FIX: Added Apache Tika magic byte detection to prevent fake image RCE
@@ -58,78 +61,78 @@ public class ProductValidator {
             return; // Optional file
         }
 
-        // TC-SEC-002 FIX: Validate filename for path traversal attack prevention
-        // Attacker can send filename "../../etc/passwd.jpg" to traverse directories
         String filename = file.getOriginalFilename();
-        if (filename != null) {
-            // Check for path traversal sequences
-            if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
-                throw new BusinessRuleException("Tên file không hợp lệ: chứa ký tự nguy hiểm (path traversal)");
-            }
-            // Additional: only allow safe characters in filename
-            if (!filename.matches("^[a-zA-Z0-9._\\-\\s]+$")) {
-                throw new BusinessRuleException("Tên file không hợp lệ: chỉ chấp nhận chữ cái, số, dấu chấm, gạch ngang");
-            }
+        if (filename == null || filename.isBlank()) {
+            throw new BusinessRuleException("Ten file khong hop le");
         }
 
-        // Check file size
+        // Only block traversal-style names; normal spaces, accents, plus signs, underscores are allowed.
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new BusinessRuleException("Ten file khong hop le: chua ky tu nguy hiem (path traversal)");
+        }
+
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BusinessRuleException("Kích thước file không được vượt quá 5MB");
+            throw new BusinessRuleException("Kich thuoc file khong duoc vuot qua 5MB");
         }
 
-        // Check file type (MIME type from request header)
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-            throw new BusinessRuleException("Chỉ chấp nhận file ảnh định dạng: JPG, PNG, WEBP");
+            throw new BusinessRuleException("Chi chap nhan file anh dinh dang: JPG, JPEG, PNG, WEBP, GIF");
         }
 
-        // TC-PRD-CTRL-046 FIX: Validate actual file content using Apache Tika magic bytes
-        // CRITICAL SECURITY: Client-controlled MIME type can be spoofed
-        // Example attack: PE binary with Content-Type: image/jpeg
-        // Tika reads first bytes of file to detect real type (magic bytes)
+        String extension = getFileExtension(filename);
+        if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+            throw new BusinessRuleException("Phan mo rong file khong duoc ho tro. Chi chap nhan: JPG, JPEG, PNG, WEBP, GIF");
+        }
+
         try {
             String detectedType = tika.detect(file.getInputStream());
-            
-            // Normalize detected type (Tika may return "image/jpg" instead of "image/jpeg")
+
             String normalizedType = detectedType.toLowerCase();
             if (normalizedType.equals("image/jpg")) {
                 normalizedType = "image/jpeg";
             }
-            
+
             if (!ALLOWED_IMAGE_TYPES.contains(normalizedType)) {
                 throw new BusinessRuleException(
-                    "File không phải ảnh hợp lệ. Phát hiện loại file: " + detectedType + 
-                    ". Chỉ chấp nhận: JPG, PNG, WEBP"
+                    "File khong phai anh hop le. Phat hien loai file: " + detectedType +
+                    ". Chi chap nhan: JPG, JPEG, PNG, WEBP, GIF"
                 );
             }
         } catch (IOException e) {
-            throw new BusinessRuleException("Không thể đọc file để kiểm tra. Vui lòng thử lại.");
+            throw new BusinessRuleException("Khong the doc file de kiem tra. Vui long thu lai.");
         }
     }
-    
+
     /**
      * Validate multiple image files
      */
     public void validateImageFiles(List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
-            throw new BusinessRuleException("Vui lòng chọn ít nhất 1 ảnh");
+            throw new BusinessRuleException("Vui long chon it nhat 1 anh");
         }
-        
+
         if (files.size() > 10) {
-            throw new BusinessRuleException("Chỉ được upload tối đa 10 ảnh");
+            throw new BusinessRuleException("Chi duoc upload toi da 10 anh");
         }
-        
-        // TC-PRD-CTRL-044 FIX: Check for duplicate filenames in same request
+
         java.util.Set<String> filenames = new java.util.HashSet<>();
         for (MultipartFile file : files) {
             String filename = file.getOriginalFilename();
             if (filename != null && !filenames.add(filename)) {
-                throw new BusinessRuleException("File trùng lặp: " + filename + ". Vui lòng chọn các file khác nhau.");
+                throw new BusinessRuleException("File trung lap: " + filename + ". Vui long chon cac file khac nhau.");
             }
         }
-        
+
         for (MultipartFile file : files) {
             validateImageFile(file);
         }
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 }
