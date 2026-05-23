@@ -29,6 +29,18 @@ public class Category implements Serializable {
     @Column(name = "icon", length = 500)
     private String icon;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "meta_title", length = 255)
+    private String metaTitle;
+
+    @Column(name = "meta_description", length = 500)
+    private String metaDescription;
+
+    @Column(name = "seo_content", columnDefinition = "TEXT")
+    private String seoContent;
+
     @Column(name = "slug", length = 300, unique = true)
     private String slug;
 

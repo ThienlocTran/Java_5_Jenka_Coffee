@@ -174,6 +174,10 @@ public class CategoryServiceImpl implements CategoryService {
         // Update fields from request
         existing.setName(request.getName());
         existing.setSlug(request.getSlug());
+        existing.setDescription(request.getDescription());
+        existing.setMetaTitle(request.getMetaTitle());
+        existing.setMetaDescription(request.getMetaDescription());
+        existing.setSeoContent(request.getSeoContent());
 
         // Update icon if provided, otherwise keep existing or set from predefined list
         if (request.getIcon() != null && !request.getIcon().isEmpty()) {
