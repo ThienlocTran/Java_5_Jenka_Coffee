@@ -28,15 +28,6 @@ public class ApiNewsController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "9") int size) {
 
-        // VULN #22 FIX: Prevent public OOM DoS via pagination abuse
-        // PROBLEM: No validation on size parameter → attacker can request size=Integer.MAX_VALUE
-        // - Public endpoint (no authentication required)
-        // - JVM tries to allocate huge list → OutOfMemoryError
-        // - Single request can crash entire server
-        // SOLUTION: Enforce reasonable limits
-        // - Min size: 1 (prevent zero/negative)
-        // - Max size: 100 (reasonable for news pagination)
-        // - Min page: 0 (prevent negative)
         size = Math.min(Math.max(size, 1), 100);
         page = Math.max(page, 0);
 
@@ -53,17 +44,28 @@ public class ApiNewsController {
         data.put("totalPages", newsPage.getTotalPages());
         data.put("totalItems", newsPage.getTotalElements());
 
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tin tức thành công", data));
+        return ResponseEntity.ok(ApiResponse.success("Lay danh sach tin tuc thanh cong", data));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<News>> getNewsDetail(@PathVariable("id") Integer id) {
         News news = newsService.findById(id);
-        if (news == null || !news.getAvailable()) {
+        if (news == null || !Boolean.TRUE.equals(news.getAvailable())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Không tìm thấy tin tức với ID: " + id));
+                    .body(ApiResponse.error("Khong tim thay tin tuc voi ID: " + id));
         }
 
-        return ResponseEntity.ok(ApiResponse.success("Lắng chi tiết tin tức thành công", news));
+        return ResponseEntity.ok(ApiResponse.success("Lay chi tiet tin tuc thanh cong", news));
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<ApiResponse<News>> getNewsDetailBySlug(@PathVariable("slug") String slug) {
+        News news = newsService.findAvailableBySlug(slug);
+        if (news == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Khong tim thay tin tuc voi slug: " + slug));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("Lay chi tiet tin tuc theo slug thanh cong", news));
     }
 }

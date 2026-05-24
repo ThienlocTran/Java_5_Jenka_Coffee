@@ -33,7 +33,6 @@ public class ApiAdminNewsController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
-        // VULN-054 FIX: Giới hạn page size tránh Memory DoS
         size = Math.min(Math.max(size, 1), 100);
         page = Math.max(page, 0);
 
@@ -48,62 +47,72 @@ public class ApiAdminNewsController {
         News news = newsService.findById(id);
         if (news == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Không tìm thấy tin tức: " + id));
+                    .body(ApiResponse.error("Khong tim thay tin tuc: " + id));
         }
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tin tức thành công", news));
+        return ResponseEntity.ok(ApiResponse.success("Lay thong tin tin tuc thanh cong", news));
     }
 
-    /**
-     * VULN-049 FIX: Dùng NewsRequest DTO thay vì @ModelAttribute News (raw entity).
-     * Ngăn mass assignment: id, createDate, available, image URL không được client set.
-     */
-    @PostMapping(consumes = { "multipart/form-data" })
+    @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<News>> createNews(
             @Valid @ModelAttribute NewsRequest request,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
 
         News news = new News();
         news.setTitle(sanitize(request.getTitle()));
-        news.setContent(request.getContent()); // HTML content — sanitize ở frontend hoặc dùng OWASP
-        news.setCreateDate(LocalDateTime.now()); // server-side, không tin client
-        news.setAvailable(false); // default unpublished — admin toggle riêng
-        // id = null → INSERT, không thể override thành UPDATE
+        news.setSlug(normalizeOptional(request.getSlug()));
+        news.setContent(request.getContent());
+        news.setCreateDate(LocalDateTime.now());
+        news.setAvailable(false);
 
-        newsService.saveNews(news, file);
+        News savedNews = newsService.saveNews(news, file);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo tin tức thành công", news));
+                .body(ApiResponse.success("Tao tin tuc thanh cong", savedNews));
     }
 
-    @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<News>> updateNews(
             @PathVariable Integer id,
             @Valid @ModelAttribute NewsRequest request,
             @RequestParam(value = "imageFile", required = false) MultipartFile file) {
 
         News existing = newsService.findById(id);
-        existing.setTitle(sanitize(request.getTitle()));
-        existing.setContent(request.getContent());
-        // createDate, available, id giữ nguyên từ DB — không tin client
+        if (existing == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Khong tim thay tin tuc: " + id));
+        }
 
-        newsService.saveNews(existing, file);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật tin tức thành công", existing));
+        existing.setTitle(sanitize(request.getTitle()));
+        existing.setSlug(normalizeOptional(request.getSlug()));
+        existing.setContent(request.getContent());
+
+        News savedNews = newsService.saveNews(existing, file);
+        return ResponseEntity.ok(ApiResponse.success("Cap nhat tin tuc thanh cong", savedNews));
     }
 
     @PutMapping("/{id}/toggle")
     public ResponseEntity<ApiResponse<Void>> toggleAvailable(@PathVariable Integer id) {
         newsService.toggleAvailable(id);
-        return ResponseEntity.ok(ApiResponse.success("Thay đổi trạng thái tin tức thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Thay doi trang thai tin tuc thanh cong", null));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteNews(@PathVariable Integer id) {
         newsService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Xóa tin tức thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Xoa tin tuc thanh cong", null));
     }
 
-    /** Strip HTML tags cơ bản cho title — ngăn XSS trong tiêu đề */
     private String sanitize(String input) {
-        if (input == null) return null;
+        if (input == null) {
+            return null;
+        }
         return input.replaceAll("<[^>]*>", "").trim();
+    }
+
+    private String normalizeOptional(String input) {
+        if (input == null) {
+            return null;
+        }
+        String value = input.trim();
+        return value.isEmpty() ? null : value;
     }
 }

@@ -51,7 +51,7 @@ public class ApiSitemapController {
         // ── Trang tĩnh ──────────────────────────────────────────────
         addUrl(xml, SITE_URL + "/",              "1.0",  "daily",   today);
         addUrl(xml, SITE_URL + "/product/list",  "0.9",  "daily",   today);
-        addUrl(xml, SITE_URL + "/news",          "0.8",  "weekly",  today);
+        addUrl(xml, SITE_URL + "/tin-tuc",       "0.8",  "weekly",  today);
         addUrl(xml, SITE_URL + "/contact",       "0.5",  "monthly", today);
 
         // ── Danh mục sản phẩm ───────────────────────────────────────────
@@ -115,7 +115,10 @@ public class ApiSitemapController {
                 newsPageResult = newsRepository.findByAvailableTrueOrderByCreateDateDesc(
                         PageRequest.of(newsPage, newsPageSize));
                 for (News n : newsPageResult.getContent()) {
-                    String url = SITE_URL + "/news/detail/" + n.getId();
+                    String newsPath = (n.getSlug() != null && !n.getSlug().isBlank())
+                            ? "/tin-tuc/" + n.getSlug()
+                            : "/news/detail/" + n.getId();
+                    String url = SITE_URL + newsPath;
                     String lastmod = n.getCreateDate() != null
                             ? n.getCreateDate().format(W3C_DATE)
                             : today;
