@@ -22,6 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StoreFeedbackServiceImpl implements StoreFeedbackService {
 
+    private static final String ANONYMOUS_NAME = "Khách hàng Jenka";
+
     private final StoreFeedbackRepository feedbackRepository;
 
     private static final org.owasp.html.PolicyFactory SANITIZE_POLICY =
@@ -32,7 +34,7 @@ public class StoreFeedbackServiceImpl implements StoreFeedbackService {
     public StoreFeedback create(StoreFeedbackRequest request) {
         StoreFeedback feedback = new StoreFeedback();
         feedback.setBranch(normalizeBranch(request.getBranch()));
-        feedback.setFullname(sanitize(request.getFullname()));
+        feedback.setFullname(normalizeFullname(request.getFullname()));
         feedback.setPhone(normalizePhone(request.getPhone()));
         feedback.setComment(sanitize(request.getContent()));
         feedback.setRating(request.getRating());
@@ -79,14 +81,21 @@ public class StoreFeedbackServiceImpl implements StoreFeedbackService {
         if (input == null) {
             return null;
         }
-        return SANITIZE_POLICY.sanitize(input).trim();
+        String value = SANITIZE_POLICY.sanitize(input).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private String normalizeFullname(String fullname) {
+        String value = sanitize(fullname);
+        return value == null ? ANONYMOUS_NAME : value;
     }
 
     private String normalizePhone(String phone) {
         if (phone == null) {
             return null;
         }
-        return phone.replaceAll("[\\s.-]+", "").trim();
+        String value = phone.replaceAll("[\\s.-]+", "").trim();
+        return value.isEmpty() ? null : value;
     }
 
     private String normalizeBranch(String branch) {

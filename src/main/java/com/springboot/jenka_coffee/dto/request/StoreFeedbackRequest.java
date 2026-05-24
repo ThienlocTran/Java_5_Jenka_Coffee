@@ -16,13 +16,11 @@ public class StoreFeedbackRequest {
     @Pattern(regexp = "^(HN|HCM|ONLINE|OTHER)$", message = "Chi nhánh không hợp lệ")
     private String branch;
 
-    @NotBlank(message = "Họ và tên không được để trống")
     @Size(min = 2, max = 100, message = "Họ và tên phải từ 2-100 ký tự")
     private String fullname;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(
-            regexp = "^(\\+84|84|0)(?:[\\s.-]?\\d){8,10}$",
+            regexp = "^$|^(\\+84|84|0)(?:[\\s.-]?\\d){8,10}$",
             message = "Số điện thoại không hợp lệ"
     )
     private String phone;
