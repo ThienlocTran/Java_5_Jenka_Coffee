@@ -24,7 +24,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class StoreFeedbackServiceImpl implements StoreFeedbackService {
 
-    private static final String ANONYMOUS_NAME = "Khách hàng Jenka";
+    private static final String ANONYMOUS_NAME = "Khách hàng";
 
     private final StoreFeedbackRepository feedbackRepository;
 
@@ -104,6 +104,7 @@ public class StoreFeedbackServiceImpl implements StoreFeedbackService {
         if (branch == null || branch.isBlank()) {
             return null;
         }
+
         String normalizedKey = Normalizer.normalize(branch, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "")
                 .replaceAll("[^\\p{Alnum}]+", "")
