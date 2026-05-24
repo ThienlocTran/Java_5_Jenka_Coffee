@@ -62,7 +62,7 @@ public class ApiAdminNewsController {
         news.setSlug(normalizeOptional(request.getSlug()));
         news.setContent(request.getContent());
         news.setCreateDate(LocalDateTime.now());
-        news.setAvailable(false);
+        news.setAvailable(true);
 
         News savedNews = newsService.saveNews(news, file);
         return ResponseEntity.status(HttpStatus.CREATED)

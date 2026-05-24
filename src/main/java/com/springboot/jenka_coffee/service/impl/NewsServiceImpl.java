@@ -56,6 +56,9 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     public News create(News news) {
+        if (news.getAvailable() == null) {
+            news.setAvailable(true);
+        }
         news.setSlug(resolveUniqueSlug(news.getSlug(), news.getTitle(), null));
         News savedNews = newsRepository.save(news);
         log.info("Successfully created news with ID: {} and slug: {}", savedNews.getId(), savedNews.getSlug());
@@ -95,6 +98,9 @@ public class NewsServiceImpl implements NewsService {
             if (url != null) {
                 news.setImage(url);
             }
+        }
+        if (news.getId() == null && news.getAvailable() == null) {
+            news.setAvailable(true);
         }
         news.setSlug(resolveUniqueSlug(news.getSlug(), news.getTitle(), news.getId()));
         News savedNews = newsRepository.save(news);
