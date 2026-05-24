@@ -752,8 +752,11 @@ public class ProductServiceImpl implements ProductService {
         existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
-        existing.setHomeAddon(request.getIsHomeAddon() != null ? request.getIsHomeAddon() : Boolean.TRUE.equals(existing.getHomeAddon()));
-        existing.setHomeAddonPosition(request.getHomeAddonPosition() != null ? request.getHomeAddonPosition() : existing.getHomeAddonPosition());
+        Boolean homeAddon = request.getIsHomeAddon() != null ? request.getIsHomeAddon() : Boolean.TRUE.equals(existing.getHomeAddon());
+        existing.setHomeAddon(homeAddon);
+        if (Boolean.TRUE.equals(homeAddon)) {
+            existing.setHomeAddonPosition(request.getHomeAddonPosition());
+        }
         existing.setCategory(category);
 
         // Save with image

@@ -122,7 +122,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // ── Home add-on products for homepage section ─────────────────────
     @Query("SELECT p FROM Product p JOIN FETCH p.category " +
            "WHERE p.homeAddon = true AND p.available = true " +
-           "ORDER BY COALESCE(p.homeAddonPosition, 999999) ASC, p.createDate DESC")
+           "ORDER BY COALESCE(p.homeAddonPosition, 999999) ASC, p.createDate DESC, p.id ASC")
     List<Product> findHomeAddonProducts(Pageable pageable);
 
     long countByCreateDateGreaterThanEqualAndCreateDateLessThan(LocalDateTime from, LocalDateTime to);
