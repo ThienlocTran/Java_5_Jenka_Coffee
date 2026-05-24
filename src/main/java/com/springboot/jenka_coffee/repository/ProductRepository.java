@@ -31,6 +31,10 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
            countQuery = "SELECT COUNT(p) FROM Product p")
     Page<Product> findAllWithCategory(Pageable pageable);
 
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE p.available = true ORDER BY p.createDate DESC",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE p.available = true")
+    Page<Product> findByAvailableTrueWithCategory(Pageable pageable);
+
     @Query("SELECT p FROM Product p WHERE p.featured = true ORDER BY COALESCE(p.featuredPosition, 999999), p.createDate DESC")
     List<Product> findFeaturedProductsForOrdering();
 
