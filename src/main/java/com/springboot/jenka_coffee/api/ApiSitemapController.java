@@ -28,6 +28,8 @@ public class ApiSitemapController {
             "/may-pha-ca-phe",
             "/may-xay-ca-phe",
             "/may-pha-ca-phe-cho-quan",
+            "/may-pha-ca-phe-ha-noi",
+            "/may-pha-ca-phe-tphcm",
             "/setup-quan-ca-phe"
     );
 
