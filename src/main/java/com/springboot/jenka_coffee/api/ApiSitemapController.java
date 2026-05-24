@@ -17,12 +17,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
 public class ApiSitemapController {
 
     private static final DateTimeFormatter W3C_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final List<String> LANDING_PATHS = Arrays.asList(
+            "/may-pha-ca-phe",
+            "/may-xay-ca-phe",
+            "/may-pha-ca-phe-cho-quan",
+            "/setup-quan-ca-phe"
+    );
 
     private final ProductRepository productRepository;
     private final NewsRepository newsRepository;
@@ -49,6 +56,7 @@ public class ApiSitemapController {
         addUrl(xml, siteUrl + "/", "1.0", "daily", today);
         addUrl(xml, siteUrl + "/product/list", "0.7", "daily", today);
         addUrl(xml, siteUrl + "/tin-tuc", "0.6", "weekly", today);
+        appendLandingUrls(xml, today);
 
         appendCategoryUrls(xml, today);
         appendProductUrls(xml, today);
@@ -58,6 +66,12 @@ public class ApiSitemapController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_XML)
                 .body(xml.toString());
+    }
+
+    private void appendLandingUrls(StringBuilder xml, String today) {
+        for (String path : LANDING_PATHS) {
+            addUrl(xml, siteUrl + path, "0.8", "weekly", today);
+        }
     }
 
     private void appendCategoryUrls(StringBuilder xml, String today) {
