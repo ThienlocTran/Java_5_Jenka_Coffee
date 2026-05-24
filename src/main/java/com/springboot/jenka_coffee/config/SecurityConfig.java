@@ -114,6 +114,7 @@ public class SecurityConfig {
                     // VULN #24 FIX: Removed /api/csrf-token endpoint
                     // CSRF protection is disabled (using JWT + SameSite cookies instead)
                     // Having unused CSRF endpoint creates false sense of security
+                    "/api/consultations",
                     "/api/contacts",
                     "/api/contact/**",
                     "/api/feedbacks",             // Feedback popup - public access

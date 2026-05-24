@@ -117,7 +117,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 // VULN-REQUEST-BODY-CONSUMPTION FIX: Disabled phone extraction from body
                 // Use IP-based rate limiting only (5 resends per minute per IP)
                 bucket = signupBuckets.get(ip, k -> buildBucket(5, Duration.ofMinutes(1)));
-            } else if (path.startsWith("/api/contact/send")) {
+            } else if (path.startsWith("/api/contact/send") || path.startsWith("/api/consultations")) {
                 // BUG-48 FIX: Email-specific rate limiting for contact form
                 String email = req.getParameter("email");
                 if (email != null && !email.isBlank()) {
