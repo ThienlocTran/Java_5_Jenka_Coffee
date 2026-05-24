@@ -94,6 +94,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                     "/api/products/**", "/api/categories/**",
                     "/api/news/**", "/api/banners/**",
+                    "/api/feedbacks/**",
                     "/sitemap.xml", "/robots.txt").permitAll()
                 .requestMatchers(
                     // VULN #15 FIX: Sync with actual controller endpoints
