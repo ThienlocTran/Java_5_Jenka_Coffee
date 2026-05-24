@@ -14,8 +14,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -102,6 +104,17 @@ public class StoreFeedbackServiceImpl implements StoreFeedbackService {
         if (branch == null || branch.isBlank()) {
             return null;
         }
-        return branch.trim().toUpperCase();
+        String normalizedKey = Normalizer.normalize(branch, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replaceAll("[^\\p{Alnum}]+", "")
+                .toUpperCase(Locale.ROOT);
+
+        return switch (normalizedKey) {
+            case "HN", "HANOI" -> "HN";
+            case "HCM", "HOCHIMINH", "TPHOCHIMINH", "TPHCM", "SAIGON" -> "HCM";
+            case "ONLINE" -> "ONLINE";
+            case "OTHER", "KHAC" -> "OTHER";
+            default -> branch.trim().toUpperCase(Locale.ROOT);
+        };
     }
 }

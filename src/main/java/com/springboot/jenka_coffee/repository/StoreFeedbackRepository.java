@@ -16,7 +16,7 @@ public interface StoreFeedbackRepository extends JpaRepository<StoreFeedback, Lo
 
     @Query("""
             select f from StoreFeedback f
-            where (:branch is null or upper(f.branch) = upper(:branch))
+            where (:branch is null or f.branch = :branch)
               and (:status is null or f.status = :status)
             order by f.createdAt desc
             """)

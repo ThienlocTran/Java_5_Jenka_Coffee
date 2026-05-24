@@ -34,4 +34,19 @@ public class StoreFeedbackRequest {
     @Min(value = 1, message = "Đánh giá phải từ 1-5 sao")
     @Max(value = 5, message = "Đánh giá phải từ 1-5 sao")
     private Integer rating;
+    public void setFullname(String fullname) {
+        this.fullname = normalizeOptional(fullname);
+    }
+
+    public void setPhone(String phone) {
+        this.phone = normalizeOptional(phone);
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
 }
