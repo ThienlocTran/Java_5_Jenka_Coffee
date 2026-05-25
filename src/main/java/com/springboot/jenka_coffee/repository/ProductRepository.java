@@ -70,7 +70,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     // ── Search (paginated only) ──────────────────────────────────────
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category c WHERE " +
-                   "(:categorySlug IS NULL OR LOWER(c.slug) = :categorySlug) AND " +
+                   "(:categoryFilterRaw IS NULL OR c.id = :categoryFilterRaw OR LOWER(c.slug) = :categorySlug) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                    "p.available = true AND " +
@@ -78,14 +78,15 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    " LOWER(p.name) LIKE :keywordPattern OR " +
                    " LOWER(p.description) LIKE :keywordPattern)",
            countQuery = "SELECT COUNT(p) FROM Product p JOIN p.category c WHERE " +
-                        "(:categorySlug IS NULL OR LOWER(c.slug) = :categorySlug) AND " +
+                        "(:categoryFilterRaw IS NULL OR c.id = :categoryFilterRaw OR LOWER(c.slug) = :categorySlug) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "p.available = true AND " +
                         "(:keywordPattern IS NULL OR " +
                         " LOWER(p.name) LIKE :keywordPattern OR " +
                         " LOWER(p.description) LIKE :keywordPattern)")
-    Page<Product> findByAllCriteria(@Param("categorySlug") String categorySlug,
+    Page<Product> findByAllCriteria(@Param("categoryFilterRaw") String categoryFilterRaw,
+                                    @Param("categorySlug") String categorySlug,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,
                                     @Param("keywordPattern") String keywordPattern,
