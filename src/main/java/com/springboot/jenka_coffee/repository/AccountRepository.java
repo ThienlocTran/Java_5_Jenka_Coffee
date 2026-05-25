@@ -23,6 +23,13 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         boolean existsByEmailIgnoreCase(String email);
 
         /**
+         * Legacy alias kept for older tests/callers.
+         */
+        default boolean existsByEmail(String email) {
+                return existsByEmailIgnoreCase(email);
+        }
+
+        /**
          * Check if phone exists
          * Generated query: SELECT COUNT(*) FROM accounts WHERE phone = ?
          */
@@ -37,6 +44,13 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          * Find account by email
          */
         Optional<Account> findByEmailIgnoreCase(String email);
+
+        /**
+         * Legacy alias kept for older tests/callers.
+         */
+        default Optional<Account> findByEmail(String email) {
+                return findByEmailIgnoreCase(email);
+        }
 
         List<Account> findAllByEmailIgnoreCase(String email);
 

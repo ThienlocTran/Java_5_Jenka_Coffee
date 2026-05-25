@@ -108,7 +108,7 @@ class AccountServiceImplTest {
         newAccount.setPasswordHash("password123");
 
         when(accountRepository.existsById("newuser")).thenReturn(false);
-        when(accountRepository.existsByEmail("existing@test.com")).thenReturn(true);
+        when(accountRepository.existsByEmailIgnoreCase("existing@test.com")).thenReturn(true);
 
         // Act & Assert
         ValidationException exception = assertThrows(ValidationException.class, () -> {

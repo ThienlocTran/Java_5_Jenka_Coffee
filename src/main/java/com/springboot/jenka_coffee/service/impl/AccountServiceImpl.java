@@ -30,7 +30,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class AccountServiceImpl implements AccountService {
+public  class AccountServiceImpl implements AccountService {
 
     private final AccountRepository dao;
     private final UploadService uploadService;
@@ -474,6 +474,33 @@ public class AccountServiceImpl implements AccountService {
         account.setPhone(phone);
         dao.save(account);
         log.info("Updated phone number for user: {}", username);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "accountSecurity", key = "#result.username", condition = "#result != null")
+    public Account setAdminRoleByEmail(String email, boolean isAdmin) {
+        Account account = findByEmail(email);
+        if (account == null) {
+            throw new ResourceNotFoundException("Account", "email", email);
+        }
+
+        if (Boolean.TRUE.equals(account.getAdmin()) && !isAdmin) {
+            long adminCount = dao.countByAdminTrue();
+            if (adminCount <= 1) {
+                throw new BusinessRuleException("Khong the ha quyen admin cuoi cung trong he thong!");
+            }
+        }
+
+        account.setAdmin(isAdmin);
+        return dao.save(account);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "accountSecurity", key = "#username")
+    public Account setAdminRole(String username, boolean isAdmin) {
+        return setAdminRole(username, isAdmin, null);
     }
 
     @Override
