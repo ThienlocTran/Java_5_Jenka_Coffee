@@ -35,6 +35,7 @@ public class ApiProductController {
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProducts(
             @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "categorySlug", required = false) String categorySlug,
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
             @RequestParam(value = "maxPrice", required = false) Double maxPriceDouble,
             @RequestParam(value = "keyword", required = false) String keyword,
@@ -66,7 +67,6 @@ public class ApiProductController {
 
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
-
         Sort sortOrder = switch (sort) {
             case "price_asc"  -> Sort.by("price").ascending();
             case "price_desc" -> Sort.by("price").descending();
@@ -75,13 +75,13 @@ public class ApiProductController {
         };
 
         Pageable pageable = PageRequest.of(page, size, sortOrder);
-        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, minPrice, maxPrice,
+        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, categorySlug, minPrice, maxPrice,
                 keyword, pageable);
 
         // BUG FIX: Add null check for productPage to prevent NPE
         if (productPage == null) {
-            log.error("Service returned null productPage for filters: categoryId={}, minPrice={}, maxPrice={}, keyword={}", 
-                    categoryId, minPrice, maxPrice, keyword);
+            log.error("Service returned null productPage for filters: categoryId={}, categorySlug={}, minPrice={}, maxPrice={}, keyword={}",
+                    categoryId, categorySlug, minPrice, maxPrice, keyword);
             return ResponseEntity.status(500)
                     .body(ApiResponse.error("Lỗi khi lấy danh sách sản phẩm"));
         }

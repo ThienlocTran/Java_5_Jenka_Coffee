@@ -38,7 +38,7 @@ public interface ProductService {
 
     void toggleAvailable(Integer id);
 
-    Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+    Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
                                                 String keyword, Pageable pageable);
 
     Page<Product> searchProductsPaginated(String keyword, Pageable pageable);

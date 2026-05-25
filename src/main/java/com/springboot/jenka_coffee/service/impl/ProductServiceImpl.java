@@ -454,28 +454,47 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
-        if (isDefaultHomepageQuery(categorySlug, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+        if (isDefaultHomepageQuery(categoryId, categorySlug, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
+        String normalizedCategoryId = normalizeCategoryId(categoryId);
+        String normalizedCategoryIdSlug = categorySlug == null ? normalizeCategorySlug(categoryId) : null;
         String normalizedCategorySlug = normalizeCategorySlug(categorySlug);
         String normalizedKeywordPattern = normalizeKeywordPattern(keyword);
-        return productRepository.findByAllCriteria(normalizedCategorySlug, minPrice, maxPrice, normalizedKeywordPattern, pageable);
+        return productRepository.findByAllCriteria(
+                normalizedCategoryId,
+                normalizedCategoryIdSlug,
+                normalizedCategorySlug,
+                minPrice,
+                maxPrice,
+                normalizedKeywordPattern,
+                pageable
+        );
     }
 
-    private boolean isDefaultHomepageQuery(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
+    private boolean isDefaultHomepageQuery(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
         return (categoryId == null || categoryId.isBlank())
+                && (categorySlug == null || categorySlug.isBlank())
                 && minPrice == null
                 && maxPrice == null
                 && (keyword == null || keyword.isBlank());
     }
 
-    private String normalizeCategorySlug(String categorySlug) {
-        if (categorySlug == null) {
+    private String normalizeCategoryId(String categoryId) {
+        if (categoryId == null) {
             return null;
         }
-        String normalized = categorySlug.trim().toLowerCase();
+        String normalized = categoryId.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeCategorySlug(String categoryFilter) {
+        if (categoryFilter == null) {
+            return null;
+        }
+        String normalized = categoryFilter.trim().toLowerCase();
         return normalized.isEmpty() ? null : normalized;
     }
 
