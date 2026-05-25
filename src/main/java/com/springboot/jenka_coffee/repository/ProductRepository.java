@@ -70,7 +70,10 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     // ── Search (paginated only) ──────────────────────────────────────
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category c WHERE " +
-                   "(:categoryFilterRaw IS NULL OR c.id = :categoryFilterRaw OR LOWER(c.slug) = :categorySlug) AND " +
+                   "(" +
+                   "(:categorySlug IS NOT NULL AND LOWER(c.slug) = :categorySlug) OR " +
+                   "(:categorySlug IS NULL AND (:categoryId IS NULL OR c.id = :categoryId OR LOWER(c.slug) = :categoryIdSlug))" +
+                   ") AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                    "p.available = true AND " +
@@ -78,14 +81,18 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    " LOWER(p.name) LIKE :keywordPattern OR " +
                    " LOWER(p.description) LIKE :keywordPattern)",
            countQuery = "SELECT COUNT(p) FROM Product p JOIN p.category c WHERE " +
-                        "(:categoryFilterRaw IS NULL OR c.id = :categoryFilterRaw OR LOWER(c.slug) = :categorySlug) AND " +
+                        "(" +
+                        "(:categorySlug IS NOT NULL AND LOWER(c.slug) = :categorySlug) OR " +
+                        "(:categorySlug IS NULL AND (:categoryId IS NULL OR c.id = :categoryId OR LOWER(c.slug) = :categoryIdSlug))" +
+                        ") AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "p.available = true AND " +
                         "(:keywordPattern IS NULL OR " +
                         " LOWER(p.name) LIKE :keywordPattern OR " +
                         " LOWER(p.description) LIKE :keywordPattern)")
-    Page<Product> findByAllCriteria(@Param("categoryFilterRaw") String categoryFilterRaw,
+    Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                    @Param("categoryIdSlug") String categoryIdSlug,
                                     @Param("categorySlug") String categorySlug,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,
