@@ -1,7 +1,19 @@
 package com.springboot.jenka_coffee.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.LocalDateTime;
@@ -18,32 +30,48 @@ public class StoreFeedback {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 10)
-    private String branch; // "HN" or "HCM"
+    @Column(name = "branch", length = 100)
+    private String branch;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "fullname", nullable = false, length = 100)
     private String fullname;
 
-    @Column(length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
-    @Column(name = "store_rating", nullable = false)
-    private Integer storeRating; // 1-5 stars
+    @Column(name = "rating")
+    private Integer rating;
 
-    @Column(name = "staff_rating", nullable = false)
-    private Integer staffRating; // 1-5 stars
+    @Column(name = "status", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private FeedbackStatus status;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "store_rating")
+    private Integer storeRating;
+
+    @Column(name = "staff_rating")
+    private Integer staffRating;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = FeedbackStatus.PENDING;
+        }
     }
 
     @Override

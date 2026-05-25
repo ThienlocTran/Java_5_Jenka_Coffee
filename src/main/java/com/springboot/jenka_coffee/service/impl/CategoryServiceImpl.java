@@ -9,6 +9,9 @@ import com.springboot.jenka_coffee.repository.CategoryRepository;
 import com.springboot.jenka_coffee.repository.ProductRepository;
 import com.springboot.jenka_coffee.service.CategoryService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 @Service
 @Transactional
 public class CategoryServiceImpl implements CategoryService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
@@ -116,14 +121,20 @@ public class CategoryServiceImpl implements CategoryService {
     public Category createCategory(CategoryRequest request) {
         // Normalize data
         request.normalize();
+        request.validateImageDisplay();
+        String normalizedId = request.getId();
+        String normalizedSlug = request.getSlug();
 
-        // Check duplicate
-        if (categoryRepository.existsById(request.getId())) {
-            throw new DuplicateResourceException(
-                    "Category", "id", request.getId());
+        if (categoryRepository.existsById(normalizedId)) {
+            throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + normalizedId);
+        }
+        if (normalizedSlug != null && !normalizedSlug.isBlank()
+                && categoryRepository.existsBySlugIgnoreCase(normalizedSlug)) {
+            throw new DuplicateResourceException("Slug SEO đã tồn tại: " + normalizedSlug);
         }
 
         Category category = request.toEntity();
+        applyCategoryImageCrop(category, request, null);
 
         // Set icon from predefined list if not provided
         if (category.getIcon() == null || category.getIcon().isEmpty()) {
@@ -131,7 +142,25 @@ public class CategoryServiceImpl implements CategoryService {
             category.setIcon(icons.get(category.getId()));
         }
 
-        return categoryRepository.save(category);
+        try {
+            return categoryRepository.save(category);
+        } catch (DataIntegrityViolationException ex) {
+            String constraintName = extractConstraintName(ex);
+            logger.warn("Category create data integrity violation (constraint={}): {}", constraintName, ex.getMessage());
+            if (isCategoryIdConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + normalizedId);
+            }
+            if (isCategorySlugConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Slug SEO đã tồn tại: " + normalizedSlug);
+            }
+            String missingField = extractNotNullColumn(ex);
+            if (missingField != null) {
+                throw new IllegalArgumentException("Lỗi dữ liệu danh mục: " + missingField + " không được để trống");
+            }
+            throw new IllegalArgumentException(
+                    "Vi phạm ràng buộc dữ liệu categories"
+                            + (constraintName == null ? "" : ": " + constraintName));
+        }
     }
 
     @Override
@@ -144,6 +173,11 @@ public class CategoryServiceImpl implements CategoryService {
 
         // Update fields from request
         existing.setName(request.getName());
+        existing.setSlug(request.getSlug());
+        existing.setDescription(request.getDescription());
+        existing.setMetaTitle(request.getMetaTitle());
+        existing.setMetaDescription(request.getMetaDescription());
+        existing.setSeoContent(request.getSeoContent());
 
         // Update icon if provided, otherwise keep existing or set from predefined list
         if (request.getIcon() != null && !request.getIcon().isEmpty()) {
@@ -153,6 +187,112 @@ public class CategoryServiceImpl implements CategoryService {
             existing.setIcon(icons.get(existing.getId()));
         }
 
-        return categoryRepository.save(existing);
+        request.validateImageDisplay();
+        applyCategoryImageCrop(existing, request, existing);
+
+        try {
+            return categoryRepository.save(existing);
+        } catch (DataIntegrityViolationException ex) {
+            String constraintName = extractConstraintName(ex);
+            logger.warn("Category update data integrity violation (constraint={}): {}", constraintName, ex.getMessage());
+            if (isCategoryIdConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Mã loại hàng đã tồn tại: " + existing.getId());
+            }
+            if (isCategorySlugConstraint(constraintName, ex)) {
+                throw new DuplicateResourceException("Slug SEO đã tồn tại: " + existing.getSlug());
+            }
+            String missingField = extractNotNullColumn(ex);
+            if (missingField != null) {
+                throw new IllegalArgumentException("Lỗi dữ liệu danh mục: " + missingField + " không được để trống");
+            }
+            throw new IllegalArgumentException(
+                    "Vi phạm ràng buộc dữ liệu categories"
+                            + (constraintName == null ? "" : ": " + constraintName));
+        }
+    }
+
+    private String extractConstraintName(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if (normalized.contains("categories_pkey")) return "categories_pkey";
+                if (normalized.contains("ux_categories_slug")) return "ux_categories_slug";
+                if (normalized.contains("categories_slug_key")) return "categories_slug_key";
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private boolean isCategoryIdConstraint(String constraintName, DataIntegrityViolationException exception) {
+        return "categories_pkey".equals(constraintName)
+                || containsConstraintText(exception, "categories_pkey");
+    }
+
+    private boolean isCategorySlugConstraint(String constraintName, DataIntegrityViolationException exception) {
+        return "ux_categories_slug".equals(constraintName)
+                || "categories_slug_key".equals(constraintName)
+                || containsConstraintText(exception, "ux_categories_slug")
+                || containsConstraintText(exception, "categories_slug_key");
+    }
+
+    private boolean containsConstraintText(DataIntegrityViolationException exception, String expected) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains(expected.toLowerCase())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String extractNotNullColumn(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase();
+                if (lower.contains("null value in column")) {
+                    int start = message.indexOf('"');
+                    int end = start >= 0 ? message.indexOf('"', start + 1) : -1;
+                    if (start >= 0 && end > start) {
+                        return message.substring(start + 1, end);
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private java.math.BigDecimal resolveCropValue(java.math.BigDecimal value, java.math.BigDecimal fallback) {
+        return value != null ? value : fallback;
+    }
+
+    private void applyCategoryImageCrop(Category target, CategoryRequest request, Category fallbackSource) {
+        target.setImageCropX(resolveCropValue(
+                request.getImageCropX(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropX(), java.math.BigDecimal.ZERO)
+                        : java.math.BigDecimal.ZERO));
+        target.setImageCropY(resolveCropValue(
+                request.getImageCropY(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropY(), java.math.BigDecimal.ZERO)
+                        : java.math.BigDecimal.ZERO));
+        target.setImageCropWidth(resolveCropValue(
+                request.getImageCropWidth(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropWidth(), new java.math.BigDecimal("100.00"))
+                        : new java.math.BigDecimal("100.00")));
+        target.setImageCropHeight(resolveCropValue(
+                request.getImageCropHeight(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageCropHeight(), new java.math.BigDecimal("100.00"))
+                        : new java.math.BigDecimal("100.00")));
+        target.setImageZoom(resolveCropValue(
+                request.getImageZoom(),
+                fallbackSource != null ? resolveCropValue(fallbackSource.getImageZoom(), new java.math.BigDecimal("1.00"))
+                        : new java.math.BigDecimal("1.00")));
     }
 }

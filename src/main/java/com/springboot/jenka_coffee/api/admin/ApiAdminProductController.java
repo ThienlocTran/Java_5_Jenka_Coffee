@@ -19,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,20 +52,31 @@ public class ApiAdminProductController {
     private final ProductValidator productValidator;
 
     /**
-     * GET /api/admin/products?page=0&size=10
+     * GET /api/admin/products?page=0&size=10&keyword=...&categoryId=...&status=1|0
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> listProducts(
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "status", required = false) String status) {
+
         try {
             // Validate pagination
             size = Math.min(Math.max(size, 1), 100);
             page = Math.max(page, 0);
 
+            // Map status param to Boolean: "1" → true, "0" → false, blank/null → null (no filter)
+            Boolean available = null;
+            if ("1".equals(status)) {
+                available = true;
+            } else if ("0".equals(status)) {
+                available = false;
+            }
+
             Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
-            Page<Product> productPage = productService.findAllPaginated(pageable);
+            Page<Product> productPage = productService.findByAdminCriteria(categoryId, available, keyword, pageable);
 
             Map<String, Object> data = new HashMap<>();
             data.put("items", productPage.getContent());
@@ -135,11 +145,8 @@ public class ApiAdminProductController {
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> updateProductPut(
             @PathVariable Integer id,
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("price") BigDecimal price,
+            @ModelAttribute ProductRequest request,
             @RequestParam("categoryId") String categoryId,
-            @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
         
         try {
@@ -147,9 +154,7 @@ public class ApiAdminProductController {
             productValidator.validateImageFile(imageFile);
             
             // Delegate to service - Service sẽ validate price
-            Product product = productService.updateProductFromRequest(
-                id, name, description, price, categoryId, available, imageFile
-            );
+            Product product = productService.updateProductFromRequest(id, request, categoryId, imageFile);
             return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm thành công", product));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -171,14 +176,11 @@ public class ApiAdminProductController {
     @PostMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<Product>> updateProductPost(
             @PathVariable Integer id,
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("price") BigDecimal price,
+            @ModelAttribute ProductRequest request,
             @RequestParam("categoryId") String categoryId,
-            @RequestParam("available") Boolean available,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
         
-        return updateProductPut(id, name, description, price, categoryId, available, imageFile);
+        return updateProductPut(id, request, categoryId, imageFile);
     }
 
     /**
@@ -324,13 +326,13 @@ public class ApiAdminProductController {
      * POST /api/admin/products/{id}/images
      */
     @PostMapping(value = "/{id}/images", consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse<Void>> uploadProductImages(
+    public ResponseEntity<ApiResponse<List<ProductImage>>> uploadProductImages(
             @PathVariable Integer id,
             @RequestParam("images") List<MultipartFile> images) {
         try {
             productValidator.validateImageFiles(images);
-            productService.saveProductImages(id, images);
-            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", null));
+            List<ProductImage> savedImages = productService.saveProductImages(id, images);
+            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", savedImages));
         } catch (BusinessRuleException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
@@ -389,3 +391,4 @@ public class ApiAdminProductController {
         }
     }
 }
+

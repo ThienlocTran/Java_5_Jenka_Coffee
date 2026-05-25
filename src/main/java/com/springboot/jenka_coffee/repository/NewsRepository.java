@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface NewsRepository extends JpaRepository<News, Integer> {
@@ -25,4 +26,12 @@ public interface NewsRepository extends JpaRepository<News, Integer> {
      * Find all news with pagination (for admin)
      */
     Page<News> findAllByOrderByCreateDateDesc(Pageable pageable);
+
+    Optional<News> findBySlugIgnoreCase(String slug);
+
+    Optional<News> findBySlugIgnoreCaseAndAvailableTrue(String slug);
+
+    boolean existsBySlugIgnoreCase(String slug);
+
+    boolean existsBySlugIgnoreCaseAndIdNot(String slug, Integer id);
 }

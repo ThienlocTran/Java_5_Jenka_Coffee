@@ -31,6 +31,10 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
            countQuery = "SELECT COUNT(p) FROM Product p")
     Page<Product> findAllWithCategory(Pageable pageable);
 
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE p.available = true ORDER BY p.createDate DESC",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE p.available = true")
+    Page<Product> findByAvailableTrueWithCategory(Pageable pageable);
+
     @Query("SELECT p FROM Product p WHERE p.featured = true ORDER BY COALESCE(p.featuredPosition, 999999), p.createDate DESC")
     List<Product> findFeaturedProductsForOrdering();
 
@@ -100,9 +104,31 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
            nativeQuery = true)
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
     
+    // ── Admin filtered list (keyword + categoryId + available) ───────
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
+                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:available IS NULL OR p.available = :available) AND " +
+                   "(:keyword IS NULL OR :keyword = '' OR " +
+                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
+                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:available IS NULL OR p.available = :available) AND " +
+                        "(:keyword IS NULL OR :keyword = '' OR " +
+                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findByAdminCriteria(@Param("categoryId") String categoryId,
+                                      @Param("available") Boolean available,
+                                      @Param("keyword") String keyword,
+                                      Pageable pageable);
+
     // ── Count orders using this product ──────────────────────────────
     @Query("SELECT COUNT(od) FROM OrderDetail od WHERE od.product.id = :productId")
     long countOrdersByProductId(@Param("productId") Integer productId);
+
+    // ── Home add-on products for homepage section ─────────────────────
+    @Query("SELECT p FROM Product p JOIN FETCH p.category " +
+           "WHERE p.homeAddon = true AND p.available = true " +
+           "ORDER BY COALESCE(p.homeAddonPosition, 999999) ASC, p.createDate DESC, p.id ASC")
+    List<Product> findHomeAddonProducts(Pageable pageable);
 
     long countByCreateDateGreaterThanEqualAndCreateDateLessThan(LocalDateTime from, LocalDateTime to);
 }

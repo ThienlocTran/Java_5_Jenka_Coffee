@@ -44,6 +44,36 @@ public class Product implements Serializable {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
+    @Column(name = "detail_description", columnDefinition = "TEXT")
+    private String detailDescription;
+
+    @Column(name = "specifications_json", columnDefinition = "TEXT")
+    private String specificationsJson;
+
+    @Column(name = "features_json", columnDefinition = "TEXT")
+    private String featuresJson;
+
+    @Column(name = "warranty_info", columnDefinition = "TEXT")
+    private String warrantyInfo;
+
+    @Column(name = "shipping_info", columnDefinition = "TEXT")
+    private String shippingInfo;
+
+    @Column(name = "suitable_for", columnDefinition = "TEXT")
+    private String suitableFor;
+
+    @Column(name = "faq_json", columnDefinition = "TEXT")
+    private String faqJson;
+
+    @Column(name = "meta_title", length = 255)
+    private String metaTitle;
+
+    @Column(name = "meta_description", length = 320)
+    private String metaDescription;
+
     @Column(name = "create_date", updatable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
@@ -59,6 +89,13 @@ public class Product implements Serializable {
 
     @Column(name = "require_contact")
     private Boolean requireContact = false; // Sản phẩm yêu cầu liên hệ (không thể mua online)
+
+    // Home add-on section flag
+    @Column(name = "is_home_addon")
+    private Boolean homeAddon = false;
+
+    @Column(name = "home_addon_position")
+    private Integer homeAddonPosition;
 
     // --- CÁC MỐI QUAN HỆ ---
 

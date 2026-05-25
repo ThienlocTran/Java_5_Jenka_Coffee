@@ -115,18 +115,21 @@ COMMENT ON TABLE "Accounts" IS 'Tai khoan nguoi dung - khach hang va admin';
 -- 2. CATEGORIES (Entity: Category.java)
 -- ----------------------------------------------------------
 CREATE TABLE "Categories" (
-    "Id"              VARCHAR(50)  NOT NULL,
-    "Name"            VARCHAR(100) NOT NULL,
-    "Icon"            VARCHAR(500),
-    slug              VARCHAR(160),
-    description       TEXT,
-    meta_title        VARCHAR(255),
-    meta_description  VARCHAR(320),
-    seo_content       TEXT,
+    "Id"               VARCHAR(50)    NOT NULL,
+    "Name"             VARCHAR(100)   NOT NULL,
+    "Icon"             VARCHAR(500),
+    description        TEXT,
+    meta_title         VARCHAR(255),
+    meta_description   VARCHAR(500),
+    seo_content        TEXT,
+    slug               VARCHAR(300)   UNIQUE,
+    image_crop_x       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_y       NUMERIC(5,2)   NOT NULL DEFAULT 0,
+    image_crop_width   NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_crop_height  NUMERIC(5,2)   NOT NULL DEFAULT 100,
+    image_zoom         NUMERIC(4,2)   NOT NULL DEFAULT 1.00,
     CONSTRAINT "Categories_pkey" PRIMARY KEY ("Id")
 );
-
-CREATE UNIQUE INDEX ux_categories_slug ON "Categories" (slug);
 
 COMMENT ON TABLE "Categories" IS 'Danh muc san pham (ID tu nhap, VD: MAY_PHA)';
 
@@ -135,31 +138,43 @@ COMMENT ON TABLE "Categories" IS 'Danh muc san pham (ID tu nhap, VD: MAY_PHA)';
 -- 3. PRODUCTS (Entity: Product.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE products_id_seq;
-CREATE TABLE "products" (
+CREATE TABLE "Products" (
     "Id"             INTEGER       NOT NULL DEFAULT nextval('products_id_seq'),
     "Name"           VARCHAR(200)  NOT NULL,
     slug             VARCHAR(300)  UNIQUE,
     "Image"          VARCHAR(500),
     price            NUMERIC(18,2) NOT NULL,
     description      TEXT,
+    short_description TEXT,
+    detail_description TEXT,
+    specifications_json TEXT,
+    features_json    TEXT,
+    warranty_info    TEXT,
+    shipping_info    TEXT,
+    suitable_for     TEXT,
+    faq_json         TEXT,
+    meta_title       VARCHAR(255),
+    meta_description VARCHAR(320),
     "createDate"     TIMESTAMP     NOT NULL DEFAULT NOW(),
     "Available"      BOOLEAN       NOT NULL DEFAULT TRUE,
     "isFeatured"     BOOLEAN       NOT NULL DEFAULT FALSE,
     featured_position INTEGER,
     "requireContact" BOOLEAN       NOT NULL DEFAULT FALSE,
+    is_home_addon    BOOLEAN       NOT NULL DEFAULT FALSE,
+    home_addon_position INTEGER,
     "Categoryid"     VARCHAR(50)   NOT NULL,
     CONSTRAINT "Products_pkey"      PRIMARY KEY ("Id"),
     CONSTRAINT fk_products_category FOREIGN KEY ("Categoryid")
         REFERENCES "Categories" ("Id") ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_products_category  ON "products" ("Categoryid");
-CREATE INDEX idx_products_available ON "products" ("Available");
-CREATE INDEX idx_products_featured  ON "products" ("isFeatured");
-CREATE INDEX idx_products_featured_position ON "products" (featured_position);
-CREATE INDEX idx_products_slug      ON "products" (slug);
+CREATE INDEX idx_products_category  ON "Products" ("Categoryid");
+CREATE INDEX idx_products_available ON "Products" ("Available");
+CREATE INDEX idx_products_featured  ON "Products" ("isFeatured");
+CREATE INDEX idx_products_featured_position ON "Products" (featured_position);
+CREATE INDEX idx_products_slug      ON "Products" (slug);
 
-COMMENT ON TABLE "products" IS 'San pham ca phe va may moc';
+COMMENT ON TABLE "Products" IS 'San pham ca phe va may moc';
 
 
 -- ----------------------------------------------------------
@@ -300,6 +315,7 @@ CREATE TABLE "News" (
     "Title"      VARCHAR(500) NOT NULL,
     "Content"    TEXT,
     "Image"      VARCHAR(500),
+    slug         VARCHAR(255) UNIQUE,
     "CreateDate" TIMESTAMP    NOT NULL DEFAULT NOW(),
     "Available"  BOOLEAN      NOT NULL DEFAULT TRUE,
     CONSTRAINT "News_pkey" PRIMARY KEY ("Id")
@@ -355,18 +371,28 @@ COMMENT ON TABLE banner_set IS 'Bo banner slide show. Chi 1 bo active tai 1 thoi
 -- 12. BANNER IMAGE (Entity: BannerImage.java)
 -- ----------------------------------------------------------
 CREATE SEQUENCE banner_image_id_seq;
-CREATE TABLE banner_image (
-    id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
-    banner_set_id BIGINT       NOT NULL,
-    image         VARCHAR(500) NOT NULL,
-    title         VARCHAR(200),
-    subtitle      VARCHAR(300),
-    object_position VARCHAR(30) NOT NULL DEFAULT 'center',
-    zoom          DOUBLE PRECISION NOT NULL DEFAULT 1.0,
-    sort_order    INTEGER      NOT NULL DEFAULT 0,
+  CREATE TABLE banner_image (
+      id            BIGINT       NOT NULL DEFAULT nextval('banner_image_id_seq'),
+      banner_set_id BIGINT       NOT NULL,
+      image         VARCHAR(500) NOT NULL,
+      title         VARCHAR(200),
+      subtitle      VARCHAR(300),
+      headline      VARCHAR(255),
+      sub_headline  VARCHAR(500),
+      primary_cta_text VARCHAR(120),
+      primary_cta_link VARCHAR(500),
+      secondary_cta_text VARCHAR(120),
+      secondary_cta_link VARCHAR(500),
+      target_link   VARCHAR(500),
+      display_mode  VARCHAR(30)  DEFAULT 'IMAGE_ONLY',
+      active        BOOLEAN      NOT NULL DEFAULT TRUE,
+      sort_order    INTEGER      NOT NULL DEFAULT 0,
+    image_crop_x  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_y  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    image_crop_width NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_crop_height NUMERIC(5,2) NOT NULL DEFAULT 100,
+    image_zoom    NUMERIC(4,2) NOT NULL DEFAULT 1.00,
     CONSTRAINT banner_image_pkey   PRIMARY KEY (id),
-    CONSTRAINT chk_banner_image_object_position CHECK (object_position IN ('center', 'top', 'bottom', 'left', 'right')),
-    CONSTRAINT chk_banner_image_zoom CHECK (zoom >= 1.0 AND zoom <= 1.5),
     CONSTRAINT fk_bannerimage_set  FOREIGN KEY (banner_set_id)
         REFERENCES banner_set (id) ON DELETE CASCADE
 );
@@ -387,6 +413,9 @@ CREATE TABLE store_feedbacks (
     fullname      VARCHAR(100) NOT NULL,
     phone         VARCHAR(20),
     comment       TEXT,
+    rating        INTEGER,
+    status        VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    approved_at   TIMESTAMP,
     "storeRating" INTEGER     NOT NULL CHECK ("storeRating" BETWEEN 1 AND 5),
     "staffRating" INTEGER     NOT NULL CHECK ("staffRating" BETWEEN 1 AND 5),
     "createdAt"   TIMESTAMP   NOT NULL DEFAULT NOW(),
@@ -400,7 +429,36 @@ COMMENT ON TABLE store_feedbacks IS 'Danh gia cua hang tu khach - hien thi popup
 
 
 -- ----------------------------------------------------------
--- 14. CART ITEMS (MOI - Thay the ConcurrentHashMap in-memory)
+-- 14. CONSULTATION REQUESTS
+-- ----------------------------------------------------------
+CREATE TABLE consultation_requests (
+    id            BIGINT       NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+    full_name     VARCHAR(100),
+    contact_phone VARCHAR(50)  NOT NULL,
+    need_type     VARCHAR(20)  NOT NULL,
+    interest      VARCHAR(30)  NOT NULL,
+    budget        VARCHAR(20)  NOT NULL,
+    note          TEXT,
+    source        VARCHAR(50),
+    product_name  VARCHAR(200),
+    product_url   VARCHAR(500),
+    page_title    VARCHAR(200),
+    page_url      VARCHAR(500),
+    status        VARCHAR(20)  NOT NULL DEFAULT 'NEW',
+    created_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
+    CONSTRAINT consultation_requests_pkey PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_consultation_requests_status     ON consultation_requests (status);
+CREATE INDEX idx_consultation_requests_created_at ON consultation_requests (created_at DESC);
+CREATE INDEX idx_consultation_requests_updated_at ON consultation_requests (updated_at DESC);
+
+COMMENT ON TABLE consultation_requests IS 'Yeu cau tu van tu landing page/trang san pham';
+
+
+-- ----------------------------------------------------------
+-- 15. CART ITEMS (MOI - Thay the ConcurrentHashMap in-memory)
 -- Persist gio hang vao DB, khong mat khi server restart
 -- ----------------------------------------------------------
 CREATE SEQUENCE cart_items_id_seq;
@@ -429,7 +487,7 @@ COMMENT ON TABLE cart_items IS 'Gio hang persistent. TTL: cleanup cart > 24h kho
 
 
 -- ----------------------------------------------------------
--- 15. VISITOR STATS (MOI - Thay the AtomicLong in-memory)
+-- 16. VISITOR STATS (MOI - Thay the AtomicLong in-memory)
 -- Persist thong ke luot truy cap, giu data khi restart server
 -- ----------------------------------------------------------
 CREATE TABLE visitor_stats (
@@ -490,10 +548,10 @@ INSERT INTO "Accounts" (
 -- BUOC 6: DU LIEU MAU TOI THIEU
 -- Danh muc mac dinh de admin tao san pham ngay
 -- ============================================================
-INSERT INTO "Categories" ("Id", "Name", "Icon", slug) VALUES
-    ('MAY_PHA',   'May Pha Ca Phe',     'may-pha.webp', 'may-pha-ca-phe'),
-    ('CA_PHE',    'Ca Phe Nguyen Chat', 'ca-phe.webp', 'ca-phe'),
-    ('PHU_KIEN',  'Phu Kien',           'phu-kien.webp', 'phu-kien-ca-phe');
+INSERT INTO "Categories" ("Id", "Name", "Icon") VALUES
+    ('MAY_PHA',   'May Pha Ca Phe',     'may-pha.webp'),
+    ('CA_PHE',    'Ca Phe Nguyen Chat', 'ca-phe.webp'),
+    ('PHU_KIEN',  'Phu Kien',           'phu-kien.webp');
 
 -- Tao 1 bo banner trong de admin them anh
 INSERT INTO banner_set (name, effect, active)

@@ -88,7 +88,17 @@ public class ApiVisitorController {
         int onlineCount = (int) onlineUsers.values().stream()
                 .filter(ts -> (now - ts) <= ONLINE_TIMEOUT_MS)
                 .count();
-        return ResponseEntity.ok(ApiResponse.success("OK", buildStats(today, onlineCount)));
+        try {
+            return ResponseEntity.ok(ApiResponse.success("OK", buildStats(today, onlineCount)));
+        } catch (Exception e) {
+            log.warn("[VISITOR] Failed to build stats response: {}", e.getMessage());
+            return ResponseEntity.ok(ApiResponse.success("OK", Map.of(
+                    "online", (long) onlineCount,
+                    "today", 0L,
+                    "month", 0L,
+                    "total", 0L
+            )));
+        }
     }
 
     /** POST /api/visitors/leave — user rời trang */
@@ -114,7 +124,12 @@ public class ApiVisitorController {
     }
 
     private Map<String, Object> buildStats(LocalDate today, int onlineCount) {
-        VisitorStats todayStats = visitorStatsRepository.findByStatDate(today).orElse(null);
+        VisitorStats todayStats = null;
+        try {
+            todayStats = visitorStatsRepository.findByStatDate(today).orElse(null);
+        } catch (Exception e) {
+            log.warn("[VISITOR] Failed to load today's stats: {}", e.getMessage());
+        }
 
         // Use unique visitors consistently for the public visitor counter.
         long todayVisits = todayStats != null ? todayStats.getUniqueVisitors() : 0;

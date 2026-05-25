@@ -34,6 +34,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "/api/auth/google-login".equals(path)
+                || path.startsWith("/api/visitors/");
+    }
+
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest req,
                                     @NonNull HttpServletResponse res,
                                     @NonNull FilterChain chain) throws ServletException, IOException {

@@ -193,7 +193,7 @@ public class ProfileServiceImpl implements ProfileService {
             }
             
             // Check if email already exists (excluding current user)
-            if (accountRepository.existsByEmail(email) && 
+            if (accountRepository.existsByEmailIgnoreCase(email) && 
                 !email.equals(currentAccount.getEmail())) {
                 throw new ValidationException("Email đã được sử dụng bởi tài khoản khác");
             }

@@ -15,7 +15,7 @@ public interface ProductService {
     List<Product> findAll();
 
     Product findById(Integer id);
-    
+
     Product findBySlug(String slug);
 
     Product create(Product product);
@@ -32,6 +32,8 @@ public interface ProductService {
 
     Page<Product> findAllPaginated(Pageable pageable);
 
+    Page<Product> findByAdminCriteria(String categoryId, Boolean available, String keyword, Pageable pageable);
+
     Map<String, Long> getCategoryCounts();
 
     void toggleAvailable(Integer id);
@@ -40,24 +42,25 @@ public interface ProductService {
                                                 String keyword, Pageable pageable);
 
     Page<Product> searchProductsPaginated(String keyword, Pageable pageable);
-    
+
     // Admin operations with business logic
     Product createProductFromRequest(ProductRequest request, String categoryId, MultipartFile imageFile);
-    
-    Product updateProductFromRequest(Integer id, String name, String description, BigDecimal price, 
-                                     String categoryId, Boolean available, MultipartFile imageFile);
-    
+
+    Product updateProductFromRequest(Integer id, ProductRequest request, String categoryId, MultipartFile imageFile);
+
     void deleteProductWithValidation(Integer id);
-    
+
     Product toggleFeatured(Integer id);
 
     Product updateFeaturedPosition(Integer id, Integer position);
-    
-    void saveProductImages(Integer productId, List<MultipartFile> images);
-    
+
+    List<ProductImage> saveProductImages(Integer productId, List<MultipartFile> images);
+
     List<ProductImage> getProductImages(Integer productId);
-    
+
     void deleteProductImage(Integer imageId);
-    
+
     Map<String, Object> generateSlugsForAllProducts();
+
+    List<Product> getHomeAddonProducts(int limit);
 }

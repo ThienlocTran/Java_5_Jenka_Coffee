@@ -14,28 +14,30 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "news")
+@Table(name = "News")
 public class News implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column(name = "Id")
     private Integer id;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "Title", nullable = false)
     private String title;
 
-    @Lob
-    @Column(name = "content", columnDefinition = "TEXT")
+    @Column(name = "Content", columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
-    @Column(name = "image")
+    @Column(name = "Image")
     private String image;
 
-    @Column(name = "create_date")
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
+    @Column(name = "CreateDate")
     private LocalDateTime createDate = LocalDateTime.now();
 
-    @Column(name = "available")
+    @Column(name = "Available")
     private Boolean available = true;
 
     @Override

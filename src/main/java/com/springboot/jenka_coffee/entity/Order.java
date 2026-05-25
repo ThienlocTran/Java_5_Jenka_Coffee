@@ -2,7 +2,6 @@ package com.springboot.jenka_coffee.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.persistence.Index;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -19,7 +18,7 @@ import java.util.Objects;
 @AllArgsConstructor
 @Entity
 @Table(
-    name = "orders", // Bắt buộc, vì Order trùng tên khóa SQL
+    name = "orders",
     indexes = { @Index(name = "idx_order_code", columnList = "order_code", unique = true) }
 )
 public class Order implements Serializable {
@@ -30,10 +29,7 @@ public class Order implements Serializable {
     private Long id;
 
     /**
-     * Public-facing order code — safe to expose in URLs and to customers.
-     * Format: ORD-YYYYMMDD-XXXXXX  (e.g. ORD-20260511-AB12CD)
-     * Generated once at checkout; NEVER changes after creation.
-     * Keeps numeric PK private (performance / JPA relations unchanged).
+     * Public-facing order code.
      */
     @Column(name = "order_code", unique = true, nullable = false, length = 30)
     private String orderCode;
@@ -48,24 +44,25 @@ public class Order implements Serializable {
     private String phone;
 
     @Column(name = "status")
-    private Integer status = OrderStatus.NEW.getValue(); // 0: NEW, 1: CONFIRMED, 2: CANCELLED
+    private Integer status = OrderStatus.NEW.getValue();
 
-    /**
-     * Simplified Order Status - No shipping tracking
-     * Business model: Admin confirms order, then calls customer to arrange delivery
-     */
     @Getter
     public enum OrderStatus {
-        NEW(0),        // Đơn hàng mới, chờ xác nhận
-        CONFIRMED(1),  // Đã xác nhận, admin sẽ gọi khách và giao hàng
-        CANCELLED(2);  // Đã hủy
+        NEW(0),
+        CONFIRMED(1),
+        CANCELLED(2);
 
         private final int value;
-        OrderStatus(int value) { this.value = value; }
+
+        OrderStatus(int value) {
+            this.value = value;
+        }
 
         public static OrderStatus fromValue(int value) {
             for (OrderStatus s : values()) {
-                if (s.value == value) return s;
+                if (s.value == value) {
+                    return s;
+                }
             }
             throw new IllegalArgumentException("Unknown order status: " + value);
         }
@@ -74,59 +71,50 @@ public class Order implements Serializable {
     @Column(name = "total_amount", precision = 18, scale = 2)
     private BigDecimal totalAmount;
 
-    // VULN-INFINITE-POINTS FIX: Lưu số điểm thực tế đã sử dụng khi checkout
     @Column(name = "points_used")
     private Integer pointsUsed = 0;
 
-    // VULN-058 FIX: note field — lưu ghi chú đơn hàng (đã sanitize trước khi save)
     @Column(name = "note", length = 500)
     private String note;
 
-    // --- QUAN HỆ ---
-
-    // N-1 với Account
-    @JsonIgnore // Chặn Account↔Order cycle (tránh StackOverflow khi serialize)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "username")
     @ToString.Exclude
     private Account account;
 
-    // 1-N với OrderDetail
-    @JsonIgnore // Chặn Order↔OrderDetail cycle
+    @JsonIgnore
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<OrderDetail> orderDetails;
 
-
-
-
-    // 1-N với Payment
-    @JsonIgnore // Chặn Order↔Payment cycle
+    @JsonIgnore
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<Payment> payments;
 
-    // 1-N với PointHistory
-    @JsonIgnore // Chặn Order↔PointHistory cycle
+    @JsonIgnore
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<PointHistory> pointHistories;
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null)
+        }
+        if (o == null) {
             return false;
+        }
         Class<?> oEffectiveClass = o instanceof HibernateProxy
                 ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                 : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                 : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass)
+        if (thisEffectiveClass != oEffectiveClass) {
             return false;
+        }
         Order order = (Order) o;
         return getId() != null && Objects.equals(getId(), order.getId());
     }

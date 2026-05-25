@@ -1,12 +1,13 @@
 version: '3.8'
 
-# Local PostgreSQL helper only.
-# Defaults below are aligned with application-local.properties fallback values.
-# Production backend on VPS must use:
-#   SPRING_PROFILES_ACTIVE=production
-#   SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jenka_coffee
-#   SPRING_DATASOURCE_USERNAME=jenka_user
-#   SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+# Local/dev only.
+# Do not use this file to initialize or upgrade PostgreSQL on the live VPS.
+# Do not copy this init.sql mount into production.
+# /docker-entrypoint-initdb.d/init.sql is for fresh local/dev DB initialization only.
+# Production schema changes must be run manually via docs/deploy/production_migration_safe.sql.
+# If VPS production uses Docker PostgreSQL, use docker-compose.production.yml.
+# On production: never run docker compose down -v.
+# On production: never delete ./pg-data.
 
 services:
   postgres:

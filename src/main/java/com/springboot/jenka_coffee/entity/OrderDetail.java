@@ -30,37 +30,35 @@ public class OrderDetail implements Serializable {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    // --- QUAN HỆ ---
-
-    // N-1 với Order
-    @JsonIgnore // Chặn Order↔OrderDetail cycle (tránh StackOverflow khi serialize)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     @ToString.Exclude
     private Order order;
 
-    // N-1 với Product
-    @JsonIgnoreProperties("orderDetails") // Chặn Product↔OrderDetail cycle
+    @JsonIgnoreProperties("orderDetails")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     @ToString.Exclude
     private Product product;
 
-    // --- LOGIC HIBERNATE PROXY ---
     @Override
     public final boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null)
+        }
+        if (o == null) {
             return false;
+        }
         Class<?> oEffectiveClass = o instanceof HibernateProxy
                 ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                 : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy
                 ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                 : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass)
+        if (thisEffectiveClass != oEffectiveClass) {
             return false;
+        }
         OrderDetail that = (OrderDetail) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }

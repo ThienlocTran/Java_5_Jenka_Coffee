@@ -99,46 +99,30 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public boolean existsByEmail(String email) {
-        // ✅ Delegate to repository - efficient database query
-        return dao.existsByEmail(email);
+        String normalizedEmail = normalizeEmail(email);
+        return normalizedEmail != null && dao.existsByEmailIgnoreCase(normalizedEmail);
     }
 
     @Override
-    @Transactional
     public AuthResult authenticateWithResult(String identifier, String password) {
         // VULN-BCRYPT-DOS FIX: Giới hạn độ dài password trước khi hash
         if (password == null || password.length() > 72) {
             return AuthResult.invalidCredentials();
         }
         
-        String normalizedIdentifier = identifier != null ? identifier.trim() : "";
+        String normalizedIdentifier = identifier != null ? identifier.trim() : null;
         Account account = dao.findByUsernameOrEmailOrPhone(normalizedIdentifier).orElse(null);
         
         // VULN-TIMING-ATTACK FIX: Dummy BCrypt check khi account không tồn tại
         // Đảm bảo response time giống nhau cho cả trường hợp tồn tại và không tồn tại
         if (account == null) {
             // Chạy dummy BCrypt hash để timing giống với trường hợp account tồn tại
-            passwordSecurity.verifyPassword(password, "$2a$12$C6UzMDM.H6dfI/f/IKcEeOth3pR4S6Hc8mYlshC1R6Qz6WmAb4h5m");
+            passwordSecurity.verifyPassword(password, "$2a$12$dummyHashToPreventTimingAttack1234567890123456789012");
             return AuthResult.invalidCredentials();
         }
         
         if (!account.getActivated()) return AuthResult.notActivated(account);
-        String storedPassword = account.getPasswordHash();
-        boolean passwordMatches = passwordSecurity.verifyPassword(password, storedPassword);
-
-        // Legacy recovery: older builds saved normal-account passwords without BCrypt
-        // because isPasswordHashed() returned the opposite value. Let the user in once,
-        // then upgrade the stored password immediately.
-        if (!passwordMatches && storedPassword != null && !passwordSecurity.isPasswordHashed(storedPassword)
-                && password.equals(storedPassword)) {
-            account.setPasswordHash(passwordSecurity.hashPassword(password));
-            account.setLastPasswordResetDate(LocalDateTime.now());
-            dao.save(account);
-            passwordMatches = true;
-            log.warn("Upgraded legacy plaintext password hash for user '{}'", account.getUsername());
-        }
-
-        if (!passwordMatches) return AuthResult.invalidCredentials();
+        if (!passwordSecurity.verifyPassword(password, account.getPasswordHash())) return AuthResult.invalidCredentials();
         return AuthResult.success(account);
     }
 
@@ -153,20 +137,25 @@ public class AccountServiceImpl implements AccountService {
         // VULN-PRE-ACCOUNT-HIJACKING FIX: Email phải được verify trước khi activate
         // Không auto-activate nữa, yêu cầu OTP qua phone
         if (email != null && !email.trim().isEmpty()) {
-            newAccount.setEmail(email.trim());
+            newAccount.setEmail(normalizeEmail(email));
         } else {
             newAccount.setEmail(null); // SECURITY FIX: NULL instead of empty string to avoid unique constraint
         }
 
         // 3. Set defaults for new user registration
         newAccount.setPasswordHash(password); // Will be hashed in createAccount
-        newAccount.setActivated(true); // Kích hoạt ngay, không cần OTP
+        newAccount.setActivated(false); // CHANGED: Require phone OTP verification
         newAccount.setAdmin(false);
         newAccount.setPoints(0);
         newAccount.setCustomerRank("MEMBER");
 
         // 4. Call createAccount which handles validation and hashing
         createAccount(newAccount, null);
+        
+        // 5. Send OTP to phone for verification
+        if (!phone.trim().isEmpty()) {
+            otpService.generateOTP(phone.trim());
+        }
     }
 
     @Override
@@ -184,6 +173,7 @@ public class AccountServiceImpl implements AccountService {
 
         // Validation - check email exists (only if email is provided)
         if (account.getEmail() != null && !account.getEmail().trim().isEmpty()) {
+            account.setEmail(normalizeEmail(account.getEmail()));
             if (existsByEmail(account.getEmail())) {
                 throw new ValidationException("email", "Email đã được sử dụng!");
             }
@@ -242,7 +232,8 @@ public class AccountServiceImpl implements AccountService {
 
         // Validation - check email (if changed)
         String existingEmail = existingAccount.getEmail();
-        String newEmail = updatedAccount.getEmail();
+        String newEmail = normalizeEmail(updatedAccount.getEmail());
+        updatedAccount.setEmail(newEmail);
         boolean emailChanged = !Objects.equals(existingEmail, newEmail)
                 && newEmail != null && !newEmail.trim().isEmpty();
         if (emailChanged && existsByEmail(newEmail)) {
@@ -330,48 +321,6 @@ public class AccountServiceImpl implements AccountService {
         Account account = findByIdOrThrow(username);
         account.setActivated(!account.getActivated());
         return dao.save(account);
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "accountSecurity", key = "#username")
-    public Account setAdminRole(String username, boolean isAdmin) {
-        Account account = findByIdOrThrow(username);
-
-        // Ngăn revoke admin cuối cùng
-        if (!isAdmin && Boolean.TRUE.equals(account.getAdmin())) {
-            long adminCount = dao.countByAdminTrue();
-            if (adminCount <= 1) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Không thể thu hồi quyền admin của người dùng cuối cùng trong hệ thống!");
-            }
-        }
-
-        account.setAdmin(isAdmin);
-        Account saved = dao.save(account);
-        log.info("ADMIN_ROLE_CHANGE: user='{}' isAdmin={}", username, isAdmin);
-        return saved;
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "accountSecurity", allEntries = true)
-    public Account setAdminRoleByEmail(String email, boolean isAdmin) {
-        Account account = dao.findByEmail(email)
-                .orElseThrow(() -> new jakarta.validation.ValidationException("Không tìm thấy tài khoản với email: " + email));
-
-        if (!isAdmin && Boolean.TRUE.equals(account.getAdmin())) {
-            long adminCount = dao.countByAdminTrue();
-            if (adminCount <= 1) {
-                throw new com.springboot.jenka_coffee.exception.BusinessRuleException(
-                        "Không thể thu hồi quyền admin của người dùng cuối cùng trong hệ thống!");
-            }
-        }
-
-        account.setAdmin(isAdmin);
-        Account saved = dao.save(account);
-        log.info("ADMIN_ROLE_CHANGE: email='{}' user='{}' isAdmin={}", email, account.getUsername(), isAdmin);
-        return saved;
     }
 
     // ===== ADMIN USER MANAGEMENT METHODS =====
@@ -478,7 +427,42 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account findByEmail(String email) {
-        return dao.findByEmail(email).orElse(null);
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) {
+            return null;
+        }
+        List<Account> matches = dao.findAllByEmailIgnoreCase(normalizedEmail);
+        if (matches == null || matches.isEmpty()) {
+            return null;
+        }
+
+        return matches.stream()
+                .sorted((left, right) -> {
+                    int adminCompare = Boolean.compare(Boolean.TRUE.equals(right.getAdmin()), Boolean.TRUE.equals(left.getAdmin()));
+                    if (adminCompare != 0) {
+                        return adminCompare;
+                    }
+
+                    int activeCompare = Boolean.compare(Boolean.TRUE.equals(right.getActivated()), Boolean.TRUE.equals(left.getActivated()));
+                    if (activeCompare != 0) {
+                        return activeCompare;
+                    }
+
+                    LocalDateTime leftDate = left.getCreateDate();
+                    LocalDateTime rightDate = right.getCreateDate();
+                    if (leftDate == null && rightDate == null) {
+                        return 0;
+                    }
+                    if (leftDate == null) {
+                        return 1;
+                    }
+                    if (rightDate == null) {
+                        return -1;
+                    }
+                    return leftDate.compareTo(rightDate);
+                })
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -490,6 +474,26 @@ public class AccountServiceImpl implements AccountService {
         account.setPhone(phone);
         dao.save(account);
         log.info("Updated phone number for user: {}", username);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "accountSecurity", key = "#username")
+    public Account setAdminRole(String username, boolean isAdmin, String currentAdminUsername) {
+        Account account = findByIdOrThrow(username);
+
+        if (Boolean.TRUE.equals(account.getAdmin()) && !isAdmin) {
+            long adminCount = dao.countByAdminTrue();
+            if (adminCount <= 1) {
+                throw new BusinessRuleException("Không thể hạ quyền admin cuối cùng trong hệ thống!");
+            }
+            if (username.equals(currentAdminUsername)) {
+                throw new BusinessRuleException("Không thể tự gỡ quyền admin của chính bạn!");
+            }
+        }
+
+        account.setAdmin(isAdmin);
+        return dao.save(account);
     }
 
     // ===== SECURITY LAYER METHODS =====
@@ -594,5 +598,13 @@ public class AccountServiceImpl implements AccountService {
         dao.save(account);
         
         log.info("Successfully reset password for user: {}", username);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

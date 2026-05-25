@@ -20,7 +20,7 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          * Check if email exists
          * Generated query: SELECT COUNT(*) FROM accounts WHERE email = ?
          */
-        boolean existsByEmail(String email);
+        boolean existsByEmailIgnoreCase(String email);
 
         /**
          * Check if phone exists
@@ -36,7 +36,9 @@ public interface AccountRepository extends JpaRepository<Account, String> {
         /**
          * Find account by email
          */
-        Optional<Account> findByEmail(String email);
+        Optional<Account> findByEmailIgnoreCase(String email);
+
+        List<Account> findAllByEmailIgnoreCase(String email);
 
         /**
          * Find account by username
@@ -64,7 +66,7 @@ public interface AccountRepository extends JpaRepository<Account, String> {
          * Enables login with any of the three identifiers
          */
         @Query("SELECT a FROM Account a WHERE a.username = :identifier " +
-                        "OR a.email = :identifier OR a.phone = :identifier")
+                        "OR LOWER(a.email) = LOWER(:identifier) OR a.phone = :identifier")
         Optional<Account> findByUsernameOrEmailOrPhone(@Param("identifier") String identifier);
 
         // ===== ACTIVATION & PASSWORD RESET =====

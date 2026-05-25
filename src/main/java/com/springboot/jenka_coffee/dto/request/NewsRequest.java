@@ -21,5 +21,8 @@ public class NewsRequest {
     @Size(max = 500, message = "Tóm tắt tối đa 500 ký tự")
     private String summary;
 
+    @Size(max = 255, message = "Slug SEO tá»‘i Ä‘a 255 kÃ½ tá»±")
+    private String slug;
+
     // available và createDate do server set — không nhận từ client
 }

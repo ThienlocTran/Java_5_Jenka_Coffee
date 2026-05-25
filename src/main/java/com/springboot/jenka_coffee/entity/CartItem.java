@@ -27,6 +27,7 @@ public class CartItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "cart_key", nullable = false, length = 255)
@@ -35,7 +36,7 @@ public class CartItem {
     @Column(name = "product_id", nullable = false)
     private Integer productId;
 
-    @Column(nullable = false)
+    @Column(name = "quantity", nullable = false)
     private Integer quantity = 1;
 
     /** Giá tại thời điểm thêm vào giỏ (chỉ để hiển thị — khi checkout sẽ lấy giá từ DB) */
