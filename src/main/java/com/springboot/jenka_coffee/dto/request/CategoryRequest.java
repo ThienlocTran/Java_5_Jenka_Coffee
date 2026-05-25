@@ -30,6 +30,14 @@ public class CategoryRequest {
 
     private String slug;
 
+    private String description;
+
+    private String metaTitle;
+
+    private String metaDescription;
+
+    private String seoContent;
+
     @DecimalMin(value = "0.00", message = "imageCropX must be between 0 and 100")
     @DecimalMax(value = "100.00", message = "imageCropX must be between 0 and 100")
     private BigDecimal imageCropX;
@@ -121,6 +129,10 @@ public class CategoryRequest {
         category.setName(name);
         category.setIcon(icon);
         category.setSlug(slug);
+        category.setDescription(description);
+        category.setMetaTitle(metaTitle);
+        category.setMetaDescription(metaDescription);
+        category.setSeoContent(seoContent);
         category.setImageCropX(imageCropX);
         category.setImageCropY(imageCropY);
         category.setImageCropWidth(imageCropWidth);

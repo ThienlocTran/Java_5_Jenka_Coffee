@@ -1,7 +1,13 @@
 version: '3.8'
 
-# Docker Compose cho LOCAL DEVELOPMENT
-# Production: Dùng PostgreSQL trên Vietnix VPS (không cần Docker)
+# Docker Compose này chỉ dành cho LOCAL / DEV.
+# KHÔNG dùng file này để khởi tạo hay nâng cấp PostgreSQL production trên VPS.
+# KHÔNG copy mount init.sql của file này sang production.
+# File /docker-entrypoint-initdb.d/init.sql chỉ dành cho fresh local/dev DB initialization.
+# Production schema changes phải chạy thủ công bằng docs/deploy/production_migration_safe.sql.
+# Nếu VPS production dùng Docker PostgreSQL, hãy dùng docker-compose.production.yml.
+# Trên production: KHÔNG chạy docker compose down -v.
+# Trên production: KHÔNG xóa ./pg-data.
 
 services:
   postgres:
@@ -14,8 +20,8 @@ services:
       - POSTGRES_USER=jenka_user
       - POSTGRES_PASSWORD=jenka_dev_123  # Chỉ dùng local dev
     volumes:
-      - ./pg-data:/var/lib/postgresql/data        # Lưu data khi tắt container
-      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Auto init schema
+      - ./pg-data:/var/lib/postgresql/data        # Local/dev persistent data
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Fresh local/dev init only
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jenka_user -d jenka_coffee"]

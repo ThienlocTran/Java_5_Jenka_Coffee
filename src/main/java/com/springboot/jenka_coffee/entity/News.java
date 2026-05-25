@@ -31,6 +31,9 @@ public class News implements Serializable {
     @Column(name = "Image")
     private String image;
 
+    @Column(name = "slug", length = 255, unique = true)
+    private String slug;
+
     @Column(name = "CreateDate")
     private LocalDateTime createDate = LocalDateTime.now();
 

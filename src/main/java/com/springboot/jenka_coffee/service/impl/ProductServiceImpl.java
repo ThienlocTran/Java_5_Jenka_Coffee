@@ -394,7 +394,7 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.deleteById(id);
         log.info("Successfully deleted product with ID: {}", id);
-        
+
         // VULN-M04 FIX: Trigger Vercel rebuild outside transaction
         try {
             vercelWebhookService.triggerRebuild();
@@ -412,15 +412,26 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<Product> findByAdminCriteria(String categoryId, Boolean available, String keyword, Pageable pageable) {
+        return productRepository.findByAdminCriteria(
+                (categoryId == null || categoryId.isBlank()) ? null : categoryId,
+                available,
+                (keyword == null || keyword.isBlank()) ? null : keyword,
+                pageable
+        );
+    }
+
+    @Override
     @Cacheable("categoryCounts")
     public Map<String, Long> getCategoryCounts() {
         Map<String, Long> counts = new HashMap<>();
         List<Object[]> results = productRepository.countProductsGroupedByCategory();
         long total = 0L;
         for (Object[] result : results) {
-            String categoryId = (String) result[0];
+            String catId = (String) result[0];
             Long count = (Long) result[1];
-            counts.put(categoryId, count);
+            counts.put(catId, count);
             total += count;
         }
         counts.put("ALL", total);
@@ -685,6 +696,8 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
+        product.setHomeAddon(request.getIsHomeAddon() != null ? request.getIsHomeAddon() : false);
+        product.setHomeAddonPosition(request.getHomeAddonPosition());
         product.setCategory(category);
         product.setId(null); // Force INSERT
         return product;
@@ -739,8 +752,13 @@ public class ProductServiceImpl implements ProductService {
         existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
+        Boolean homeAddon = request.getIsHomeAddon() != null ? request.getIsHomeAddon() : Boolean.TRUE.equals(existing.getHomeAddon());
+        existing.setHomeAddon(homeAddon);
+        if (Boolean.TRUE.equals(homeAddon)) {
+            existing.setHomeAddonPosition(request.getHomeAddonPosition());
+        }
         existing.setCategory(category);
-        
+
         // Save with image
         return saveProduct(existing, imageFile);
     }
@@ -819,5 +837,12 @@ public class ProductServiceImpl implements ProductService {
                 .max(Integer::compareTo)
                 .map(position -> position + 1)
                 .orElse(1);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Product> getHomeAddonProducts(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        return productRepository.findHomeAddonProducts(PageRequest.of(0, safeLimit));
     }
 }

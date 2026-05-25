@@ -46,6 +46,10 @@ public class ProductRequest {
     private Boolean available;
     
     private Boolean requireContact;
+
+    private Boolean isHomeAddon;
+
+    private Integer homeAddonPosition;
     
     // Image sẽ được xử lý riêng qua MultipartFile
     // Category ID sẽ được xử lý riêng qua @RequestParam

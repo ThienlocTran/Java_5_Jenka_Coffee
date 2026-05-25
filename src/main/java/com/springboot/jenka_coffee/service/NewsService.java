@@ -19,6 +19,10 @@ public interface NewsService {
      */
     News findById(Integer id);
 
+    News findBySlug(String slug);
+
+    News findAvailableBySlug(String slug);
+
     /**
      * Create new news
      */
@@ -35,7 +39,7 @@ public interface NewsService {
     void delete(Integer id);
 
 
-    void saveNews(News news, MultipartFile file);
+    News saveNews(News news, MultipartFile file);
 
     /*
      * Toggle news availability
