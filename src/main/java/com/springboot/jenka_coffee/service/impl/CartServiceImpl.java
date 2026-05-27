@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * Cart data is persisted in cart_items table → survives server restart.
  *
  * cart_key for authenticated users: username
- * cart_key for anonymous users: 'anon:<uuid>' (UUID from HttpOnly cookie)
+ * cart_key for anonymous users: 'anon:<uuid>' (UUID from X-Anonymous-Cart-Id header)
  */
 @Slf4j
 @Service
@@ -52,7 +52,7 @@ public class CartServiceImpl implements CartService {
      * Set cart key for current request.
      * Called by ApiCartController before each operation.
      * - Authenticated: username
-     * - Anonymous: 'anon:<uuid>' from cookie
+     * - Anonymous: 'anon:<uuid>' from X-Anonymous-Cart-Id header
      */
     public static void setCartKey(String cartKey) {
         cartKeyContext.set(cartKey);

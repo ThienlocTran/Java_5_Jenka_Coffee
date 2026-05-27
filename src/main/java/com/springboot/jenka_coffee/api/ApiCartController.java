@@ -14,11 +14,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/cart")
 public class ApiCartController {
+
+    private static final String ANONYMOUS_CART_HEADER = "X-Anonymous-Cart-Id";
+    private static final Pattern SAFE_ANONYMOUS_CART_ID = Pattern.compile("^[A-Za-z0-9_-]{16,80}$");
 
     private final CartService cartService;
 
@@ -38,12 +42,17 @@ public class ApiCartController {
     private String resolveCartKey(String username, HttpServletRequest request, HttpServletResponse response) {
         if (username != null) return username;
 
-        // Anonymous: look for cart_id session cookie
+        String anonymousCartId = request.getHeader(ANONYMOUS_CART_HEADER);
+        if (isSafeAnonymousCartId(anonymousCartId)) {
+            return "anon:" + anonymousCartId;
+        }
+
+        // Legacy fallback for older frontend versions that still use the cart_id cookie.
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("cart_id".equals(cookie.getName())) {
                     String val = cookie.getValue();
-                    if (val != null && !val.isBlank()) {
+                    if (isSafeAnonymousCartId(val)) {
                         return "anon:" + val;
                     }
                 }
@@ -65,6 +74,10 @@ public class ApiCartController {
 
         log.debug("[CART] New anonymous session-cart created: anon:{}", cartUuid);
         return "anon:" + cartUuid;
+    }
+
+    private boolean isSafeAnonymousCartId(String value) {
+        return value != null && SAFE_ANONYMOUS_CART_ID.matcher(value).matches();
     }
 
     @GetMapping
