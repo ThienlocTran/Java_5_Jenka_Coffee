@@ -191,6 +191,38 @@ public class CartServiceImpl implements CartService {
         return res;
     }
 
+    @Override
+    @Transactional
+    public void mergeAnonymousCart(String username, String anonymousCartId) {
+        if (username == null || username.isBlank() || anonymousCartId == null || anonymousCartId.isBlank()) {
+            return;
+        }
+
+        String anonymousKey = "anon:" + anonymousCartId;
+        List<com.springboot.jenka_coffee.entity.CartItem> anonymousItems =
+                cartItemRepository.findByCartKey(anonymousKey);
+        if (anonymousItems.isEmpty()) {
+            return;
+        }
+
+        for (com.springboot.jenka_coffee.entity.CartItem anonymousItem : anonymousItems) {
+            Optional<com.springboot.jenka_coffee.entity.CartItem> existingUserItem =
+                    cartItemRepository.findByCartKeyAndProductId(username, anonymousItem.getProductId());
+
+            if (existingUserItem.isPresent()) {
+                com.springboot.jenka_coffee.entity.CartItem userItem = existingUserItem.get();
+                int mergedQuantity = Math.min(99, userItem.getQuantity() + anonymousItem.getQuantity());
+                userItem.setQuantity(mergedQuantity);
+                cartItemRepository.save(userItem);
+            } else {
+                anonymousItem.setCartKey(username);
+                cartItemRepository.save(anonymousItem);
+            }
+        }
+
+        cartItemRepository.deleteByCartKey(anonymousKey);
+    }
+
     /**
      * Cleanup: xóa anonymous cart items (anon:*) không được cập nhật trong 2 giờ.
      * (Anonymous carts là session-only — cookie bị mất khi đóng browser,
