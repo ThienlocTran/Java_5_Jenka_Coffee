@@ -3,7 +3,6 @@ package com.springboot.jenka_coffee.api;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.impl.CartServiceImpl;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -33,11 +32,11 @@ public class ApiCartController {
     /**
      * Resolve cart key:
      * - Authenticated: username (persistent forever in DB)
-     * - Anonymous: 'anon:<uuid>' via SESSION cookie (lost when browser closes — by design)
+     * - Anonymous: 'anon:<uuid>' from X-Anonymous-Cart-Id header
      *
      * Business rules:
      * - Logged-in user cart NEVER expires → encourages purchase across sessions/devices
-     * - Anonymous cart is session-only → no commitment, no persistence needed
+     * - Anonymous cart is scoped to the browser/device generated id
      */
     private String resolveCartKey(String username, HttpServletRequest request, HttpServletResponse response) {
         if (username != null) return username;
@@ -47,32 +46,10 @@ public class ApiCartController {
             return "anon:" + anonymousCartId;
         }
 
-        // Legacy fallback for older frontend versions that still use the cart_id cookie.
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("cart_id".equals(cookie.getName())) {
-                    String val = cookie.getValue();
-                    if (isSafeAnonymousCartId(val)) {
-                        return "anon:" + val;
-                    }
-                }
-            }
-        }
-
-        // No cookie yet — generate new UUID cart ID
+        // Frontend v2 always sends X-Anonymous-Cart-Id. If an old client misses it,
+        // use a request-scoped fallback instead of trusting legacy cart_id cookies.
         String cartUuid = UUID.randomUUID().toString();
-        Cookie cookie = new Cookie("cart_id", cartUuid);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);        // HTTPS only (Vietnix)
-        cookie.setPath("/");
-        // NOTE: DO NOT call setMaxAge() — this makes it a SESSION cookie.
-        // Browser will delete it automatically when the window/tab is closed.
-        // This is intentional: anonymous carts are temporary by design.
-        // Logged-in users get persistent carts via username key in DB.
-        cookie.setAttribute("SameSite", "Lax");
-        response.addCookie(cookie);
-
-        log.debug("[CART] New anonymous session-cart created: anon:{}", cartUuid);
+        log.debug("[CART] Missing anonymous cart header, using request fallback: anon:{}", cartUuid);
         return "anon:" + cartUuid;
     }
 
