@@ -186,7 +186,7 @@ public class ApiAuthController {
         accountService.register(
                 request.getUsername(), request.getFullname(),
                 request.getPhone(), request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công! Vui lòng đăng nhập.", null));
+        return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công. Bạn có thể đăng nhập ngay.", null));
     }
 
     @PostMapping("/activate")

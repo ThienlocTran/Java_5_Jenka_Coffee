@@ -144,7 +144,7 @@ public  class AccountServiceImpl implements AccountService {
 
         // 3. Set defaults for new user registration
         newAccount.setPasswordHash(password); // Will be hashed in createAccount
-        newAccount.setActivated(false); // CHANGED: Require phone OTP verification
+        newAccount.setActivated(true);
         newAccount.setAdmin(false);
         newAccount.setPoints(0);
         newAccount.setCustomerRank("MEMBER");
@@ -152,10 +152,6 @@ public  class AccountServiceImpl implements AccountService {
         // 4. Call createAccount which handles validation and hashing
         createAccount(newAccount, null);
         
-        // 5. Send OTP to phone for verification
-        if (!phone.trim().isEmpty()) {
-            otpService.generateOTP(phone.trim());
-        }
     }
 
     @Override
