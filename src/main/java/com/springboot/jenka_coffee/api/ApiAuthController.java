@@ -298,7 +298,7 @@ public class ApiAuthController {
 
             if (!Boolean.TRUE.equals(account.getActivated())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t hoáº·c Ä‘Ã£ bá»‹ khÃ³a."));
+                        .body(ApiResponse.error("Tài khoản chưa được kích hoạt hoặc đã bị khóa."));
             }
             
             // Check if this is an OAuth account
