@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Visitor tracking with DB persistence.
@@ -30,10 +31,11 @@ public class ApiVisitorController {
 
     private final VisitorStatsRepository visitorStatsRepository;
     private static final ZoneId STATS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final Pattern SAFE_VISITOR_ID = Pattern.compile("^[A-Za-z0-9_-]{16,80}$");
 
-    // Online tracking stays in-memory (ephemeral, 5-min window — intentional)
+    // Online tracking stays in-memory and expires by recent heartbeat TTL.
     private final ConcurrentHashMap<String, Long> onlineUsers = new ConcurrentHashMap<>();
-    private static final long ONLINE_TIMEOUT_MS = 5 * 60 * 1000L; // 5 minutes
+    private static final long ONLINE_TIMEOUT_MS = 120 * 1000L;
 
     // Deduplicate unique visitors within the current day (in-memory — fast)
     // This resets on restart, meaning a visitor on day N might be counted again after restart.
@@ -71,7 +73,7 @@ public class ApiVisitorController {
 
         // 4. Persist to DB via UPSERT (atomic increment)
         try {
-            visitorStatsRepository.upsertVisit(today, isNewUniqueToday ? 1 : 0, onlineCount);
+            visitorStatsRepository.upsertVisit(today, isNewUniqueToday ? 1 : 0, isNewUniqueToday ? 1 : 0, onlineCount);
         } catch (Exception e) {
             // Non-critical — don't break the user's page load because of analytics
             log.warn("[VISITOR] Failed to persist visit stats: {}", e.getMessage());
@@ -104,8 +106,6 @@ public class ApiVisitorController {
     /** POST /api/visitors/leave — user rời trang */
     @PostMapping("/leave")
     public ResponseEntity<Void> leave(HttpServletRequest request) {
-        String clientId = getClientIdentifier(request);
-        onlineUsers.remove(clientId);
         return ResponseEntity.ok().build();
     }
 
@@ -117,7 +117,7 @@ public class ApiVisitorController {
     }
 
     /** Cleanup seenTodayMap sau nửa đêm để không giữ data cũ */
-    @Scheduled(cron = "0 5 0 * * *") // 00:05 hàng ngày
+    @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Ho_Chi_Minh") // 00:05 hàng ngày
     public void resetDailyDedup() {
         seenTodayMap.clear();
         log.debug("[VISITOR] Daily dedup map cleared");
@@ -154,6 +154,11 @@ public class ApiVisitorController {
     }
 
     private String getClientIdentifier(HttpServletRequest request) {
+        String visitorId = request.getHeader("X-Visitor-Id");
+        if (visitorId != null && SAFE_VISITOR_ID.matcher(visitorId).matches()) {
+            return "vid:" + visitorId;
+        }
+
         String ip = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
         if (userAgent == null) userAgent = "unknown";

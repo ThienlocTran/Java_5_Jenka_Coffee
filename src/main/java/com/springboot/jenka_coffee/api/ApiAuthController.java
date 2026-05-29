@@ -295,6 +295,11 @@ public class ApiAuthController {
             
             String username = account.getUsername();
             String passwordHash = account.getPasswordHash();
+
+            if (!Boolean.TRUE.equals(account.getActivated())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t hoáº·c Ä‘Ã£ bá»‹ khÃ³a."));
+            }
             
             // Check if this is an OAuth account
             // OAuth accounts have either:
@@ -325,17 +330,7 @@ public class ApiAuthController {
             }
 
             if (!isOAuthAccount) {
-                if (!Boolean.TRUE.equals(account.getActivated())) {
-                    // Verified Google email proves ownership, so allow the owner to claim
-                    // an unactivated signup created with the same email.
-                    account.setActivated(true);
-                    account.setActivationToken(null);
-                    account.setActivationTokenExpiry(null);
-                    account = accountService.save(account);
-                    log.info("Activated and linked verified Google login for account: {}", account.getUsername());
-                } else {
-                    log.info("Linked verified Google login for existing password account: {}", account.getUsername());
-                }
+                log.info("Linked verified Google login for existing password account: {}", account.getUsername());
                 isOAuthAccount = true;
             }
             

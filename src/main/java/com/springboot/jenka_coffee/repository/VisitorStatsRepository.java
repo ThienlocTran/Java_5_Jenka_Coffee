@@ -26,9 +26,9 @@ public interface VisitorStatsRepository extends JpaRepository<VisitorStats, Loca
     @Transactional
     @Query(value = """
         INSERT INTO visitor_stats (stat_date, unique_visitors, total_visits, online_peak, updated_at)
-        VALUES (:today, :uniqueDelta, 1, :onlinePeak, NOW())
+        VALUES (:today, :uniqueDelta, :visitDelta, :onlinePeak, NOW())
         ON CONFLICT (stat_date) DO UPDATE SET
-            total_visits    = visitor_stats.total_visits + 1,
+            total_visits    = visitor_stats.total_visits + :visitDelta,
             unique_visitors = visitor_stats.unique_visitors + :uniqueDelta,
             online_peak     = GREATEST(visitor_stats.online_peak, :onlinePeak),
             updated_at      = NOW()
@@ -36,6 +36,7 @@ public interface VisitorStatsRepository extends JpaRepository<VisitorStats, Loca
     void upsertVisit(
             @Param("today") LocalDate today,
             @Param("uniqueDelta") int uniqueDelta,
+            @Param("visitDelta") int visitDelta,
             @Param("onlinePeak") int onlinePeak
     );
 }
