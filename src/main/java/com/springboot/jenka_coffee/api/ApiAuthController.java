@@ -13,6 +13,7 @@ import com.springboot.jenka_coffee.dto.response.AuthStatus;
 import com.springboot.jenka_coffee.entity.Account;
 import com.springboot.jenka_coffee.security.JwtService;
 import com.springboot.jenka_coffee.service.AccountService;
+import com.springboot.jenka_coffee.service.CartService;
 import com.springboot.jenka_coffee.service.CookieService;
 import com.springboot.jenka_coffee.service.GoogleOAuthService;
 import com.springboot.jenka_coffee.service.JwtBlacklistService;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static java.lang.System.currentTimeMillis;
 
@@ -37,11 +39,15 @@ import static java.lang.System.currentTimeMillis;
 @RequestMapping("/api/auth")
 public class ApiAuthController {
 
+    private static final String ANONYMOUS_CART_HEADER = "X-Anonymous-Cart-Id";
+    private static final Pattern SAFE_ANONYMOUS_CART_ID = Pattern.compile("^[A-Za-z0-9_-]{16,80}$");
+
     private final AccountService accountService;
     private final JwtService jwtService;
     private final GoogleOAuthService googleOAuthService;
     private final JwtBlacklistService jwtBlacklistService;
     private final com.springboot.jenka_coffee.service.CookieService cookieService;
+    private final CartService cartService;
 
     // VULN-L02 FIX: Detect production vs local để set Secure flag đúng
     @Value("${spring.profiles.active:default}")
@@ -50,17 +56,20 @@ public class ApiAuthController {
     public ApiAuthController(AccountService accountService, JwtService jwtService, 
                            GoogleOAuthService googleOAuthService,
                            JwtBlacklistService jwtBlacklistService,
-                           CookieService cookieService) {
+                           CookieService cookieService,
+                           CartService cartService) {
         this.accountService = accountService;
         this.jwtService = jwtService;
         this.googleOAuthService = googleOAuthService;
         this.jwtBlacklistService = jwtBlacklistService;
         this.cookieService = cookieService;
+        this.cartService = cartService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(
             @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest,
             HttpServletResponse response) {
 
         AuthResult result = accountService.authenticateWithResult(request.getUsername(), request.getPassword());
@@ -90,6 +99,8 @@ public class ApiAuthController {
             Cookie rememberCookie = cookieService.createRememberMeCookie(account.getUsername(), 30); // 30 ngày
             response.addCookie(rememberCookie);
         }
+
+        mergeAnonymousCartIfPresent(httpRequest, account.getUsername());
 
         Map<String, Object> data = buildUserData(account);
         // DEV FALLBACK: Trả accessToken trong body để frontend lưu vào sessionStorage
@@ -175,7 +186,7 @@ public class ApiAuthController {
         accountService.register(
                 request.getUsername(), request.getFullname(),
                 request.getPhone(), request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công! Vui lòng đăng nhập.", null));
+        return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công. Bạn có thể đăng nhập ngay.", null));
     }
 
     @PostMapping("/activate")
@@ -216,6 +227,7 @@ public class ApiAuthController {
     @PostMapping("/google-login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request,
+            HttpServletRequest httpRequest,
             HttpServletResponse response) {
         
         // Verify Google ID token
@@ -283,6 +295,11 @@ public class ApiAuthController {
             
             String username = account.getUsername();
             String passwordHash = account.getPasswordHash();
+
+            if (!Boolean.TRUE.equals(account.getActivated())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Tài khoản chưa được kích hoạt hoặc đã bị khóa."));
+            }
             
             // Check if this is an OAuth account
             // OAuth accounts have either:
@@ -313,17 +330,7 @@ public class ApiAuthController {
             }
 
             if (!isOAuthAccount) {
-                if (!Boolean.TRUE.equals(account.getActivated())) {
-                    // Verified Google email proves ownership, so allow the owner to claim
-                    // an unactivated signup created with the same email.
-                    account.setActivated(true);
-                    account.setActivationToken(null);
-                    account.setActivationTokenExpiry(null);
-                    account = accountService.save(account);
-                    log.info("Activated and linked verified Google login for account: {}", account.getUsername());
-                } else {
-                    log.info("Linked verified Google login for existing password account: {}", account.getUsername());
-                }
+                log.info("Linked verified Google login for existing password account: {}", account.getUsername());
                 isOAuthAccount = true;
             }
             
@@ -356,6 +363,8 @@ public class ApiAuthController {
         // Set cookies
         addTokenCookie(response, "access_token", accessToken, 86400);
         addTokenCookie(response, "refresh_token", refreshToken, 604800);
+
+        mergeAnonymousCartIfPresent(httpRequest, account.getUsername());
         
         Map<String, Object> data = buildUserData(account);
         // DEV FALLBACK: Trả accessToken trong body (xem lý giải tại /login endpoint)
@@ -472,6 +481,13 @@ public class ApiAuthController {
         data.put("photo",    account.getPhoto());
         data.put("points",   account.getPoints());
         return data;
+    }
+
+    private void mergeAnonymousCartIfPresent(HttpServletRequest request, String username) {
+        String anonymousCartId = request.getHeader(ANONYMOUS_CART_HEADER);
+        if (anonymousCartId != null && SAFE_ANONYMOUS_CART_ID.matcher(anonymousCartId).matches()) {
+            cartService.mergeAnonymousCart(username, anonymousCartId);
+        }
     }
 
     private void addTokenCookie(HttpServletResponse res, String name, String value, int maxAge) {
