@@ -1,7 +1,10 @@
 package com.springboot.jenka_coffee.service.impl;
 
+import com.springboot.jenka_coffee.entity.ConsultationRequest;
 import com.springboot.jenka_coffee.service.EmailService;
 import jakarta.mail.MessagingException;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 
 @Service
@@ -25,10 +29,13 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${app.mail.from:${spring.mail.username:}}")
     private String fromEmail;
 
-    @Value("${app.admin.email:${spring.mail.username}}")
+    @Value("${app.admin.email:${spring.mail.username:}}")
     private String adminNotifyEmail;
 
     public EmailServiceImpl(JavaMailSender mailSender) {
@@ -39,6 +46,65 @@ public class EmailServiceImpl implements EmailService {
         return HtmlUtils.htmlEscape(value != null ? value : defaultVal);
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String normalizeEmail(String value) {
+        if (value == null) {
+            return null;
+        }
+        String email = value.trim();
+        return email.isEmpty() ? null : email;
+    }
+
+    private boolean isValidEmail(String value) {
+        String email = normalizeEmail(value);
+        if (email == null) {
+            return false;
+        }
+        try {
+            InternetAddress address = new InternetAddress(email, true);
+            address.validate();
+            return email.equals(address.getAddress());
+        } catch (AddressException ex) {
+            return false;
+        }
+    }
+
+    private String resolveConfiguredEmail(String value) {
+        String email = normalizeEmail(value);
+        return isValidEmail(email) ? email : null;
+    }
+
+    private String resolveSenderEmail() {
+        String configuredFrom = normalizeEmail(fromEmail);
+        if (isValidEmail(configuredFrom)) {
+            return configuredFrom;
+        }
+        if (!isBlank(configuredFrom)) {
+            log.warn("Configured mail from address is invalid; falling back to spring.mail.username");
+        }
+
+        String username = normalizeEmail(mailUsername);
+        if (isValidEmail(username)) {
+            return username;
+        }
+        return null;
+    }
+
+    private String resolveAdminEmail() {
+        return resolveConfiguredEmail(adminNotifyEmail);
+    }
+
+    private String value(Object value) {
+        if (value == null) {
+            return "N/A";
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? "N/A" : text;
+    }
+
     private String formatCurrency(BigDecimal total) {
         return total != null
                 ? String.format("%,.0f", total.doubleValue()) + " ₫"
@@ -47,15 +113,33 @@ public class EmailServiceImpl implements EmailService {
 
     private MimeMessageHelper createHelper(MimeMessage message, String to, String subject)
             throws MessagingException {
+        String senderEmail = resolveSenderEmail();
+        if (senderEmail == null) {
+            throw new MessagingException("Mail sender not configured");
+        }
+        return createHelper(message, to, subject, senderEmail);
+    }
+
+    private MimeMessageHelper createHelper(MimeMessage message, String to, String subject, String senderEmail)
+            throws MessagingException {
+        String recipientEmail = resolveConfiguredEmail(to);
+        if (recipientEmail == null) {
+            throw new MessagingException("Invalid recipient email");
+        }
+
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail);
-        helper.setTo(to);
+        try {
+            helper.setFrom(senderEmail, "Jenka Coffee");
+        } catch (UnsupportedEncodingException ex) {
+            helper.setFrom(senderEmail);
+        }
+        helper.setTo(recipientEmail);
         helper.setSubject(subject);
         return helper;
     }
 
     private void logMailFailure(String action, String to, Exception e) {
-        log.error("[EMAIL FAIL] {} | to={} | cause={}. Check SPRING_MAIL_USERNAME and Gmail App Password.",
+        log.error("[EMAIL FAIL] {} | to={} | cause={}. Check mail username/from config and app password.",
                 action, to, e.getMessage(), e);
     }
 
@@ -231,11 +315,22 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendContactConfirmation(String toEmail, String customerName, String subject) {
+        String adminEmail = resolveAdminEmail();
+        if (adminEmail == null) {
+            log.warn("Admin email not configured or invalid; contact email skipped");
+            return;
+        }
+        String senderEmail = resolveSenderEmail();
+        if (senderEmail == null) {
+            log.warn("Mail sender not configured; contact email skipped");
+            return;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = createHelper(
                     message,
-                    adminNotifyEmail,
+                    adminEmail,
                     "[Jenka Coffee] Liên hệ mới từ: " + escape(customerName, "")
             );
 
@@ -252,7 +347,86 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(html, true);
             mailSender.send(message);
         } catch (MessagingException | MailException e) {
-            logMailFailure("sendContactConfirmation", adminNotifyEmail, e);
+            logMailFailure("sendContactConfirmation", adminEmail, e);
+        }
+    }
+
+    @Override
+    @Async
+    public void sendConsultationNotification(ConsultationRequest consultation) {
+        if (consultation == null) {
+            log.warn("Consultation email skipped: request is null");
+            return;
+        }
+        String adminEmail = resolveAdminEmail();
+        if (adminEmail == null) {
+            log.warn("Admin email not configured or invalid; consultation email skipped for id={}", consultation.getId());
+            return;
+        }
+        String senderEmail = resolveSenderEmail();
+        if (senderEmail == null) {
+            log.warn("Mail sender not configured; consultation email skipped for id={}", consultation.getId());
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            String phone = value(consultation.getContactPhone());
+            MimeMessageHelper helper = createHelper(
+                    message,
+                    adminEmail,
+                    "[Jenka Coffee] Khach moi can tu van - " + phone,
+                    senderEmail
+            );
+
+            String adminLink = isBlank(baseUrl) ? "N/A" : baseUrl + "/admin/consultations";
+            String body = """
+                    Khach moi can tu van tu Jenka Coffee
+
+                    Khach vua gui yeu cau tu van. Vui long goi lai som.
+
+                    Thong tin khach:
+                    - Ho ten: %s
+                    - So dien thoai/Zalo: %s
+                    - Email: N/A
+
+                    Nhu cau:
+                    - Loai nhu cau: %s
+                    - San pham/hang muc quan tam: %s
+                    - San pham cu the: %s
+                    - Ngan sach: %s
+                    - Ghi chu: %s
+
+                    Nguon:
+                    - Tieu de trang: %s
+                    - Trang gui: %s
+                    - Source: %s
+                    - Thoi gian: %s
+
+                    Hanh dong:
+                    Vui long goi lai khach trong thoi gian som nhat.
+
+                    Admin:
+                    %s
+                    """.formatted(
+                    value(consultation.getFullName()),
+                    phone,
+                    value(consultation.getNeedType()),
+                    value(consultation.getInterest()),
+                    value(consultation.getProductName()),
+                    value(consultation.getBudget()),
+                    value(consultation.getNote()),
+                    value(consultation.getPageTitle()),
+                    value(consultation.getPageUrl()),
+                    value(consultation.getSource()),
+                    value(consultation.getCreatedAt()),
+                    adminLink
+            );
+
+            helper.setText(body, false);
+            mailSender.send(message);
+        } catch (MessagingException | MailException e) {
+            logMailFailure("sendConsultationNotification id=" + consultation.getId(), adminEmail, e);
         }
     }
 }
