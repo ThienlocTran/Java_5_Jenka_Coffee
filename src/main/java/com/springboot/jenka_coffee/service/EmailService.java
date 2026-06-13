@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.service;
 
 import com.springboot.jenka_coffee.entity.ConsultationRequest;
+import com.springboot.jenka_coffee.entity.Contact;
 
 import java.math.BigDecimal;
 
@@ -39,7 +40,7 @@ public interface EmailService {
     void sendOrderConfirmation(String customerEmail, String customerName, Long orderId,
                                String orderCode, String phone, String address, BigDecimal total);
 
-    void sendContactConfirmation(String toEmail, String customerName, String subject);
+    void sendContactConfirmation(Contact contact);
 
     void sendConsultationNotification(ConsultationRequest consultation);
 }
