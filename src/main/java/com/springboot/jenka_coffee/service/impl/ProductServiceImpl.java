@@ -455,16 +455,17 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice,
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
-        if (isDefaultHomepageQuery(categoryId, productKind, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+        if (isDefaultHomepageQuery(categoryId, categorySlug, productKind, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
-        return productRepository.findByAllCriteria(categoryId, productKind, minPrice, maxPrice, keyword, pageable);
+        return productRepository.findByAllCriteria(categoryId, categorySlug, productKind, minPrice, maxPrice, keyword, pageable);
     }
 
-    private boolean isDefaultHomepageQuery(String categoryId, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
+    private boolean isDefaultHomepageQuery(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
         return (categoryId == null || categoryId.isBlank())
+                && (categorySlug == null || categorySlug.isBlank())
                 && productKind == null
                 && minPrice == null
                 && maxPrice == null

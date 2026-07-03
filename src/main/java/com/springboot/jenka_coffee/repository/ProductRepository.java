@@ -72,6 +72,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // ── Search (paginated only) ──────────────────────────────────────
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
                    "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:categorySlug IS NULL OR :categorySlug = '' OR LOWER(p.category.slug) = LOWER(:categorySlug)) AND " +
                    "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
@@ -81,6 +82,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
            countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
                         "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:categorySlug IS NULL OR :categorySlug = '' OR LOWER(p.category.slug) = LOWER(:categorySlug)) AND " +
                         "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
@@ -89,6 +91,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                         " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                    @Param("categorySlug") String categorySlug,
                                     @Param("productKind") ProductKind productKind,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,

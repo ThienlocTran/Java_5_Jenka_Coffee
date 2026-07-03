@@ -36,6 +36,7 @@ public class ApiProductController {
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProducts(
             @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "categorySlug", required = false) String categorySlug,
             @RequestParam(value = "productKind", required = false) String productKindParam,
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
             @RequestParam(value = "maxPrice", required = false) Double maxPriceDouble,
@@ -84,7 +85,7 @@ public class ApiProductController {
         };
 
         Pageable pageable = PageRequest.of(page, size, sortOrder);
-        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, productKind, minPrice, maxPrice,
+        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, categorySlug, productKind, minPrice, maxPrice,
                 keyword, pageable);
 
         // BUG FIX: Add null check for productPage to prevent NPE
