@@ -3,7 +3,7 @@ package com.springboot.jenka_coffee.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMin;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -37,8 +37,8 @@ public class Product implements Serializable {
     @Column(name = "image")
     private String image;
 
-    @Min(value = 0, message = "Giá sản phẩm phải lớn hơn 0")
-    @Column(name = "price", nullable = false, precision = 18, scale = 2)
+    @DecimalMin(value = "0.0", inclusive = false, message = "Giá sản phẩm phải lớn hơn 0")
+    @Column(name = "price", precision = 18, scale = 2)
     private BigDecimal price;
 
     @Column(name = "description", columnDefinition = "TEXT")

@@ -68,8 +68,8 @@ public class ApiProductController {
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
 
         Sort sortOrder = switch (sort) {
-            case "price_asc"  -> Sort.by("price").ascending();
-            case "price_desc" -> Sort.by("price").descending();
+            case "price_asc"  -> Sort.by(Sort.Order.asc("price").nullsLast());
+            case "price_desc" -> Sort.by(Sort.Order.desc("price").nullsLast());
             case "name_asc"   -> Sort.by("name").ascending();
             default           -> Sort.by("id").descending(); // newest
         };

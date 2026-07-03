@@ -33,10 +33,10 @@ public class ProductValidator {
      */
     public void validatePrice(BigDecimal price) {
         if (price == null) {
-            throw new BusinessRuleException("Gia san pham khong duoc de trong");
+            return;
         }
-        if (price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Gia san pham khong the am");
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Gia san pham phai lon hon 0");
         }
     }
 

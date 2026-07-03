@@ -114,7 +114,10 @@ public class CartServiceImpl implements CartService {
                 throw new BusinessRuleException("Sản phẩm không tồn tại hoặc không còn kinh doanh!");
             }
             if (Boolean.TRUE.equals(product.getRequireContact())) {
-                throw new BusinessRuleException("Sản phẩm này yêu cầu liên hệ trực tiếp, không thể thêm vào giỏ hàng");
+                throw new BusinessRuleException("Sản phẩm này cần liên hệ để được tư vấn mua hàng.");
+            }
+            if (product.getPrice() == null || product.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new BusinessRuleException("Sản phẩm này cần liên hệ để được tư vấn mua hàng.");
             }
 
             com.springboot.jenka_coffee.entity.CartItem item = new com.springboot.jenka_coffee.entity.CartItem();

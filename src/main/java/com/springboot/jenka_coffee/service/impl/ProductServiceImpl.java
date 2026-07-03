@@ -633,12 +633,9 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessRuleException("Tên sản phẩm không được để trống");
         }
         
-        // Validate price
-        if (request.getPrice() == null) {
-            throw new BusinessRuleException("Giá sản phẩm không được để trống");
-        }
-        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Giá sản phẩm không thể âm");
+        // Price is optional; when provided it must be positive.
+        if (request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Giá sản phẩm phải lớn hơn 0");
         }
         
         // Get category
@@ -717,12 +714,9 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessRuleException("Tên sản phẩm không được để trống");
         }
 
-        // Validate price - FIX BUG Ở ĐÂY!
-        if (request.getPrice() == null) {
-            throw new BusinessRuleException("Giá sản phẩm không được để trống");
-        }
-        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Giá sản phẩm không thể âm");
+        // Price is optional; when provided it must be positive.
+        if (request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Giá sản phẩm phải lớn hơn 0");
         }
         
         // Get existing product
