@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.entity.ProductKind;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
@@ -454,16 +455,17 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
-        if (isDefaultHomepageQuery(categoryId, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+        if (isDefaultHomepageQuery(categoryId, productKind, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
-        return productRepository.findByAllCriteria(categoryId, minPrice, maxPrice, keyword, pageable);
+        return productRepository.findByAllCriteria(categoryId, productKind, minPrice, maxPrice, keyword, pageable);
     }
 
-    private boolean isDefaultHomepageQuery(String categoryId, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
+    private boolean isDefaultHomepageQuery(String categoryId, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
         return (categoryId == null || categoryId.isBlank())
+                && productKind == null
                 && minPrice == null
                 && maxPrice == null
                 && (keyword == null || keyword.isBlank());
@@ -690,6 +692,7 @@ public class ProductServiceImpl implements ProductService {
         product.setFaqJson(request.getFaqJson());
         product.setMetaTitle(request.getMetaTitle());
         product.setMetaDescription(request.getMetaDescription());
+        product.setProductKind(parseProductKind(request.getProductKind()));
         product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
@@ -743,6 +746,7 @@ public class ProductServiceImpl implements ProductService {
         existing.setFaqJson(request.getFaqJson());
         existing.setMetaTitle(request.getMetaTitle());
         existing.setMetaDescription(request.getMetaDescription());
+        existing.setProductKind(parseProductKind(request.getProductKind()));
         existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
@@ -755,6 +759,14 @@ public class ProductServiceImpl implements ProductService {
 
         // Save with image
         return saveProduct(existing, imageFile);
+    }
+
+    private static ProductKind parseProductKind(String productKind) {
+        try {
+            return ProductKind.fromNullable(productKind);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleException("Loại sản phẩm không hợp lệ");
+        }
     }
     
     /**

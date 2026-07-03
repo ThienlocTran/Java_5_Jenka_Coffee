@@ -37,6 +37,10 @@ public class Product implements Serializable {
     @Column(name = "image")
     private String image;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "product_kind", length = 32)
+    private ProductKind productKind;
+
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá sản phẩm phải lớn hơn 0")
     @Column(name = "price", precision = 18, scale = 2)
     private BigDecimal price;

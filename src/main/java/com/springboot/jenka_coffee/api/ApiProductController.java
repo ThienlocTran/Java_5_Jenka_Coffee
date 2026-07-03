@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.api;
 import com.springboot.jenka_coffee.dto.ApiResponse;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.entity.ProductKind;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.service.ProductService;
 import com.springboot.jenka_coffee.util.SqlUtils;
@@ -35,6 +36,7 @@ public class ApiProductController {
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProducts(
             @RequestParam(value = "categoryId", required = false) String categoryId,
+            @RequestParam(value = "productKind", required = false) String productKindParam,
             @RequestParam(value = "minPrice", required = false) Double minPriceDouble,
             @RequestParam(value = "maxPrice", required = false) Double maxPriceDouble,
             @RequestParam(value = "keyword", required = false) String keyword,
@@ -66,6 +68,13 @@ public class ApiProductController {
 
         BigDecimal minPrice = minPriceDouble != null ? BigDecimal.valueOf(minPriceDouble) : null;
         BigDecimal maxPrice = maxPriceDouble != null ? BigDecimal.valueOf(maxPriceDouble) : null;
+        ProductKind productKind;
+        try {
+            productKind = ProductKind.fromNullable(productKindParam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("productKind không hợp lệ"));
+        }
 
         Sort sortOrder = switch (sort) {
             case "price_asc"  -> Sort.by(Sort.Order.asc("price").nullsLast());
@@ -75,7 +84,7 @@ public class ApiProductController {
         };
 
         Pageable pageable = PageRequest.of(page, size, sortOrder);
-        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, minPrice, maxPrice,
+        Page<Product> productPage = productService.filterProductsWithAllCriteria(categoryId, productKind, minPrice, maxPrice,
                 keyword, pageable);
 
         // BUG FIX: Add null check for productPage to prevent NPE

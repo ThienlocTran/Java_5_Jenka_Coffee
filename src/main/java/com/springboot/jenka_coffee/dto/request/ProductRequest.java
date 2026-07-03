@@ -37,6 +37,8 @@ public class ProductRequest {
     private String metaTitle;
 
     private String metaDescription;
+
+    private String productKind;
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá sản phẩm phải lớn hơn 0")
     private BigDecimal price;

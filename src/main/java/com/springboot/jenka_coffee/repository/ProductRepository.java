@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.repository;
 
 import com.springboot.jenka_coffee.entity.Product;
+import com.springboot.jenka_coffee.entity.ProductKind;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -71,6 +72,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // ── Search (paginated only) ──────────────────────────────────────
     @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
                    "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                   "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                    "p.available = true AND " +
@@ -79,6 +81,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
            countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
                         "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
+                        "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "p.available = true AND " +
@@ -86,6 +89,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                         " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                    @Param("productKind") ProductKind productKind,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,
                                     @Param("keyword") String keyword,
