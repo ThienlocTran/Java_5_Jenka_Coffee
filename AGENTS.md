@@ -33,6 +33,22 @@
 - Existing business rules.
 - Tests and build validation for non-trivial changes.
 
+## Cloudinary Safety
+- Development uploads should use `jenka/dev/...` folders.
+- Production uploads should use `jenka/prod/...` folders.
+- Do not delete `jenka/prod` assets during dev cleanup.
+- Do not move or rewrite existing Cloudinary URLs without a separate migration/cleanup plan.
+- Do not delete assets by URL guessing.
+- Cleanup must use `publicId` and must check whether another record still references the asset.
+
+## UTF-8 And Vietnamese Text
+- All source files must be UTF-8.
+- Preserve Vietnamese accents.
+- After touching Vietnamese text, search touched files for mojibake patterns: `Ãƒ`, `Ã„`, `Ã†`, `Ã¡Âº`, `Ã¡Â»`, `ï¿½`.
+- Do not commit if mojibake is found in touched files.
+- Backend validation/error messages must be readable Vietnamese.
+- Prefer existing message style; do not mass rewrite all messages.
+
 ## Ponytail Boundaries
 - Do not add dependencies unless clearly justified.
 - Do not copy the Ponytail repo into this repo.

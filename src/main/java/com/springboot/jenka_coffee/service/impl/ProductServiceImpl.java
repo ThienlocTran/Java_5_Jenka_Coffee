@@ -338,21 +338,21 @@ public class ProductServiceImpl implements ProductService {
             if (message != null) {
                 String normalized = message.toLowerCase();
                 if (normalized.contains("categoryid")) {
-                    return "CÆ¡ sá»Ÿ dá»¯ liá»‡u hiá»‡n táº¡i cÃ²n schema cá»§ khÃ´ng khá»›p VPS (categoryid). Cáº§n bá» rÃ ng buá»™c cÅ© nÃ y trÃªn database.";
+                    return "Cơ sở dữ liệu hiện tại còn schema cũ không khớp VPS (categoryid). Cần bỏ ràng buộc cũ này trên database.";
                 }
                 if (normalized.contains("category_id")) {
-                    return "Danh má»¥c sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Danh mục sản phẩm không hợp lệ.";
                 }
                 if (normalized.contains("name")) {
-                    return "TÃªn sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Tên sản phẩm không hợp lệ.";
                 }
                 if (normalized.contains("price")) {
-                    return "GiÃ¡ sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Giá sản phẩm không hợp lệ.";
                 }
             }
             current = current.getCause();
         }
-        return "KhÃ´ng thá»ƒ táº¡o sáº£n pháº©m do rÃ ng buá»™c dá»¯ liá»‡u trong database.";
+        return "Không thể tạo sản phẩm do ràng buộc dữ liệu trong database.";
     }
 
     @Override
