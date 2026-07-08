@@ -337,6 +337,9 @@ public class ProductServiceImpl implements ProductService {
             String message = current.getMessage();
             if (message != null) {
                 String normalized = message.toLowerCase();
+                if (normalized.contains("price") && normalized.contains("not-null")) {
+                    return "Cơ sở dữ liệu chưa cập nhật để cho phép sản phẩm không giá. Vui lòng chạy migration trước.";
+                }
                 if (normalized.contains("categoryid")) {
                     return "Cơ sở dữ liệu hiện tại còn schema cũ không khớp VPS (categoryid). Cần bỏ ràng buộc cũ này trên database.";
                 }
@@ -347,7 +350,7 @@ public class ProductServiceImpl implements ProductService {
                     return "Tên sản phẩm không hợp lệ.";
                 }
                 if (normalized.contains("price")) {
-                    return "Giá sản phẩm không hợp lệ.";
+                    return "Không thể tạo sản phẩm do ràng buộc dữ liệu giá chưa phù hợp.";
                 }
             }
             current = current.getCause();
