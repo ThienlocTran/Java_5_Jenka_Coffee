@@ -1,0 +1,102 @@
+language: "vi-VN"
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_filters:
+    - "!target/**"
+    - "!.idea/**"
+    - "!.mvn/wrapper/*.jar"
+    - "src/**"
+    - "deploy/**"
+    - "docker-compose*.yml"
+    - "*.sql"
+    - "pom.xml"
+    - "AGENTS.md"
+
+  path_instructions:
+    - path: "src/main/resources/db/migration/**"
+      instructions: |
+        Jenka Coffee is production with real customer data.
+        main is production.
+        Review migrations strictly for data safety.
+        Flag DROP, TRUNCATE, DELETE, destructive UPDATE, table recreation, or data rewrites unless explicitly justified.
+        Prefer additive, backward-compatible migrations.
+        Verify nullable/product_kind migrations do not rewrite existing production rows.
+
+    - path: "**/*.sql"
+      instructions: |
+        Jenka Coffee is production with real customer data.
+        Block or flag destructive DB operations.
+        Flag DROP, TRUNCATE, DELETE, destructive UPDATE, table recreation, init.sql, or init_production.sql when they can affect production data.
+        Prefer additive, backward-compatible SQL.
+
+    - path: "src/main/resources/application*.properties"
+      instructions: |
+        Check for production safety.
+        Flag committed secrets, real passwords, real API keys, or unsafe production defaults.
+        Production must use SPRING_PROFILES_ACTIVE=production and DDL_AUTO=validate.
+        Flag DDL_AUTO=update/create/create-drop/validator in production config.
+
+    - path: "deploy/**"
+      instructions: |
+        Review deploy scripts for destructive Docker/DB operations.
+        Flag docker compose down -v, docker volume rm, init.sql/init_production.sql against live DB, DROP/TRUNCATE/DELETE, or commands that can remove java_5_jenka_coffee_jenka_pg_data.
+
+    - path: "docker-compose*.yml"
+      instructions: |
+        Review Docker config for production data safety.
+        Protect the production PostgreSQL named volume java_5_jenka_coffee_jenka_pg_data.
+        Flag accidental volume removal, new anonymous DB volumes, unsafe env defaults, or destructive production operations.
+
+    - path: "src/main/java/**/controller/**"
+      instructions: |
+        Review auth, authorization, request validation, and error handling.
+        Flag endpoints that expose admin data without proper role checks.
+        Prefer readable Vietnamese errors without leaking stack traces or entity internals.
+
+    - path: "src/main/java/**/security/**"
+      instructions: |
+        Review JWT/auth/session changes carefully.
+        Invalid or expired tokens should return 401/403, not 500.
+        Do not weaken authentication, authorization, CORS, or security headers.
+
+    - path: "src/main/java/**/service/**"
+      instructions: |
+        Review business logic, transaction safety, and error mapping.
+        Flag misleading errors such as mapping price constraint failures to category errors.
+        Preserve production data and existing business rules.
+
+    - path: "src/main/java/**/repository/**"
+      instructions: |
+        Review query behavior, filtering, null handling, and pagination.
+        Flag queries that bypass expected category/productKind filters or can leak unrelated data.
+
+    - path: "src/main/java/**/UploadService*.java"
+      instructions: |
+        Review Cloudinary logic carefully.
+        Development uploads should use jenka/dev folders.
+        Production uploads should use jenka/prod folders.
+        Do not delete assets by guessing URLs.
+        Cleanup must use publicId and verify no other record references the asset.
+
+    - path: "src/main/java/**/*{Banner,Account,News,Category}*.java"
+      instructions: |
+        Review asset cleanup and upload behavior carefully.
+        Do not delete Cloudinary assets by guessing URLs.
+        Cleanup must use publicId and verify no other record references the asset.
+
+    - path: "src/main/java/**/*.java"
+      instructions: |
+        Preserve UTF-8 Vietnamese text.
+        Flag mojibake patterns such as Ãƒ, Ã„, Ã†, Ã¡Âº, Ã¡Â», or ï¿½.
+        Avoid over-engineering. Use the smallest safe diff.
+
+chat:
+  auto_reply: true
