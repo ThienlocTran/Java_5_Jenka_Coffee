@@ -18,6 +18,7 @@ import org.apache.tomcat.util.http.Rfc6265CookieProcessor;
 import org.apache.tomcat.util.http.SameSiteCookies;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -25,10 +26,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:4173}")
     private String[] allowedOrigins;
 
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*,https://*.vercel.app}")
+    private String[] allowedOriginPatterns;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOrigins(clean(allowedOrigins))
+                .allowedOriginPatterns(clean(allowedOriginPatterns))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
@@ -38,6 +43,16 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**").addResourceLocations("file:uploads/");
+    }
+
+    private String[] clean(String[] values) {
+        if (values == null) {
+            return new String[0];
+        }
+        return Arrays.stream(values)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toArray(String[]::new);
     }
 
     /**

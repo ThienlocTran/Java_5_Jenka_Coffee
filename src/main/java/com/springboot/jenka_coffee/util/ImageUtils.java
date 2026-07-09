@@ -21,8 +21,7 @@ public class ImageUtils {
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
             "jpg", "jpeg", "png", "gif", "webp");
 
-    // Max file size (5MB)
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 
     /**
      * Validate if uploaded file is a valid image.
@@ -30,7 +29,6 @@ public class ImageUtils {
      */
     public static boolean isValidImage(MultipartFile file) {
         if (file == null || file.isEmpty()) return false;
-        if (file.getSize() > MAX_FILE_SIZE) return false;
 
         // Check content type (client-controlled, but first filter)
         String contentType = file.getContentType();
@@ -149,9 +147,6 @@ public class ImageUtils {
             return "Vui lòng chọn file ảnh";
         }
 
-        if (file.getSize() > MAX_FILE_SIZE) {
-            return "Kích thước file quá lớn. Vui lòng chọn file dưới 5MB.";
-        }
 
         String contentType = file.getContentType();
         if (contentType == null || !SUPPORTED_IMAGE_TYPES.contains(contentType.toLowerCase())) {

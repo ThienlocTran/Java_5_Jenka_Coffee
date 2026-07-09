@@ -90,8 +90,8 @@ public class ApiProductController {
 
         // BUG FIX: Add null check for productPage to prevent NPE
         if (productPage == null) {
-            log.error("Service returned null productPage for filters: categoryId={}, minPrice={}, maxPrice={}, keyword={}", 
-                    categoryId, minPrice, maxPrice, keyword);
+            log.error("Service returned null productPage for filters: categoryId={}, categorySlug={}, minPrice={}, maxPrice={}, keyword={}",
+                    categoryId, categorySlug, minPrice, maxPrice, keyword);
             return ResponseEntity.status(500)
                     .body(ApiResponse.error("Lỗi khi lấy danh sách sản phẩm"));
         }

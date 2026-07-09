@@ -10,14 +10,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "Contacts")
+@Table(name = "contacts")
 public class Contact {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "fullName", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
     @Column(name = "phone", length = 15)
@@ -32,9 +32,9 @@ public class Contact {
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
 
-    @Column(name = "createdAt")
+    @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "isRead")
+    @Column(name = "is_read")
     private Boolean isRead = false;
 }

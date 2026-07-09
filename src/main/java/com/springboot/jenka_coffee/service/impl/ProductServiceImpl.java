@@ -463,7 +463,20 @@ public class ProductServiceImpl implements ProductService {
         if (isDefaultHomepageQuery(categoryId, categorySlug, productKind, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
-        return productRepository.findByAllCriteria(categoryId, categorySlug, productKind, minPrice, maxPrice, keyword, pageable);
+        String normalizedCategoryId = normalizeCategoryId(categoryId);
+        String normalizedCategoryIdSlug = categorySlug == null ? normalizeCategorySlug(categoryId) : null;
+        String normalizedCategorySlug = normalizeCategorySlug(categorySlug);
+        String normalizedKeywordPattern = normalizeKeywordPattern(keyword);
+        return productRepository.findByAllCriteria(
+                normalizedCategoryId,
+                normalizedCategoryIdSlug,
+                normalizedCategorySlug,
+                productKind,
+                minPrice,
+                maxPrice,
+                normalizedKeywordPattern,
+                pageable
+        );
     }
 
     private boolean isDefaultHomepageQuery(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
@@ -473,6 +486,30 @@ public class ProductServiceImpl implements ProductService {
                 && minPrice == null
                 && maxPrice == null
                 && (keyword == null || keyword.isBlank());
+    }
+
+    private String normalizeCategoryId(String categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        String normalized = categoryId.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeCategorySlug(String categoryFilter) {
+        if (categoryFilter == null) {
+            return null;
+        }
+        String normalized = categoryFilter.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeKeywordPattern(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String normalized = keyword.trim().toLowerCase();
+        return normalized.isEmpty() ? null : "%" + normalized + "%";
     }
 
     private boolean isDefaultProductSort(Pageable pageable) {
@@ -532,7 +569,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<Product> searchProductsPaginated(String keyword, Pageable pageable) {
-        return productRepository.searchProductsPaginated(keyword, pageable);
+        String keywordPattern = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            keywordPattern = "%" + keyword.trim().toLowerCase() + "%";
+        }
+        return productRepository.searchProductsPaginated(keywordPattern, pageable);
     }
     
     @Override

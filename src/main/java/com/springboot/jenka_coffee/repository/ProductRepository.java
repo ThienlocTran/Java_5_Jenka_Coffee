@@ -70,44 +70,50 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     // (findByAvailableTrue removed - unused, use findByAllCriteria instead)
 
     // ── Search (paginated only) ──────────────────────────────────────
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-                   "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
-                   "(:categorySlug IS NULL OR :categorySlug = '' OR LOWER(p.category.slug) = LOWER(:categorySlug)) AND " +
+    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category c WHERE " +
+                   "(" +
+                   "(:categorySlug IS NOT NULL AND LOWER(c.slug) = :categorySlug) OR " +
+                   "(:categorySlug IS NULL AND (:categoryId IS NULL OR c.id = :categoryId OR LOWER(c.slug) = :categoryIdSlug))" +
+                   ") AND " +
                    "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                    "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                    "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                    "p.available = true AND " +
-                   "(:keyword IS NULL OR :keyword = '' OR " +
-                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
-           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
-                        "(:categoryId IS NULL OR :categoryId = '' OR p.category.id = :categoryId) AND " +
-                        "(:categorySlug IS NULL OR :categorySlug = '' OR LOWER(p.category.slug) = LOWER(:categorySlug)) AND " +
+                   "(:keywordPattern IS NULL OR " +
+                   " LOWER(p.name) LIKE :keywordPattern OR " +
+                   " LOWER(p.description) LIKE :keywordPattern)",
+           countQuery = "SELECT COUNT(p) FROM Product p JOIN p.category c WHERE " +
+                        "(" +
+                        "(:categorySlug IS NOT NULL AND LOWER(c.slug) = :categorySlug) OR " +
+                        "(:categorySlug IS NULL AND (:categoryId IS NULL OR c.id = :categoryId OR LOWER(c.slug) = :categoryIdSlug))" +
+                        ") AND " +
                         "(:productKind IS NULL OR p.productKind = :productKind) AND " +
                         "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
                         "p.available = true AND " +
-                        "(:keyword IS NULL OR :keyword = '' OR " +
-                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                        "(:keywordPattern IS NULL OR " +
+                        " LOWER(p.name) LIKE :keywordPattern OR " +
+                        " LOWER(p.description) LIKE :keywordPattern)")
     Page<Product> findByAllCriteria(@Param("categoryId") String categoryId,
+                                    @Param("categoryIdSlug") String categoryIdSlug,
                                     @Param("categorySlug") String categorySlug,
                                     @Param("productKind") ProductKind productKind,
                                     @Param("minPrice") BigDecimal minPrice,
                                     @Param("maxPrice") BigDecimal maxPrice,
-                                    @Param("keyword") String keyword,
+                                    @Param("keywordPattern") String keywordPattern,
                                     Pageable pageable);
 
-    @Query(value = "SELECT p FROM Product p JOIN FETCH p.category WHERE " +
-                   "p.available = true AND " +
+    @Query(value = "SELECT p.* FROM products p " +
+                   "WHERE p.available = true AND " +
                    "(:keyword IS NULL OR :keyword = '' OR " +
-                   " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                   " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))",
-           countQuery = "SELECT COUNT(p) FROM Product p WHERE " +
-                        "p.available = true AND " +
+                   " p.name ILIKE :keyword OR " +
+                   " p.description ILIKE :keyword)",
+           countQuery = "SELECT COUNT(*) FROM products p " +
+                        "WHERE p.available = true AND " +
                         "(:keyword IS NULL OR :keyword = '' OR " +
-                        " LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        " LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+                        " p.name ILIKE :keyword OR " +
+                        " p.description ILIKE :keyword)",
+           nativeQuery = true)
     Page<Product> searchProductsPaginated(@Param("keyword") String keyword, Pageable pageable);
     
     // ── Admin filtered list (keyword + categoryId + available) ───────

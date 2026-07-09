@@ -14,4 +14,5 @@ public interface CartService {
     int getCount();
     BigDecimal getTotal();
     Map<String, Object> getCartSummary();
+    void mergeAnonymousCart(String username, String anonymousCartId);
 }

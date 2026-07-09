@@ -1,13 +1,13 @@
 version: '3.8'
 
-# Docker Compose này chỉ dành cho LOCAL / DEV.
-# KHÔNG dùng file này để khởi tạo hay nâng cấp PostgreSQL production trên VPS.
-# KHÔNG copy mount init.sql của file này sang production.
-# File /docker-entrypoint-initdb.d/init.sql chỉ dành cho fresh local/dev DB initialization.
-# Production schema changes phải chạy thủ công bằng docs/deploy/production_migration_safe.sql.
-# Nếu VPS production dùng Docker PostgreSQL, hãy dùng docker-compose.production.yml.
-# Trên production: KHÔNG chạy docker compose down -v.
-# Trên production: KHÔNG xóa ./pg-data.
+# Local/dev only.
+# Do not use this file to initialize or upgrade PostgreSQL on the live VPS.
+# Do not copy this init.sql mount into production.
+# /docker-entrypoint-initdb.d/init.sql is for fresh local/dev DB initialization only.
+# Production schema changes must be run manually via docs/deploy/production_migration_safe.sql.
+# If VPS production uses Docker PostgreSQL, use docker-compose.production.yml.
+# On production: never run docker compose down -v.
+# On production: never delete ./pg-data.
 
 services:
   postgres:
@@ -18,10 +18,10 @@ services:
     environment:
       - POSTGRES_DB=jenka_coffee
       - POSTGRES_USER=jenka_user
-      - POSTGRES_PASSWORD=jenka_dev_123  # Chỉ dùng local dev
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-jenka_local_password}
     volumes:
-      - ./pg-data:/var/lib/postgresql/data        # Local/dev persistent data
-      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Fresh local/dev init only
+      - ./pg-data:/var/lib/postgresql/data
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jenka_user -d jenka_coffee"]
@@ -29,7 +29,8 @@ services:
       timeout: 5s
       retries: 5
 
-# Để dùng với Spring Boot local:
-# spring.datasource.url=jdbc:postgresql://localhost:5432/jenka_coffee
-# spring.datasource.username=jenka_user
-# spring.datasource.password=jenka_dev_123
+# For Spring Boot local:
+# SPRING_PROFILES_ACTIVE=local
+# LOCAL_DATABASE_URL=jdbc:postgresql://<host>:5432/<database>?sslmode=require
+# LOCAL_DATABASE_USERNAME=<database-user>
+# LOCAL_DATABASE_PASSWORD=<database-password>

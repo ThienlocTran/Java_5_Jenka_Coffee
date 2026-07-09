@@ -69,6 +69,25 @@ public interface AccountService {
      */
     Account toggleActivation(String username);
 
+    /**
+     * Set admin role for an account (super-admin only).
+     * Dedicated endpoint to change admin flag safely.
+     *
+     * @param username  Account username
+     * @param isAdmin   true = grant admin, false = revoke admin
+     * @return Updated account
+     */
+    Account setAdminRole(String username, boolean isAdmin);
+
+    /**
+     * Set admin role for an account by email.
+     *
+     * @param email     Account email
+     * @param isAdmin   true = grant admin, false = revoke admin
+     * @return Updated account
+     */
+    Account setAdminRoleByEmail(String email, boolean isAdmin);
+
     /*
      * Lock account (admin function)
      * 

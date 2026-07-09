@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * Persistent Cart Item — replaces ConcurrentHashMap in CartServiceImpl.
  * cart_key = username for authenticated users.
- * cart_key = 'anon:<uuid>' for anonymous users (UUID stored in cookie).
+ * cart_key = 'anon:<uuid>' for anonymous users (UUID sent by frontend header).
  */
 @Getter
 @Setter
