@@ -1,8 +1,7 @@
 package com.springboot.jenka_coffee.dto.request;
 
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -38,9 +37,10 @@ public class ProductRequest {
     private String metaTitle;
 
     private String metaDescription;
+
+    private String productKind;
     
-    @NotNull(message = "Giá sản phẩm không được để trống")
-    @Min(value = 0, message = "Giá sản phẩm phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Giá sản phẩm phải lớn hơn 0")
     private BigDecimal price;
     
     private Boolean available;

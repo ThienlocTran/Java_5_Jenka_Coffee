@@ -3,6 +3,7 @@ package com.springboot.jenka_coffee.service;
 import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.entity.ProductKind;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,7 +39,7 @@ public interface ProductService {
 
     void toggleAvailable(Integer id);
 
-    Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
+    Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice,
                                                 String keyword, Pageable pageable);
 
     Page<Product> searchProductsPaginated(String keyword, Pageable pageable);

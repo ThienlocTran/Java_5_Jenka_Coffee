@@ -26,7 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BannerSetServiceImpl implements BannerSetService {
 
-    private static final String DISPLAY_MODE_IMAGE_ONLY = "IMAGE_ONLY";
+    private static final String DISPLAY_MODE_SHOW_FULL = "SHOW_FULL";
+    private static final String DISPLAY_MODE_FILL_FRAME = "FILL_FRAME";
     private static final String DISPLAY_MODE_TEXT_OVERLAY = "TEXT_OVERLAY";
     private static final BigDecimal CROP_MIN = BigDecimal.ZERO;
     private static final BigDecimal CROP_MAX = new BigDecimal("100.00");
@@ -399,12 +400,15 @@ public class BannerSetServiceImpl implements BannerSetService {
 
     private String normalizeDisplayMode(String value) {
         if (value == null || value.isBlank()) {
-            return DISPLAY_MODE_IMAGE_ONLY;
+            return DISPLAY_MODE_SHOW_FULL;
         }
         String normalized = value.trim().toUpperCase();
         if (DISPLAY_MODE_TEXT_OVERLAY.equals(normalized)) {
             return DISPLAY_MODE_TEXT_OVERLAY;
         }
-        return DISPLAY_MODE_IMAGE_ONLY;
+        if (DISPLAY_MODE_FILL_FRAME.equals(normalized) || "COVER".equals(normalized)) {
+            return DISPLAY_MODE_FILL_FRAME;
+        }
+        return DISPLAY_MODE_SHOW_FULL;
     }
 }

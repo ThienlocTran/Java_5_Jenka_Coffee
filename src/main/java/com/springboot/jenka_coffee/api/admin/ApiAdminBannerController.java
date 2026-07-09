@@ -19,7 +19,7 @@ import java.util.List;
 public class ApiAdminBannerController {
 
     private static final String SUPPORTED_EFFECT_PATTERN =
-            "^(fade|slide|zoom|kenburns|push|curtain|parallax|liquid|wave|magnetic|blur|vortex|glitch|cube|flip|dissolve|scale-rotate|prism|none)$";
+            "^(slide|fade|cube|flip|coverflow|creative-soft-depth|creative-premium-zoom|zoom|kenburns|push|curtain|parallax|liquid|wave|magnetic|blur|vortex|glitch|dissolve|scale-rotate|prism|none)$";
 
     private final BannerSetService bannerSetService;
 

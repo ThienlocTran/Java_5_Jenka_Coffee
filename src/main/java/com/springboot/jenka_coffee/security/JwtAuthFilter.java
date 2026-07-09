@@ -1,6 +1,7 @@
 package com.springboot.jenka_coffee.security;
 
 import com.springboot.jenka_coffee.service.AccountService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -36,7 +37,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return "/api/auth/google-login".equals(path)
+        return "/api/auth/login".equals(path)
+                || "/api/auth/signup".equals(path)
+                || "/api/auth/activate".equals(path)
+                || "/api/auth/forgot-password".equals(path)
+                || "/api/auth/reset-password".equals(path)
+                || "/api/auth/google-login".equals(path)
+                || "/api/auth/refresh".equals(path)
+                || "/api/auth/check-remember".equals(path)
+                || "/api/auth/send-otp".equals(path)
+                || "/api/auth/resend-otp".equals(path)
+                || "/api/auth/verify-otp".equals(path)
                 || path.startsWith("/api/visitors/");
     }
 
@@ -46,6 +57,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain chain) throws ServletException, IOException {
         String token = extractToken(req);
 
+        try {
         if (token != null && jwtService.isValid(token) && jwtService.isAccessToken(token)) {
             // VULN-TOKEN-001 FIX: Kiểm tra token có bị blacklist không
             if (jwtBlacklistService.isBlacklisted(token)) {
@@ -98,6 +110,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+        } catch (JwtException | IllegalArgumentException e) {
+            SecurityContextHolder.clearContext();
+            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            res.setContentType("application/json;charset=UTF-8");
+            res.getWriter().write("{\"status\":\"ERROR\",\"message\":\"Unauthorized\"}");
+            return;
         }
 
         chain.doFilter(req, res);

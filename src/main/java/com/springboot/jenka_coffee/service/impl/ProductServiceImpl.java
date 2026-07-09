@@ -4,6 +4,7 @@ import com.springboot.jenka_coffee.dto.request.ProductRequest;
 import com.springboot.jenka_coffee.entity.Category;
 import com.springboot.jenka_coffee.entity.Product;
 import com.springboot.jenka_coffee.entity.ProductImage;
+import com.springboot.jenka_coffee.entity.ProductKind;
 import com.springboot.jenka_coffee.exception.BusinessRuleException;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.CategoryRepository;
@@ -336,22 +337,25 @@ public class ProductServiceImpl implements ProductService {
             String message = current.getMessage();
             if (message != null) {
                 String normalized = message.toLowerCase();
+                if (normalized.contains("price") && normalized.contains("not-null")) {
+                    return "Cơ sở dữ liệu chưa cập nhật để cho phép sản phẩm không giá. Vui lòng chạy migration trước.";
+                }
                 if (normalized.contains("categoryid")) {
-                    return "CÆ¡ sá»Ÿ dá»¯ liá»‡u hiá»‡n táº¡i cÃ²n schema cá»§ khÃ´ng khá»›p VPS (categoryid). Cáº§n bá» rÃ ng buá»™c cÅ© nÃ y trÃªn database.";
+                    return "Cơ sở dữ liệu hiện tại còn schema cũ không khớp VPS (categoryid). Cần bỏ ràng buộc cũ này trên database.";
                 }
                 if (normalized.contains("category_id")) {
-                    return "Danh má»¥c sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Danh mục sản phẩm không hợp lệ.";
                 }
                 if (normalized.contains("name")) {
-                    return "TÃªn sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Tên sản phẩm không hợp lệ.";
                 }
                 if (normalized.contains("price")) {
-                    return "GiÃ¡ sáº£n pháº©m khÃ´ng há»£p lá»‡.";
+                    return "Không thể tạo sản phẩm do ràng buộc dữ liệu giá chưa phù hợp.";
                 }
             }
             current = current.getCause();
         }
-        return "KhÃ´ng thá»ƒ táº¡o sáº£n pháº©m do rÃ ng buá»™c dá»¯ liá»‡u trong database.";
+        return "Không thể tạo sản phẩm do ràng buộc dữ liệu trong database.";
     }
 
     @Override
@@ -454,9 +458,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice,
+    public Page<Product> filterProductsWithAllCriteria(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice,
             String keyword, Pageable pageable) {
-        if (isDefaultHomepageQuery(categoryId, categorySlug, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
+        if (isDefaultHomepageQuery(categoryId, categorySlug, productKind, minPrice, maxPrice, keyword) && isDefaultProductSort(pageable)) {
             return findHomepagePinnedProducts(pageable);
         }
         String normalizedCategoryId = normalizeCategoryId(categoryId);
@@ -467,6 +471,7 @@ public class ProductServiceImpl implements ProductService {
                 normalizedCategoryId,
                 normalizedCategoryIdSlug,
                 normalizedCategorySlug,
+                productKind,
                 minPrice,
                 maxPrice,
                 normalizedKeywordPattern,
@@ -474,9 +479,10 @@ public class ProductServiceImpl implements ProductService {
         );
     }
 
-    private boolean isDefaultHomepageQuery(String categoryId, String categorySlug, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
+    private boolean isDefaultHomepageQuery(String categoryId, String categorySlug, ProductKind productKind, BigDecimal minPrice, BigDecimal maxPrice, String keyword) {
         return (categoryId == null || categoryId.isBlank())
                 && (categorySlug == null || categorySlug.isBlank())
+                && productKind == null
                 && minPrice == null
                 && maxPrice == null
                 && (keyword == null || keyword.isBlank());
@@ -674,12 +680,9 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessRuleException("Tên sản phẩm không được để trống");
         }
         
-        // Validate price
-        if (request.getPrice() == null) {
-            throw new BusinessRuleException("Giá sản phẩm không được để trống");
-        }
-        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Giá sản phẩm không thể âm");
+        // Price is optional; when provided it must be positive.
+        if (request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Giá sản phẩm phải lớn hơn 0");
         }
         
         // Get category
@@ -734,6 +737,7 @@ public class ProductServiceImpl implements ProductService {
         product.setFaqJson(request.getFaqJson());
         product.setMetaTitle(request.getMetaTitle());
         product.setMetaDescription(request.getMetaDescription());
+        product.setProductKind(parseProductKind(request.getProductKind()));
         product.setPrice(request.getPrice());
         product.setAvailable(request.getAvailable() != null ? request.getAvailable() : true);
         product.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : false);
@@ -758,12 +762,9 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessRuleException("Tên sản phẩm không được để trống");
         }
 
-        // Validate price - FIX BUG Ở ĐÂY!
-        if (request.getPrice() == null) {
-            throw new BusinessRuleException("Giá sản phẩm không được để trống");
-        }
-        if (request.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Giá sản phẩm không thể âm");
+        // Price is optional; when provided it must be positive.
+        if (request.getPrice() != null && request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Giá sản phẩm phải lớn hơn 0");
         }
         
         // Get existing product
@@ -790,6 +791,7 @@ public class ProductServiceImpl implements ProductService {
         existing.setFaqJson(request.getFaqJson());
         existing.setMetaTitle(request.getMetaTitle());
         existing.setMetaDescription(request.getMetaDescription());
+        existing.setProductKind(parseProductKind(request.getProductKind()));
         existing.setPrice(request.getPrice()); // Preserve exact admin-entered value
         existing.setAvailable(request.getAvailable() != null ? request.getAvailable() : existing.getAvailable());
         existing.setRequireContact(request.getRequireContact() != null ? request.getRequireContact() : existing.getRequireContact());
@@ -802,6 +804,14 @@ public class ProductServiceImpl implements ProductService {
 
         // Save with image
         return saveProduct(existing, imageFile);
+    }
+
+    private static ProductKind parseProductKind(String productKind) {
+        try {
+            return ProductKind.fromNullable(productKind);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleException("Loại sản phẩm không hợp lệ");
+        }
     }
     
     /**

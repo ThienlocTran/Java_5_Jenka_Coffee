@@ -32,11 +32,15 @@ public class UploadServiceImpl implements UploadService {
     private long maxFileSizeBytes;
     private final Cloudinary cloudinary;
     private final String uploadDir;
+    private final String cloudinaryBaseFolder;
 
     public UploadServiceImpl(Cloudinary cloudinary,
-                             @Value("${app.upload.directory:uploads}") String uploadDir) {
+                             @Value("${app.upload.directory:uploads}") String uploadDir,
+                             @Value("${cloudinary.base-folder}") String cloudinaryBaseFolder) {
         this.cloudinary = cloudinary;
         this.uploadDir = uploadDir;
+        this.cloudinaryBaseFolder = normalizeCloudinaryFolder(cloudinaryBaseFolder);
+        log.info("Cloudinary base folder: {}", this.cloudinaryBaseFolder);
 
         // Create upload directory if not exists
         File uploadDirectory = new File(uploadDir);
@@ -112,7 +116,7 @@ public class UploadServiceImpl implements UploadService {
             @SuppressWarnings("unchecked")
             Map<String, Object> uploadResult = cloudinary.uploader().upload(tempFile, ObjectUtils.asMap(
                     "resource_type", "auto",
-                    "folder", "jenka_coffee",
+                    "folder", cloudinaryBaseFolder,
                     "public_id", ImageUtils.generateSafePublicId(file.getOriginalFilename(), fallbackBaseName),
                     "use_filename", false,
                     "unique_filename", false,
@@ -123,7 +127,8 @@ public class UploadServiceImpl implements UploadService {
             String secureUrl = (String) uploadResult.get("secure_url");
             String publicId = (String) uploadResult.get("public_id");
             
-            log.info("Uploaded: {} -> {} (public_id: {})", file.getOriginalFilename(), secureUrl, publicId);
+            log.info("Uploaded: {} -> {} (folder: {}, public_id: {})",
+                    file.getOriginalFilename(), secureUrl, cloudinaryBaseFolder, publicId);
             return secureUrl;
 
         } catch (InvalidFileException e) {
@@ -173,6 +178,14 @@ public class UploadServiceImpl implements UploadService {
      */
     private String getExtension(String filename) {
         return ImageUtils.getFileExtension(filename);
+    }
+
+    private String normalizeCloudinaryFolder(String folder) {
+        String normalized = folder == null ? "" : folder.trim().replaceAll("^/+|/+$", "");
+        if (normalized.isBlank()) {
+            throw new IllegalStateException("cloudinary.base-folder must not be blank");
+        }
+        return normalized;
     }
 
 

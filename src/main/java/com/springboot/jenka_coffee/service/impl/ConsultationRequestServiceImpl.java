@@ -9,7 +9,9 @@ import com.springboot.jenka_coffee.entity.ConsultationStatus;
 import com.springboot.jenka_coffee.exception.ResourceNotFoundException;
 import com.springboot.jenka_coffee.repository.ConsultationRequestRepository;
 import com.springboot.jenka_coffee.service.ConsultationRequestService;
+import com.springboot.jenka_coffee.service.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 import org.springframework.data.domain.Page;
@@ -20,11 +22,13 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ConsultationRequestServiceImpl implements ConsultationRequestService {
 
     private static final PolicyFactory SANITIZE_POLICY = Sanitizers.FORMATTING.and(Sanitizers.LINKS);
 
     private final ConsultationRequestRepository consultationRequestRepository;
+    private final EmailService emailService;
 
     @Override
     public ConsultationRequest create(ConsultationCreateRequest request) {
@@ -48,7 +52,13 @@ public class ConsultationRequestServiceImpl implements ConsultationRequestServic
         consultation.setStatus(ConsultationStatus.NEW);
 
         sanitizeEntity(consultation);
-        return consultationRequestRepository.save(consultation);
+        ConsultationRequest saved = consultationRequestRepository.save(consultation);
+        try {
+            emailService.sendConsultationNotification(saved);
+        } catch (Exception ex) {
+            log.warn("Could not trigger consultation email notification for id={}", saved.getId());
+        }
+        return saved;
     }
 
     @Override

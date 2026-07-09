@@ -52,7 +52,7 @@ public class BannerImage {
     private String targetLink;
 
     @Column(name = "display_mode", length = 30)
-    private String displayMode = "IMAGE_ONLY";
+    private String displayMode = "SHOW_FULL";
 
     @Column(name = "active", nullable = false)
     private Boolean active = true;

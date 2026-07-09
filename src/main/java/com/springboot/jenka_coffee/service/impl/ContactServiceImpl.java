@@ -34,10 +34,10 @@ public class ContactServiceImpl implements ContactService {
         contact.setEmail(request.getEmail()); // email đã validate format
         contact.setSubject(sanitizeInput(request.getSubject()));
         contact.setMessage(sanitizeInput(request.getMessage()));
-        contactRepository.save(contact);
+        Contact savedContact = contactRepository.save(contact);
 
         try {
-            emailService.sendContactConfirmation(request.getEmail(), contact.getFullName(), contact.getSubject());
+            emailService.sendContactConfirmation(savedContact);
         } catch (Exception e) {
             log.warn("Không thể gửi email thông báo liên hệ");
         }
